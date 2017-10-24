@@ -54,7 +54,7 @@ where
 }
 
 // TODO: Use integer generics to implement hashing over arrays.
-pub fn hash_float_array<T, H>(array: T, state: &mut H)
+pub fn hash_float_array<T, H>(array: &T, state: &mut H)
 where
     T: FloatArray,
     H: Hasher,
