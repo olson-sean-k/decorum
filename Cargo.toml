@@ -1,0 +1,9 @@
+[package]
+name = "decorum"
+version = "0.1.0"
+license = "MIT"
+authors = ["Sean Olson <olson.sean.k@gmail.com>"]
+description = "Ordering, equality, and hashing for floating point types."
+
+[dependencies]
+num-traits = "0.1.40"
