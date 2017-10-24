@@ -65,9 +65,7 @@ where
     type Output = Self;
 
     fn add(self, other: Self) -> Self::Output {
-        // TODO: Is it really safe to avoid NaN checks for this operation? What
-        //       about other operations?
-        NotNan::from_raw_float_unchecked(self.into_raw_float() + other.into_raw_float())
+        NotNan::from_raw_float(self.into_raw_float() + other.into_raw_float()).unwrap()
     }
 }
 
