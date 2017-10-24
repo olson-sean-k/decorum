@@ -1,5 +1,6 @@
 use num_traits::{Float, Num, One, Zero};
 use std::cmp::Ordering;
+use std::fmt::{self, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::num::FpCategory;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign};
@@ -95,6 +96,15 @@ where
 {
     fn add_assign(&mut self, other: T) {
         *self = NotNan::from_raw_float(self.into_raw_float() + other).unwrap()
+    }
+}
+
+impl<T> Display for NotNan<T>
+where
+    T: Display + Float,
+{
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        self.as_ref().fmt(f)
     }
 }
 
