@@ -37,6 +37,22 @@ pub trait Real: Copy + Sized {
 
     fn integer_decode(self) -> (u64, i16, i8);
 
+    fn hypot(self, other: Self) -> Self;
+    fn sin(self) -> Self;
+    fn cos(self) -> Self;
+    fn tan(self) -> Self;
+    fn asin(self) -> Self;
+    fn acos(self) -> Self;
+    fn atan(self) -> Self;
+    fn atan2(self, other: Self) -> Self;
+    fn sin_cos(self) -> (Self, Self);
+    fn sinh(self) -> Self;
+    fn cosh(self) -> Self;
+    fn tanh(self) -> Self;
+    fn asinh(self) -> Self;
+    fn acosh(self) -> Self;
+    fn atanh(self) -> Self;
+
     // TODO: Provide the remaining functions from `Float`.
 }
 
@@ -112,6 +128,81 @@ where
     #[inline(always)]
     fn integer_decode(self) -> (u64, i16, i8) {
         Float::integer_decode(self)
+    }
+
+    #[inline(always)]
+    fn hypot(self, other: Self) -> Self {
+        Float::hypot(self, other)
+    }
+
+    #[inline(always)]
+    fn sin(self) -> Self {
+        Float::sin(self)
+    }
+
+    #[inline(always)]
+    fn cos(self) -> Self {
+        Float::cos(self)
+    }
+
+    #[inline(always)]
+    fn tan(self) -> Self {
+        Float::tan(self)
+    }
+
+    #[inline(always)]
+    fn asin(self) -> Self {
+        Float::asin(self)
+    }
+
+    #[inline(always)]
+    fn acos(self) -> Self {
+        Float::acos(self)
+    }
+
+    #[inline(always)]
+    fn atan(self) -> Self {
+        Float::atan(self)
+    }
+
+    #[inline(always)]
+    fn atan2(self, other: Self) -> Self {
+        Float::atan2(self, other)
+    }
+
+    #[inline(always)]
+    fn sin_cos(self) -> (Self, Self) {
+        Float::sin_cos(self)
+    }
+
+    #[inline(always)]
+    fn sinh(self) -> Self {
+        Float::sinh(self)
+    }
+
+    #[inline(always)]
+    fn cosh(self) -> Self {
+        Float::cosh(self)
+    }
+
+    #[inline(always)]
+    fn tanh(self) -> Self {
+        Float::tanh(self)
+    }
+
+    #[inline(always)]
+    fn asinh(self) -> Self {
+        Float::asinh(self)
+    }
+
+    #[inline(always)]
+    fn acosh(self) -> Self {
+        Float::acosh(self)
+    }
+
+    #[inline(always)]
+    fn atanh(self) -> Self {
+        Float::atanh(self)
     }
 }
 

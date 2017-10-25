@@ -398,6 +398,85 @@ where
     fn integer_decode(self) -> (u64, i16, i8) {
         T::integer_decode(self.into_raw_float())
     }
+
+    #[inline(always)]
+    fn hypot(self, other: Self) -> Self {
+        NotNan::from_raw_float_unchecked(self.into_raw_float().hypot(other.into_raw_float()))
+    }
+
+    #[inline(always)]
+    fn sin(self) -> Self {
+        NotNan::from_raw_float_unchecked(self.into_raw_float().sin())
+    }
+
+    #[inline(always)]
+    fn cos(self) -> Self {
+        NotNan::from_raw_float_unchecked(self.into_raw_float().cos())
+    }
+
+    #[inline(always)]
+    fn tan(self) -> Self {
+        NotNan::from_raw_float_unchecked(self.into_raw_float().tan())
+    }
+
+    #[inline(always)]
+    fn asin(self) -> Self {
+        NotNan::from_raw_float_unchecked(self.into_raw_float().asin())
+    }
+
+    #[inline(always)]
+    fn acos(self) -> Self {
+        NotNan::from_raw_float_unchecked(self.into_raw_float().acos())
+    }
+
+    #[inline(always)]
+    fn atan(self) -> Self {
+        NotNan::from_raw_float_unchecked(self.into_raw_float().atan())
+    }
+
+    #[inline(always)]
+    fn atan2(self, other: Self) -> Self {
+        NotNan::from_raw_float_unchecked(self.into_raw_float().atan2(other.into_raw_float()))
+    }
+
+    #[inline(always)]
+    fn sin_cos(self) -> (Self, Self) {
+        let (sin, cos) = self.into_raw_float().sin_cos();
+        (
+            NotNan::from_raw_float_unchecked(sin),
+            NotNan::from_raw_float_unchecked(cos),
+        )
+    }
+
+    #[inline(always)]
+    fn sinh(self) -> Self {
+        NotNan::from_raw_float_unchecked(self.into_raw_float().sinh())
+    }
+
+    #[inline(always)]
+    fn cosh(self) -> Self {
+        NotNan::from_raw_float_unchecked(self.into_raw_float().cosh())
+    }
+
+    #[inline(always)]
+    fn tanh(self) -> Self {
+        NotNan::from_raw_float_unchecked(self.into_raw_float().tanh())
+    }
+
+    #[inline(always)]
+    fn asinh(self) -> Self {
+        NotNan::from_raw_float_unchecked(self.into_raw_float().asinh())
+    }
+
+    #[inline(always)]
+    fn acosh(self) -> Self {
+        NotNan::from_raw_float_unchecked(self.into_raw_float().acosh())
+    }
+
+    #[inline(always)]
+    fn atanh(self) -> Self {
+        NotNan::from_raw_float_unchecked(self.into_raw_float().atanh())
+    }
 }
 
 impl<T> Rem for NotNan<T>
