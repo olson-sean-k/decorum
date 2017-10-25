@@ -9,10 +9,12 @@ description = "Ordering, equality, and hashing for floating point types."
 keywords = ["float", "hash", "ord"]
 
 [features]
-default = ["serialize-serde"]
+default = ["always-enforce-policy", "serialize-serde"]
+always-enforce-policy = []
 serialize-serde = ["serde"]
 
 [dependencies]
+derivative = "1.0.*"
 num-traits = "0.1.40"
 
 serde = { version = "1.0", optional = true }

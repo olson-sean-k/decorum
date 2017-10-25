@@ -1,35 +1,47 @@
+#[macro_use]
+extern crate derivative;
 extern crate num_traits;
 #[cfg(feature = "serialize-serde")]
 extern crate serde;
 
-// TODO: Emit useful errors and use the error_chain crate.
-
-mod hash;
-mod notnan;
-mod ordered;
-
-pub use hash::{hash_float, hash_float_array, hash_float_slice};
-pub use notnan::NotNan;
-pub use ordered::OrderedFloat;
-
 use num_traits::Float;
 use std::num::FpCategory;
 
-// This is essentially `num_traits::Float` without its NaN functions. Until
-// such a distinction is made upstream, this can be used to be generic over
-// floats, including `NotNan`
+// TODO: Emit useful errors and use the error_chain crate.
+
+mod constrain;
+mod hash;
+mod policy;
+
+// TODO: Do not re-export `ConstrainedFloat` or policies. This is only
+//       re-exported so that documentation is more complete (`rustdoc` will
+//       provide no documentation for type definitions against types that are
+//       not re-exported).
+pub use constrain::ConstrainedFloat;
+pub use hash::{hash_float, hash_float_array, hash_float_slice};
+pub use policy::{FinitePolicy, NotNanPolicy};
+
+pub type NotNan<T> = ConstrainedFloat<T, NotNanPolicy<T>>;
+pub type Finite<T> = ConstrainedFloat<T, FinitePolicy<T>>;
+
+pub type N32 = NotNan<f32>;
+pub type N64 = NotNan<f64>;
+
+// Use "R" for "real" instead of "F" for "finite", because then this name would
+// be very similar to `f32` and `f64`, differentiated only be capitalization.
+pub type R32 = Finite<f32>;
+pub type R64 = Finite<f64>;
+
+// This is essentially `num_traits::Float` without its NaN or INF functions.
+// Until such a distinction is made upstream, this can be used to be generic
+// over both raw and constrained floats.
 //
-// Implementations for both `Real` and `Nan` are provided for all types
+// Implementations for `Real`, `Infinity` and `Nan` are provided for all types
 // implementing `num_traits::Float`.
 pub trait Real: Copy + Sized {
     fn max_value() -> Self;
     fn min_value() -> Self;
     fn min_positive_value() -> Self;
-
-    fn infinity() -> Self;
-    fn neg_infinity() -> Self;
-    fn is_infinite(self) -> bool;
-    fn is_finite(self) -> bool;
 
     fn neg_zero() -> Self;
 
@@ -60,6 +72,13 @@ pub trait Real: Copy + Sized {
     // TODO: Provide the remaining functions from `Float`.
 }
 
+pub trait Infinite: Copy + Sized {
+    fn infinity() -> Self;
+    fn neg_infinity() -> Self;
+    fn is_infinite(self) -> bool;
+    fn is_finite(self) -> bool;
+}
+
 pub trait Nan: Copy + Sized {
     fn nan() -> Self;
     fn is_nan(self) -> bool;
@@ -82,26 +101,6 @@ where
     #[inline(always)]
     fn min_positive_value() -> Self {
         Float::min_positive_value()
-    }
-
-    #[inline(always)]
-    fn infinity() -> Self {
-        Float::infinity()
-    }
-
-    #[inline(always)]
-    fn neg_infinity() -> Self {
-        Float::neg_infinity()
-    }
-
-    #[inline(always)]
-    fn is_infinite(self) -> bool {
-        Float::is_infinite(self)
-    }
-
-    #[inline(always)]
-    fn is_finite(self) -> bool {
-        Float::is_finite(self)
     }
 
     #[inline(always)]
@@ -207,6 +206,31 @@ where
     #[inline(always)]
     fn atanh(self) -> Self {
         Float::atanh(self)
+    }
+}
+
+impl<T> Infinite for T
+where
+    T: Float,
+{
+    #[inline(always)]
+    fn infinity() -> Self {
+        Float::infinity()
+    }
+
+    #[inline(always)]
+    fn neg_infinity() -> Self {
+        Float::neg_infinity()
+    }
+
+    #[inline(always)]
+    fn is_infinite(self) -> bool {
+        Float::is_infinite(self)
+    }
+
+    #[inline(always)]
+    fn is_finite(self) -> bool {
+        Float::is_finite(self)
     }
 }
 
