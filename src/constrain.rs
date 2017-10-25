@@ -1,4 +1,5 @@
-use num_traits::{Bounded, Float, FromPrimitive, Num, NumCast, One, Signed, ToPrimitive, Zero};
+use num_traits::{Bounded, Float, FloatConst, FromPrimitive, Num, NumCast, One, Signed,
+                 ToPrimitive, Zero};
 use std::cmp::Ordering;
 use std::fmt::{self, Display, Formatter};
 use std::hash::{Hash, Hasher};
@@ -204,6 +205,92 @@ where
     T: Float,
     P: FloatPolicy<T>,
 {
+}
+
+impl<T, P> FloatConst for ConstrainedFloat<T, P>
+where
+    T: Float + FloatConst,
+    P: FloatPolicy<T>,
+{
+    #[inline(always)]
+    fn E() -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::E())
+    }
+
+    #[inline(always)]
+    fn PI() -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::PI())
+    }
+
+    #[inline(always)]
+    fn SQRT_2() -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::SQRT_2())
+    }
+
+    #[inline(always)]
+    fn FRAC_1_PI() -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::FRAC_1_PI())
+    }
+
+    #[inline(always)]
+    fn FRAC_2_PI() -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::FRAC_2_PI())
+    }
+
+    #[inline(always)]
+    fn FRAC_1_SQRT_2() -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::FRAC_1_SQRT_2())
+    }
+
+    #[inline(always)]
+    fn FRAC_2_SQRT_PI() -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::FRAC_2_SQRT_PI())
+    }
+
+    #[inline(always)]
+    fn FRAC_PI_2() -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::FRAC_PI_2())
+    }
+
+    #[inline(always)]
+    fn FRAC_PI_3() -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::FRAC_PI_3())
+    }
+
+    #[inline(always)]
+    fn FRAC_PI_4() -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::FRAC_PI_4())
+    }
+
+    #[inline(always)]
+    fn FRAC_PI_6() -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::FRAC_PI_6())
+    }
+
+    #[inline(always)]
+    fn FRAC_PI_8() -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::FRAC_PI_8())
+    }
+
+    #[inline(always)]
+    fn LN_10() -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::LN_10())
+    }
+
+    #[inline(always)]
+    fn LN_2() -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::LN_2())
+    }
+
+    #[inline(always)]
+    fn LOG10_E() -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::LOG10_E())
+    }
+
+    #[inline(always)]
+    fn LOG2_E() -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::LOG2_E())
+    }
 }
 
 impl<T, P> FromPrimitive for ConstrainedFloat<T, P>
