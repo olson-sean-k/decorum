@@ -405,3 +405,38 @@ where
         T::is_zero(&self.into_raw_float())
     }
 }
+
+#[cfg(feature = "serialize-serde")]
+mod feature_serialize_serde {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use serde::de::{Error, Unexpected};
+    use std::f64;
+
+    use super::*;
+
+    impl<'a, T> Deserialize<'a> for NotNan<T>
+    where
+        T: Deserialize<'a> + Float,
+    {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'a>,
+        {
+            let value = T::deserialize(deserializer)?;
+            NotNan::from_raw_float(value)
+                .map_err(|_| Error::invalid_value(Unexpected::Float(f64::NAN), &""))
+        }
+    }
+
+    impl<T> Serialize for NotNan<T>
+    where
+        T: Float + Serialize,
+    {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            self.into_raw_float().serialize(serializer)
+        }
+    }
+}

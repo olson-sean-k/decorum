@@ -1,4 +1,6 @@
 extern crate num_traits;
+#[cfg(feature = "serialize-serde")]
+extern crate serde;
 
 // TODO: Emit useful errors and use the error_chain crate.
 
