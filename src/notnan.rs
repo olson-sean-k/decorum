@@ -1,9 +1,9 @@
-use num_traits::{Float, Num, One, Zero};
+use num_traits::{Bounded, Float, FromPrimitive, Num, NumCast, One, Signed, ToPrimitive, Zero};
 use std::cmp::Ordering;
 use std::fmt::{self, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::num::FpCategory;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign};
 
 use Real;
 use hash;
@@ -99,6 +99,19 @@ where
     }
 }
 
+impl<T> Bounded for NotNan<T>
+where
+    T: Float,
+{
+    fn min_value() -> Self {
+        NotNan::from_raw_float_unchecked(T::min_value())
+    }
+
+    fn max_value() -> Self {
+        NotNan::from_raw_float_unchecked(T::max_value())
+    }
+}
+
 impl<T> Display for NotNan<T>
 where
     T: Display + Float,
@@ -154,6 +167,59 @@ where
 {
 }
 
+impl<T> FromPrimitive for NotNan<T>
+where
+    T: Float + FromPrimitive,
+{
+    fn from_i8(value: i8) -> Option<Self> {
+        T::from_i8(value).and_then(|value| NotNan::from_raw_float(value).ok())
+    }
+
+    fn from_u8(value: u8) -> Option<Self> {
+        T::from_u8(value).and_then(|value| NotNan::from_raw_float(value).ok())
+    }
+
+    fn from_i16(value: i16) -> Option<Self> {
+        T::from_i16(value).and_then(|value| NotNan::from_raw_float(value).ok())
+    }
+
+    fn from_u16(value: u16) -> Option<Self> {
+        T::from_u16(value).and_then(|value| NotNan::from_raw_float(value).ok())
+    }
+
+    fn from_i32(value: i32) -> Option<Self> {
+        T::from_i32(value).and_then(|value| NotNan::from_raw_float(value).ok())
+    }
+
+    fn from_u32(value: u32) -> Option<Self> {
+        T::from_u32(value).and_then(|value| NotNan::from_raw_float(value).ok())
+    }
+
+    fn from_i64(value: i64) -> Option<Self> {
+        T::from_i64(value).and_then(|value| NotNan::from_raw_float(value).ok())
+    }
+
+    fn from_u64(value: u64) -> Option<Self> {
+        T::from_u64(value).and_then(|value| NotNan::from_raw_float(value).ok())
+    }
+
+    fn from_isize(value: isize) -> Option<Self> {
+        T::from_isize(value).and_then(|value| NotNan::from_raw_float(value).ok())
+    }
+
+    fn from_usize(value: usize) -> Option<Self> {
+        T::from_usize(value).and_then(|value| NotNan::from_raw_float(value).ok())
+    }
+
+    fn from_f32(value: f32) -> Option<Self> {
+        T::from_f32(value).and_then(|value| NotNan::from_raw_float(value).ok())
+    }
+
+    fn from_f64(value: f64) -> Option<Self> {
+        T::from_f64(value).and_then(|value| NotNan::from_raw_float(value).ok())
+    }
+}
+
 impl<T> Hash for NotNan<T>
 where
     T: Float,
@@ -206,6 +272,17 @@ where
     }
 }
 
+impl<T> Neg for NotNan<T>
+where
+    T: Float + Num,
+{
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        NotNan::from_raw_float_unchecked(-self.into_raw_float())
+    }
+}
+
 impl<T> Num for NotNan<T>
 where
     T: Float + Num,
@@ -216,6 +293,18 @@ where
         T::from_str_radix(source, radix)
             .map_err(|_| ())
             .and_then(|value| NotNan::from_raw_float(value).map_err(|_| ()))
+    }
+}
+
+impl<T> NumCast for NotNan<T>
+where
+    T: Float + Num,
+{
+    fn from<U>(value: U) -> Option<Self>
+    where
+        U: ToPrimitive,
+    {
+        T::from(value).and_then(|value| NotNan::from_raw_float(value).ok())
     }
 }
 
@@ -351,6 +440,31 @@ where
     }
 }
 
+impl<T> Signed for NotNan<T>
+where
+    T: Float + Signed,
+{
+    fn abs(&self) -> Self {
+        NotNan::from_raw_float_unchecked(self.into_raw_float().abs())
+    }
+
+    fn abs_sub(&self, other: &Self) -> Self {
+        NotNan::from_raw_float(self.into_raw_float().abs_sub(other.into_raw_float())).unwrap()
+    }
+
+    fn signum(&self) -> Self {
+        NotNan::from_raw_float_unchecked(self.into_raw_float().signum())
+    }
+
+    fn is_positive(&self) -> bool {
+        self.into_raw_float().is_positive()
+    }
+
+    fn is_negative(&self) -> bool {
+        self.into_raw_float().is_negative()
+    }
+}
+
 impl<T> Sub for NotNan<T>
 where
     T: Float,
@@ -388,6 +502,59 @@ where
 {
     fn sub_assign(&mut self, other: T) {
         *self = NotNan::from_raw_float(self.into_raw_float() - other).unwrap()
+    }
+}
+
+impl<T> ToPrimitive for NotNan<T>
+where
+    T: Float + ToPrimitive,
+{
+    fn to_i8(&self) -> Option<i8> {
+        self.into_raw_float().to_i8()
+    }
+
+    fn to_u8(&self) -> Option<u8> {
+        self.into_raw_float().to_u8()
+    }
+
+    fn to_i16(&self) -> Option<i16> {
+        self.into_raw_float().to_i16()
+    }
+
+    fn to_u16(&self) -> Option<u16> {
+        self.into_raw_float().to_u16()
+    }
+
+    fn to_i32(&self) -> Option<i32> {
+        self.into_raw_float().to_i32()
+    }
+
+    fn to_u32(&self) -> Option<u32> {
+        self.into_raw_float().to_u32()
+    }
+
+    fn to_i64(&self) -> Option<i64> {
+        self.into_raw_float().to_i64()
+    }
+
+    fn to_u64(&self) -> Option<u64> {
+        self.into_raw_float().to_u64()
+    }
+
+    fn to_isize(&self) -> Option<isize> {
+        self.into_raw_float().to_isize()
+    }
+
+    fn to_usize(&self) -> Option<usize> {
+        self.into_raw_float().to_usize()
+    }
+
+    fn to_f32(&self) -> Option<f32> {
+        self.into_raw_float().to_f32()
+    }
+
+    fn to_f64(&self) -> Option<f64> {
+        self.into_raw_float().to_f64()
     }
 }
 
