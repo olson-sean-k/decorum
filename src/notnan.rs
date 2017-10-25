@@ -336,67 +336,67 @@ where
 {
     #[inline(always)]
     fn max_value() -> Self {
-        NotNan::from_raw_float_unchecked(Float::max_value())
+        <Self as Bounded>::max_value()
     }
 
     #[inline(always)]
     fn min_value() -> Self {
-        NotNan::from_raw_float_unchecked(Float::min_value())
+        <Self as Bounded>::min_value()
     }
 
     #[inline(always)]
     fn min_positive_value() -> Self {
-        NotNan::from_raw_float_unchecked(Float::min_positive_value())
+        NotNan::from_raw_float_unchecked(T::min_positive_value())
     }
 
     #[inline(always)]
     fn infinity() -> Self {
-        NotNan::from_raw_float_unchecked(Float::infinity())
+        NotNan::from_raw_float_unchecked(T::infinity())
     }
 
     #[inline(always)]
     fn neg_infinity() -> Self {
-        NotNan::from_raw_float_unchecked(Float::neg_infinity())
+        NotNan::from_raw_float_unchecked(T::neg_infinity())
     }
 
     #[inline(always)]
     fn is_infinite(self) -> bool {
-        Float::is_infinite(self.into_raw_float())
+        T::is_infinite(self.into_raw_float())
     }
 
     #[inline(always)]
     fn is_finite(self) -> bool {
-        Float::is_finite(self.into_raw_float())
+        T::is_finite(self.into_raw_float())
     }
 
     #[inline(always)]
     fn neg_zero() -> Self {
-        NotNan::from_raw_float_unchecked(Float::neg_zero())
+        NotNan::from_raw_float_unchecked(T::neg_zero())
     }
 
     #[inline(always)]
     fn is_sign_positive(self) -> bool {
-        Float::is_sign_positive(self.into_raw_float())
+        T::is_sign_positive(self.into_raw_float())
     }
 
     #[inline(always)]
     fn is_sign_negative(self) -> bool {
-        Float::is_sign_negative(self.into_raw_float())
+        T::is_sign_negative(self.into_raw_float())
     }
 
     #[inline(always)]
     fn classify(self) -> FpCategory {
-        Float::classify(self.into_raw_float())
+        T::classify(self.into_raw_float())
     }
 
     #[inline(always)]
     fn is_normal(self) -> bool {
-        Float::is_normal(self.into_raw_float())
+        T::is_normal(self.into_raw_float())
     }
 
     #[inline(always)]
     fn integer_decode(self) -> (u64, i16, i8) {
-        Float::integer_decode(self.into_raw_float())
+        T::integer_decode(self.into_raw_float())
     }
 }
 
