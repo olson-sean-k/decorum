@@ -10,13 +10,17 @@ mod ordered;
 
 pub use hash::{hash_float, hash_float_array, hash_float_slice};
 pub use notnan::NotNan;
+pub use ordered::OrderedFloat;
 
 use num_traits::Float;
 use std::num::FpCategory;
 
 // This is essentially `num_traits::Float` without its NaN functions. Until
 // such a distinction is made upstream, this can be used to be generic over
-// floats, including `NotNan`.
+// floats, including `NotNan`
+//
+// Implementations for both `Real` and `Nan` are provided for all types
+// implementing `num_traits::Float`.
 pub trait Real: Copy + Sized {
     fn max_value() -> Self;
     fn min_value() -> Self;
