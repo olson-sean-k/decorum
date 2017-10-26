@@ -11,18 +11,18 @@ use std::num::FpCategory;
 
 mod constrain;
 mod hash;
-mod policy;
 
-// TODO: Do not re-export `ConstrainedFloat` or policies. This is only
+// TODO: Do not re-export types from the `constrain` module. This is only
 //       re-exported so that documentation is more complete (`rustdoc` will
 //       provide no documentation for type definitions against types that are
 //       not re-exported).
-pub use constrain::ConstrainedFloat;
+//
+//       Client code should only use the type definitions.
+pub use constrain::{ConstrainedFloat, FiniteConstraint, NotNanConstraint};
 pub use hash::{hash_float, hash_float_array, hash_float_slice};
-pub use policy::{FinitePolicy, NotNanPolicy};
 
-pub type NotNan<T> = ConstrainedFloat<T, NotNanPolicy<T>>;
-pub type Finite<T> = ConstrainedFloat<T, FinitePolicy<T>>;
+pub type NotNan<T> = ConstrainedFloat<T, NotNanConstraint<T>>;
+pub type Finite<T> = ConstrainedFloat<T, FiniteConstraint<T>>;
 
 pub type N32 = NotNan<f32>;
 pub type N64 = NotNan<f64>;

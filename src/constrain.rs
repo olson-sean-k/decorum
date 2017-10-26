@@ -9,14 +9,64 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssi
 
 use {Infinite, Real};
 use hash;
-use policy::{FloatPolicy, NotNanPolicy};
+
+pub trait FloatConstraint<T>: Copy + PartialEq + PartialOrd + Sized
+where
+    T: Float,
+{
+    fn evaluate(value: T) -> Option<T>;
+}
+
+#[derive(Clone, Copy, PartialEq, PartialOrd)]
+pub struct NotNanConstraint<T>
+where
+    T: Float,
+{
+    phantom: PhantomData<T>,
+}
+
+impl<T> FloatConstraint<T> for NotNanConstraint<T>
+where
+    T: Float,
+{
+    fn evaluate(value: T) -> Option<T> {
+        if value.is_nan() {
+            None
+        }
+        else {
+            Some(value)
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, PartialOrd)]
+pub struct FiniteConstraint<T>
+where
+    T: Float,
+{
+    phantom: PhantomData<T>,
+}
+
+impl<T> FloatConstraint<T> for FiniteConstraint<T>
+where
+    T: Float,
+{
+    fn evaluate(value: T) -> Option<T> {
+        if value.is_nan() | value.is_infinite() {
+            None
+        }
+        else {
+            Some(value)
+        }
+    }
+}
 
 #[derivative(Clone, Copy, Debug, Default)]
 #[derive(Derivative)]
 pub struct ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     value: T,
     #[derivative(Debug = "ignore")] phantom: PhantomData<P>,
@@ -25,7 +75,7 @@ where
 impl<T, P> ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     pub fn try_from_raw_float(value: T) -> Result<Self, ()> {
         P::evaluate(value)
@@ -55,7 +105,7 @@ where
 impl<T, P> ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     pub fn from_raw_float(value: T) -> Self {
         P::evaluate(value)
@@ -73,7 +123,7 @@ where
 impl<T, P> ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     #[inline(always)]
     pub fn from_raw_float(value: T) -> Self {
@@ -84,7 +134,7 @@ where
 impl<T, P> AsRef<T> for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn as_ref(&self) -> &T {
         &self.value
@@ -95,7 +145,7 @@ where
 // implemented over a type `T`.
 impl<P> Into<f32> for ConstrainedFloat<f32, P>
 where
-    P: FloatPolicy<f32>,
+    P: FloatConstraint<f32>,
 {
     fn into(self) -> f32 {
         self.into_raw_float()
@@ -106,7 +156,7 @@ where
 // implemented over a type `T`.
 impl<P> Into<f64> for ConstrainedFloat<f64, P>
 where
-    P: FloatPolicy<f64>,
+    P: FloatConstraint<f64>,
 {
     fn into(self) -> f64 {
         self.into_raw_float()
@@ -116,7 +166,7 @@ where
 impl<T, P> Add for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     type Output = Self;
 
@@ -128,7 +178,7 @@ where
 impl<T, P> Add<T> for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     type Output = Self;
 
@@ -140,7 +190,7 @@ where
 impl<T, P> AddAssign for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn add_assign(&mut self, other: Self) {
         *self = ConstrainedFloat::from_raw_float(self.into_raw_float() + other.into_raw_float())
@@ -150,7 +200,7 @@ where
 impl<T, P> AddAssign<T> for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn add_assign(&mut self, other: T) {
         *self = ConstrainedFloat::from_raw_float(self.into_raw_float() + other)
@@ -160,7 +210,7 @@ where
 impl<T, P> Bounded for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     #[inline(always)]
     fn min_value() -> Self {
@@ -176,7 +226,7 @@ where
 impl<T, P> Display for ConstrainedFloat<T, P>
 where
     T: Display + Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.as_ref().fmt(f)
@@ -186,7 +236,7 @@ where
 impl<T, P> Div for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     type Output = Self;
 
@@ -198,7 +248,7 @@ where
 impl<T, P> Div<T> for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     type Output = Self;
 
@@ -210,7 +260,7 @@ where
 impl<T, P> DivAssign for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn div_assign(&mut self, other: Self) {
         *self = ConstrainedFloat::from_raw_float(self.into_raw_float() / other.into_raw_float())
@@ -220,7 +270,7 @@ where
 impl<T, P> DivAssign<T> for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn div_assign(&mut self, other: T) {
         *self = ConstrainedFloat::from_raw_float(self.into_raw_float() / other)
@@ -230,14 +280,14 @@ where
 impl<T, P> Eq for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
 }
 
 impl<T, P> FloatConst for ConstrainedFloat<T, P>
 where
     T: Float + FloatConst,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     #[inline(always)]
     fn E() -> Self {
@@ -323,7 +373,7 @@ where
 impl<T, P> FromPrimitive for ConstrainedFloat<T, P>
 where
     T: Float + FromPrimitive,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn from_i8(value: i8) -> Option<Self> {
         T::from_i8(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
@@ -377,7 +427,7 @@ where
 impl<T, P> Hash for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn hash<H>(&self, state: &mut H)
     where
@@ -387,7 +437,7 @@ where
     }
 }
 
-impl<T> Infinite for ConstrainedFloat<T, NotNanPolicy<T>>
+impl<T> Infinite for ConstrainedFloat<T, NotNanConstraint<T>>
 where
     T: Float,
 {
@@ -415,7 +465,7 @@ where
 impl<T, P> Mul for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     type Output = Self;
 
@@ -427,7 +477,7 @@ where
 impl<T, P> Mul<T> for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     type Output = Self;
 
@@ -439,7 +489,7 @@ where
 impl<T, P> MulAssign for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn mul_assign(&mut self, other: Self) {
         *self = ConstrainedFloat::from_raw_float(self.into_raw_float() * other.into_raw_float())
@@ -449,7 +499,7 @@ where
 impl<T, P> MulAssign<T> for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn mul_assign(&mut self, other: T) {
         *self = ConstrainedFloat::from_raw_float(self.into_raw_float() * other)
@@ -459,7 +509,7 @@ where
 impl<T, P> Neg for ConstrainedFloat<T, P>
 where
     T: Float + Num,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     type Output = Self;
 
@@ -471,7 +521,7 @@ where
 impl<T, P> Num for ConstrainedFloat<T, P>
 where
     T: Float + Num,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     type FromStrRadixErr = ();
 
@@ -487,7 +537,7 @@ where
 impl<T, P> NumCast for ConstrainedFloat<T, P>
 where
     T: Float + Num,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn from<U>(value: U) -> Option<Self>
     where
@@ -500,7 +550,7 @@ where
 impl<T, P> One for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     #[inline(always)]
     fn one() -> Self {
@@ -511,7 +561,7 @@ where
 impl<T, P> Ord for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         let lhs = self.into_raw_float();
@@ -536,7 +586,7 @@ where
 impl<T, P> PartialEq for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn eq(&self, other: &Self) -> bool {
         let lhs = self.into_raw_float();
@@ -563,7 +613,7 @@ where
 impl<T, P> PartialOrd for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -573,7 +623,7 @@ where
 impl<T, P> Real for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     #[inline(always)]
     fn max_value() -> Self {
@@ -707,7 +757,7 @@ where
 impl<T, P> Rem for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     type Output = Self;
 
@@ -719,7 +769,7 @@ where
 impl<T, P> Rem<T> for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     type Output = Self;
 
@@ -731,7 +781,7 @@ where
 impl<T, P> RemAssign for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn rem_assign(&mut self, other: Self) {
         *self = ConstrainedFloat::from_raw_float(self.into_raw_float() % other.into_raw_float())
@@ -741,7 +791,7 @@ where
 impl<T, P> RemAssign<T> for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn rem_assign(&mut self, other: T) {
         *self = ConstrainedFloat::from_raw_float(self.into_raw_float() % other)
@@ -751,7 +801,7 @@ where
 impl<T, P> Signed for ConstrainedFloat<T, P>
 where
     T: Float + Signed,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     #[inline(always)]
     fn abs(&self) -> Self {
@@ -782,7 +832,7 @@ where
 impl<T, P> Sub for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     type Output = Self;
 
@@ -794,7 +844,7 @@ where
 impl<T, P> Sub<T> for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     type Output = Self;
 
@@ -806,7 +856,7 @@ where
 impl<T, P> SubAssign for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn sub_assign(&mut self, other: Self) {
         *self = ConstrainedFloat::from_raw_float(self.into_raw_float() - other.into_raw_float())
@@ -816,7 +866,7 @@ where
 impl<T, P> SubAssign<T> for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn sub_assign(&mut self, other: T) {
         *self = ConstrainedFloat::from_raw_float(self.into_raw_float() - other)
@@ -826,7 +876,7 @@ where
 impl<T, P> ToPrimitive for ConstrainedFloat<T, P>
 where
     T: Float + ToPrimitive,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     fn to_i8(&self) -> Option<i8> {
         self.into_raw_float().to_i8()
@@ -880,7 +930,7 @@ where
 impl<T, P> Zero for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatPolicy<T>,
+    P: FloatConstraint<T>,
 {
     #[inline(always)]
     fn zero() -> Self {
@@ -904,7 +954,7 @@ mod feature_serialize_serde {
     impl<'a, T, P> Deserialize<'a> for ConstrainedFloat<T, P>
     where
         T: Deserialize<'a> + Float,
-        P: FloatPolicy<T>,
+        P: FloatConstraint<T>,
     {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
@@ -919,7 +969,7 @@ mod feature_serialize_serde {
     impl<T, P> Serialize for ConstrainedFloat<T, P>
     where
         T: Float + Serialize,
-        P: FloatPolicy<T>,
+        P: FloatConstraint<T>,
     {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
