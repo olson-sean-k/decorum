@@ -11,15 +11,15 @@ use {Infinite, Real};
 use hash;
 use policy::{FloatPolicy, NotNanPolicy};
 
-#[derivative(Clone, Copy, Debug, Default, PartialEq)]
-#[derive(Derivative, PartialOrd)]
+#[derivative(Clone, Copy, Debug, Default)]
+#[derive(Derivative)]
 pub struct ConstrainedFloat<T, P>
 where
     T: Float,
     P: FloatPolicy<T>,
 {
     value: T,
-    #[derivative(Debug = "ignore", PartialEq = "ignore")] phantom: PhantomData<P>,
+    #[derivative(Debug = "ignore")] phantom: PhantomData<P>,
 }
 
 impl<T, P> ConstrainedFloat<T, P>
@@ -488,10 +488,59 @@ where
     P: FloatPolicy<T>,
 {
     fn cmp(&self, other: &Self) -> Ordering {
-        match self.partial_cmp(other) {
-            Some(order) => order,
-            _ => panic!(),
+        let lhs = self.into_raw_float();
+        let rhs = other.into_raw_float();
+        match lhs.partial_cmp(&rhs) {
+            Some(ordering) => ordering,
+            None => if lhs.is_nan() {
+                if rhs.is_nan() {
+                    Ordering::Equal
+                }
+                else {
+                    Ordering::Greater
+                }
+            }
+            else {
+                Ordering::Less
+            },
         }
+    }
+}
+
+impl<T, P> PartialEq for ConstrainedFloat<T, P>
+where
+    T: Float,
+    P: FloatPolicy<T>,
+{
+    fn eq(&self, other: &Self) -> bool {
+        let lhs = self.into_raw_float();
+        let rhs = other.into_raw_float();
+        if lhs.is_nan() {
+            if rhs.is_nan() {
+                true
+            }
+            else {
+                false
+            }
+        }
+        else {
+            if rhs.is_nan() {
+                false
+            }
+            else {
+                lhs == rhs
+            }
+        }
+    }
+}
+
+impl<T, P> PartialOrd for ConstrainedFloat<T, P>
+where
+    T: Float,
+    P: FloatPolicy<T>,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
