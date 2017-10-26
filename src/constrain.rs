@@ -27,7 +27,7 @@ where
     T: Float,
     P: FloatPolicy<T>,
 {
-    pub fn from_raw_float(value: T) -> Result<Self, ()> {
+    pub fn try_from_raw_float(value: T) -> Result<Self, ()> {
         P::evaluate(value)
             .map(|value| {
                 ConstrainedFloat {
@@ -38,19 +38,46 @@ where
             .ok_or(())
     }
 
-    // This is useful when a value cannot violate a policy. However, this is
-    // fragile, because it must be aware of all of the possible policies that
-    // could be applied.
-    pub fn from_raw_float_unchecked(value: T) -> Self {
+    pub fn into_raw_float(self) -> T {
+        let ConstrainedFloat { value, .. } = self;
+        value
+    }
+
+    fn from_raw_float_unchecked(value: T) -> Self {
         ConstrainedFloat {
             value,
             phantom: PhantomData,
         }
     }
+}
 
-    pub fn into_raw_float(self) -> T {
-        let ConstrainedFloat { value, .. } = self;
-        value
+#[cfg(feature = "enforce-constraints")]
+impl<T, P> ConstrainedFloat<T, P>
+where
+    T: Float,
+    P: FloatPolicy<T>,
+{
+    pub fn from_raw_float(value: T) -> Self {
+        P::evaluate(value)
+            .map(|value| {
+                ConstrainedFloat {
+                    value,
+                    phantom: PhantomData,
+                }
+            })
+            .unwrap()
+    }
+}
+
+#[cfg(not(feature = "enforce-constraints"))]
+impl<T, P> ConstrainedFloat<T, P>
+where
+    T: Float,
+    P: FloatPolicy<T>,
+{
+    #[inline(always)]
+    pub fn from_raw_float(value: T) -> Self {
+        Self::from_raw_float_unchecked(value)
     }
 }
 
@@ -94,7 +121,7 @@ where
     type Output = Self;
 
     fn add(self, other: Self) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() + other.into_raw_float()).unwrap()
+        ConstrainedFloat::from_raw_float(self.into_raw_float() + other.into_raw_float())
     }
 }
 
@@ -106,7 +133,7 @@ where
     type Output = Self;
 
     fn add(self, other: T) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() + other).unwrap()
+        ConstrainedFloat::from_raw_float(self.into_raw_float() + other)
     }
 }
 
@@ -117,7 +144,6 @@ where
 {
     fn add_assign(&mut self, other: Self) {
         *self = ConstrainedFloat::from_raw_float(self.into_raw_float() + other.into_raw_float())
-            .unwrap()
     }
 }
 
@@ -127,7 +153,7 @@ where
     P: FloatPolicy<T>,
 {
     fn add_assign(&mut self, other: T) {
-        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() + other).unwrap()
+        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() + other)
     }
 }
 
@@ -136,10 +162,12 @@ where
     T: Float,
     P: FloatPolicy<T>,
 {
+    #[inline(always)]
     fn min_value() -> Self {
         ConstrainedFloat::from_raw_float_unchecked(T::min_value())
     }
 
+    #[inline(always)]
     fn max_value() -> Self {
         ConstrainedFloat::from_raw_float_unchecked(T::max_value())
     }
@@ -163,7 +191,7 @@ where
     type Output = Self;
 
     fn div(self, other: Self) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() / other.into_raw_float()).unwrap()
+        ConstrainedFloat::from_raw_float(self.into_raw_float() / other.into_raw_float())
     }
 }
 
@@ -175,7 +203,7 @@ where
     type Output = Self;
 
     fn div(self, other: T) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() / other).unwrap()
+        ConstrainedFloat::from_raw_float(self.into_raw_float() / other)
     }
 }
 
@@ -186,7 +214,6 @@ where
 {
     fn div_assign(&mut self, other: Self) {
         *self = ConstrainedFloat::from_raw_float(self.into_raw_float() / other.into_raw_float())
-            .unwrap()
     }
 }
 
@@ -196,7 +223,7 @@ where
     P: FloatPolicy<T>,
 {
     fn div_assign(&mut self, other: T) {
-        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() / other).unwrap()
+        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() / other)
     }
 }
 
@@ -299,51 +326,51 @@ where
     P: FloatPolicy<T>,
 {
     fn from_i8(value: i8) -> Option<Self> {
-        T::from_i8(value).and_then(|value| ConstrainedFloat::from_raw_float(value).ok())
+        T::from_i8(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
     }
 
     fn from_u8(value: u8) -> Option<Self> {
-        T::from_u8(value).and_then(|value| ConstrainedFloat::from_raw_float(value).ok())
+        T::from_u8(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
     }
 
     fn from_i16(value: i16) -> Option<Self> {
-        T::from_i16(value).and_then(|value| ConstrainedFloat::from_raw_float(value).ok())
+        T::from_i16(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
     }
 
     fn from_u16(value: u16) -> Option<Self> {
-        T::from_u16(value).and_then(|value| ConstrainedFloat::from_raw_float(value).ok())
+        T::from_u16(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
     }
 
     fn from_i32(value: i32) -> Option<Self> {
-        T::from_i32(value).and_then(|value| ConstrainedFloat::from_raw_float(value).ok())
+        T::from_i32(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
     }
 
     fn from_u32(value: u32) -> Option<Self> {
-        T::from_u32(value).and_then(|value| ConstrainedFloat::from_raw_float(value).ok())
+        T::from_u32(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
     }
 
     fn from_i64(value: i64) -> Option<Self> {
-        T::from_i64(value).and_then(|value| ConstrainedFloat::from_raw_float(value).ok())
+        T::from_i64(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
     }
 
     fn from_u64(value: u64) -> Option<Self> {
-        T::from_u64(value).and_then(|value| ConstrainedFloat::from_raw_float(value).ok())
+        T::from_u64(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
     }
 
     fn from_isize(value: isize) -> Option<Self> {
-        T::from_isize(value).and_then(|value| ConstrainedFloat::from_raw_float(value).ok())
+        T::from_isize(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
     }
 
     fn from_usize(value: usize) -> Option<Self> {
-        T::from_usize(value).and_then(|value| ConstrainedFloat::from_raw_float(value).ok())
+        T::from_usize(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
     }
 
     fn from_f32(value: f32) -> Option<Self> {
-        T::from_f32(value).and_then(|value| ConstrainedFloat::from_raw_float(value).ok())
+        T::from_f32(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
     }
 
     fn from_f64(value: f64) -> Option<Self> {
-        T::from_f64(value).and_then(|value| ConstrainedFloat::from_raw_float(value).ok())
+        T::from_f64(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
     }
 }
 
@@ -393,7 +420,7 @@ where
     type Output = Self;
 
     fn mul(self, other: Self) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() * other.into_raw_float()).unwrap()
+        ConstrainedFloat::from_raw_float(self.into_raw_float() * other.into_raw_float())
     }
 }
 
@@ -405,7 +432,7 @@ where
     type Output = Self;
 
     fn mul(self, other: T) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() * other).unwrap()
+        ConstrainedFloat::from_raw_float(self.into_raw_float() * other)
     }
 }
 
@@ -416,7 +443,6 @@ where
 {
     fn mul_assign(&mut self, other: Self) {
         *self = ConstrainedFloat::from_raw_float(self.into_raw_float() * other.into_raw_float())
-            .unwrap()
     }
 }
 
@@ -426,7 +452,7 @@ where
     P: FloatPolicy<T>,
 {
     fn mul_assign(&mut self, other: T) {
-        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() * other).unwrap()
+        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() * other)
     }
 }
 
@@ -453,7 +479,7 @@ where
         T::from_str_radix(source, radix)
             .map_err(|_| ())
             .and_then(|value| {
-                ConstrainedFloat::from_raw_float(value).map_err(|_| ())
+                ConstrainedFloat::try_from_raw_float(value).map_err(|_| ())
             })
     }
 }
@@ -467,7 +493,7 @@ where
     where
         U: ToPrimitive,
     {
-        T::from(value).and_then(|value| ConstrainedFloat::from_raw_float(value).ok())
+        T::from(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
     }
 }
 
@@ -686,7 +712,7 @@ where
     type Output = Self;
 
     fn rem(self, other: Self) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() % other.into_raw_float()).unwrap()
+        ConstrainedFloat::from_raw_float(self.into_raw_float() % other.into_raw_float())
     }
 }
 
@@ -698,7 +724,7 @@ where
     type Output = Self;
 
     fn rem(self, other: T) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() % other).unwrap()
+        ConstrainedFloat::from_raw_float(self.into_raw_float() % other)
     }
 }
 
@@ -709,7 +735,6 @@ where
 {
     fn rem_assign(&mut self, other: Self) {
         *self = ConstrainedFloat::from_raw_float(self.into_raw_float() % other.into_raw_float())
-            .unwrap()
     }
 }
 
@@ -719,7 +744,7 @@ where
     P: FloatPolicy<T>,
 {
     fn rem_assign(&mut self, other: T) {
-        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() % other).unwrap()
+        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() % other)
     }
 }
 
@@ -728,23 +753,27 @@ where
     T: Float + Signed,
     P: FloatPolicy<T>,
 {
+    #[inline(always)]
     fn abs(&self) -> Self {
         ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float().abs())
     }
 
+    #[inline(always)]
     fn abs_sub(&self, other: &Self) -> Self {
         ConstrainedFloat::from_raw_float(self.into_raw_float().abs_sub(other.into_raw_float()))
-            .unwrap()
     }
 
+    #[inline(always)]
     fn signum(&self) -> Self {
         ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float().signum())
     }
 
+    #[inline(always)]
     fn is_positive(&self) -> bool {
         self.into_raw_float().is_positive()
     }
 
+    #[inline(always)]
     fn is_negative(&self) -> bool {
         self.into_raw_float().is_negative()
     }
@@ -758,7 +787,7 @@ where
     type Output = Self;
 
     fn sub(self, other: Self) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() - other.into_raw_float()).unwrap()
+        ConstrainedFloat::from_raw_float(self.into_raw_float() - other.into_raw_float())
     }
 }
 
@@ -770,7 +799,7 @@ where
     type Output = Self;
 
     fn sub(self, other: T) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() - other).unwrap()
+        ConstrainedFloat::from_raw_float(self.into_raw_float() - other)
     }
 }
 
@@ -781,7 +810,6 @@ where
 {
     fn sub_assign(&mut self, other: Self) {
         *self = ConstrainedFloat::from_raw_float(self.into_raw_float() - other.into_raw_float())
-            .unwrap()
     }
 }
 
@@ -791,7 +819,7 @@ where
     P: FloatPolicy<T>,
 {
     fn sub_assign(&mut self, other: T) {
-        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() - other).unwrap()
+        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() - other)
     }
 }
 
@@ -883,7 +911,7 @@ mod feature_serialize_serde {
             D: Deserializer<'a>,
         {
             let value = T::deserialize(deserializer)?;
-            ConstrainedFloat::from_raw_float(value)
+            ConstrainedFloat::try_from_raw_float(value)
                 .map_err(|_| Error::invalid_value(Unexpected::Float(f64::NAN), &""))
         }
     }

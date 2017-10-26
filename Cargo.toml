@@ -9,8 +9,8 @@ description = "Ordering, equality, and hashing for floating point types."
 keywords = ["float", "hash", "ord"]
 
 [features]
-default = ["always-enforce-policy", "serialize-serde"]
-always-enforce-policy = []
+default = ["enforce-constraints", "serialize-serde"]
+enforce-constraints = []
 serialize-serde = ["serde"]
 
 [dependencies]
