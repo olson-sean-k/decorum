@@ -40,7 +40,7 @@ where
     T: Float,
     H: Hasher,
 {
-    canonicalize_float(value).hash(state);
+    canonicalize(value).hash(state);
 }
 
 pub fn hash_float_slice<T, H>(values: &[T], state: &mut H)
@@ -62,7 +62,7 @@ where
     array.hash(state);
 }
 
-fn canonicalize_float<T>(value: T) -> u64
+fn canonicalize<T>(value: T) -> u64
 where
     T: Float,
 {
@@ -70,11 +70,11 @@ where
         CANONICAL_NAN
     }
     else {
-        canonicalize_real(value)
+        canonicalize_not_nan(value)
     }
 }
 
-fn canonicalize_real<T>(value: T) -> u64
+fn canonicalize_not_nan<T>(value: T) -> u64
 where
     T: Real,
 {
