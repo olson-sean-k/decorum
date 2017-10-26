@@ -1,3 +1,5 @@
+//! Constrained, ordered, hashable wrapper for floating point values.
+
 use num_traits::{Bounded, Float, FloatConst, FromPrimitive, Num, NumCast, One, Signed,
                  ToPrimitive, Zero};
 use std::cmp::Ordering;
@@ -10,13 +12,19 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssi
 use {Infinite, Real};
 use hash;
 
+/// Constraint on floating point values.
 pub trait FloatConstraint<T>: Copy + PartialEq + PartialOrd + Sized
 where
     T: Float,
 {
+    /// Filters a floating point value based on some constraints.
+    ///
+    /// Returns `Some` for values that satisfy constraints and `None` for
+    /// values that do not.
     fn evaluate(value: T) -> Option<T>;
 }
 
+/// Disallows `NaN` floating point values.
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
 pub struct NotNanConstraint<T>
 where
@@ -39,6 +47,7 @@ where
     }
 }
 
+/// Disallows `NaN`, `INF`, and `-INF` floating point values.
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
 pub struct FiniteConstraint<T>
 where
@@ -61,6 +70,10 @@ where
     }
 }
 
+/// Constrained, ordered, hashable floating point proxy.
+///
+/// Wraps floating point values and provides a proxy that implements operation
+/// and numerical traits, including `Hash`, `Ord`, and `Eq`.
 #[derivative(Clone, Copy, Debug, Default)]
 #[derive(Derivative)]
 pub struct ConstrainedFloat<T, P>
@@ -583,6 +596,9 @@ where
     }
 }
 
+// TODO: Consider comparing the output of `canonicalize` here.
+// TODO: Provide seperate `PartialEq` and `Eq` implementations that omit checks
+//       for omitted values like `NaN`.
 impl<T, P> PartialEq for ConstrainedFloat<T, P>
 where
     T: Float,

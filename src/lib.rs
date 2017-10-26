@@ -1,3 +1,5 @@
+//! Constrained, ordered, hashable floating point values.
+
 #[macro_use]
 extern crate derivative;
 extern crate num_traits;
@@ -21,7 +23,11 @@ mod hash;
 pub use constrain::{ConstrainedFloat, FiniteConstraint, NotNanConstraint};
 pub use hash::{hash_float, hash_float_array, hash_float_slice};
 
+/// A floating point value that cannot be `NaN`.
 pub type NotNan<T> = ConstrainedFloat<T, NotNanConstraint<T>>;
+
+/// A floating point value that cannot be `NaN`, `INF`, or `-INF` (i.e., a
+/// represnetation of a real value).
 pub type Finite<T> = ConstrainedFloat<T, FiniteConstraint<T>>;
 
 pub type N32 = NotNan<f32>;
@@ -72,6 +78,7 @@ pub trait Real: Copy + Sized {
     // TODO: Provide the remaining functions from `Float`.
 }
 
+/// A value that can be infinite.
 pub trait Infinite: Copy + Sized {
     fn infinity() -> Self;
     fn neg_infinity() -> Self;
@@ -79,6 +86,7 @@ pub trait Infinite: Copy + Sized {
     fn is_finite(self) -> bool;
 }
 
+/// A value that can be `NaN`.
 pub trait Nan: Copy + Sized {
     fn nan() -> Self;
     fn is_nan(self) -> bool;
