@@ -14,13 +14,8 @@ use std::num::FpCategory;
 mod constrain;
 mod hash;
 
-// TODO: Do not re-export types from the `constrain` module. This is only
-//       re-exported so that documentation is more complete (`rustdoc` will
-//       provide no documentation for type definitions against types that are
-//       not re-exported).
-//
-//       Client code should only use the type definitions.
-pub use constrain::{ConstrainedFloat, FiniteConstraint, NotNanConstraint};
+use constrain::{ConstrainedFloat, FiniteConstraint, NotNanConstraint};
+
 pub use hash::{hash_float, hash_float_array, hash_float_slice};
 
 /// A floating point value that can have any IEEE-754 value, but is ordered and
@@ -41,6 +36,11 @@ pub type N64 = NotNan<f64>;
 // be very similar to `f32` and `f64`, differentiated only be capitalization.
 pub type R32 = Finite<f32>;
 pub type R64 = Finite<f64>;
+
+pub trait Primitive {}
+
+impl Primitive for f32 {}
+impl Primitive for f64 {}
 
 // This is essentially `num_traits::Float` without its NaN or INF functions.
 // Until such a distinction is made upstream, this can be used to be generic
@@ -133,7 +133,7 @@ pub trait Nan: Copy + Sized {
 
 impl<T> Real for T
 where
-    T: Float,
+    T: Float + Primitive,
 {
     #[inline(always)]
     fn max_value() -> Self {
@@ -368,7 +368,7 @@ where
 
 impl<T> Infinite for T
 where
-    T: Float,
+    T: Float + Primitive,
 {
     #[inline(always)]
     fn infinity() -> Self {
@@ -393,7 +393,7 @@ where
 
 impl<T> Nan for T
 where
-    T: Float,
+    T: Float + Primitive,
 {
     #[inline(always)]
     fn nan() -> Self {

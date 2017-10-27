@@ -9,12 +9,12 @@ use std::marker::PhantomData;
 use std::num::FpCategory;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign};
 
-use {Infinite, Nan, Real};
+use {Infinite, Nan, Primitive, Real};
 use hash;
 
 pub trait FloatEq<T>
 where
-    T: Float,
+    T: Float + Primitive,
 {
     // TODO: Consider comparing the output of `canonicalize` here.
     fn eq(lhs: T, rhs: T) -> bool {
@@ -39,7 +39,7 @@ where
 
 pub trait FloatOrd<T>
 where
-    T: Float,
+    T: Float + Primitive,
 {
     fn cmp(lhs: T, rhs: T) -> Ordering {
         match lhs.partial_cmp(&rhs) {
@@ -62,7 +62,7 @@ where
 /// Constraint on floating point values.
 pub trait FloatConstraint<T>: Copy + PartialEq + PartialOrd + Sized
 where
-    T: Float,
+    T: Float + Primitive,
 {
     /// Filters a floating point value based on some constraints.
     ///
@@ -73,7 +73,7 @@ where
 
 impl<T> FloatConstraint<T> for ()
 where
-    T: Float,
+    T: Float + Primitive,
 {
     fn evaluate(value: T) -> Option<T> {
         Some(value)
@@ -82,13 +82,13 @@ where
 
 impl<T> FloatEq<T> for ()
 where
-    T: Float,
+    T: Float + Primitive,
 {
 }
 
 impl<T> FloatOrd<T> for ()
 where
-    T: Float,
+    T: Float + Primitive,
 {
 }
 
@@ -96,14 +96,14 @@ where
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
 pub struct NotNanConstraint<T>
 where
-    T: Float,
+    T: Float + Primitive,
 {
     phantom: PhantomData<T>,
 }
 
 impl<T> FloatConstraint<T> for NotNanConstraint<T>
 where
-    T: Float,
+    T: Float + Primitive,
 {
     fn evaluate(value: T) -> Option<T> {
         if value.is_nan() {
@@ -117,7 +117,7 @@ where
 
 impl<T> FloatEq<T> for NotNanConstraint<T>
 where
-    T: Float,
+    T: Float + Primitive,
 {
     fn eq(lhs: T, rhs: T) -> bool {
         // The input values should never be `NaN`, so just compare the raw
@@ -128,7 +128,7 @@ where
 
 impl<T> FloatOrd<T> for NotNanConstraint<T>
 where
-    T: Float,
+    T: Float + Primitive,
 {
     fn cmp(lhs: T, rhs: T) -> Ordering {
         // The input values should never be `NaN`, so just compare the raw
@@ -141,14 +141,14 @@ where
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
 pub struct FiniteConstraint<T>
 where
-    T: Float,
+    T: Float + Primitive,
 {
     phantom: PhantomData<T>,
 }
 
 impl<T> FloatConstraint<T> for FiniteConstraint<T>
 where
-    T: Float,
+    T: Float + Primitive,
 {
     fn evaluate(value: T) -> Option<T> {
         if value.is_nan() | value.is_infinite() {
@@ -162,7 +162,7 @@ where
 
 impl<T> FloatEq<T> for FiniteConstraint<T>
 where
-    T: Float,
+    T: Float + Primitive,
 {
     fn eq(lhs: T, rhs: T) -> bool {
         // The input values should never be `NaN`, so just compare the raw
@@ -173,7 +173,7 @@ where
 
 impl<T> FloatOrd<T> for FiniteConstraint<T>
 where
-    T: Float,
+    T: Float + Primitive,
 {
     fn cmp(lhs: T, rhs: T) -> Ordering {
         // The input values should never be `NaN`, so just compare the raw
@@ -190,7 +190,7 @@ where
 #[derive(Derivative)]
 pub struct ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     value: T,
@@ -199,7 +199,7 @@ where
 
 impl<T, P> ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     pub fn try_from_raw_float(value: T) -> Result<Self, ()> {
@@ -229,7 +229,7 @@ where
 #[cfg(feature = "enforce-constraints")]
 impl<T, P> ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     pub fn from_raw_float(value: T) -> Self {
@@ -247,7 +247,7 @@ where
 #[cfg(not(feature = "enforce-constraints"))]
 impl<T, P> ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     #[inline(always)]
@@ -258,7 +258,7 @@ where
 
 impl<T, P> AsRef<T> for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     fn as_ref(&self) -> &T {
@@ -290,7 +290,7 @@ where
 
 impl<T, P> Add for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     type Output = Self;
@@ -302,7 +302,7 @@ where
 
 impl<T, P> Add<T> for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     type Output = Self;
@@ -314,7 +314,7 @@ where
 
 impl<T, P> AddAssign for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     fn add_assign(&mut self, other: Self) {
@@ -324,7 +324,7 @@ where
 
 impl<T, P> AddAssign<T> for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     fn add_assign(&mut self, other: T) {
@@ -334,7 +334,7 @@ where
 
 impl<T, P> Bounded for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     #[inline(always)]
@@ -350,7 +350,7 @@ where
 
 impl<T, P> Display for ConstrainedFloat<T, P>
 where
-    T: Display + Float,
+    T: Display + Float + Primitive,
     P: FloatConstraint<T>,
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
@@ -360,7 +360,7 @@ where
 
 impl<T, P> Div for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     type Output = Self;
@@ -372,7 +372,7 @@ where
 
 impl<T, P> Div<T> for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     type Output = Self;
@@ -384,7 +384,7 @@ where
 
 impl<T, P> DivAssign for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     fn div_assign(&mut self, other: Self) {
@@ -394,7 +394,7 @@ where
 
 impl<T, P> DivAssign<T> for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     fn div_assign(&mut self, other: T) {
@@ -404,14 +404,14 @@ where
 
 impl<T, P> Eq for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T> + FloatEq<T>,
 {
 }
 
 impl<T, P> FloatConst for ConstrainedFloat<T, P>
 where
-    T: Float + FloatConst,
+    T: Float + FloatConst + Primitive,
     P: FloatConstraint<T>,
 {
     #[inline(always)]
@@ -497,7 +497,7 @@ where
 
 impl<T, P> FromPrimitive for ConstrainedFloat<T, P>
 where
-    T: Float + FromPrimitive,
+    T: Float + FromPrimitive + Primitive,
     P: FloatConstraint<T>,
 {
     fn from_i8(value: i8) -> Option<Self> {
@@ -551,7 +551,7 @@ where
 
 impl<T, P> Hash for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     fn hash<H>(&self, state: &mut H)
@@ -567,7 +567,7 @@ where
 //       types in `ConstrainedFloat`.
 impl<T> Infinite for ConstrainedFloat<T, NotNanConstraint<T>>
 where
-    T: Float,
+    T: Float + Primitive,
 {
     #[inline(always)]
     fn infinity() -> Self {
@@ -592,7 +592,7 @@ where
 
 impl<T, P> Mul for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     type Output = Self;
@@ -604,7 +604,7 @@ where
 
 impl<T, P> Mul<T> for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     type Output = Self;
@@ -616,7 +616,7 @@ where
 
 impl<T, P> MulAssign for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     fn mul_assign(&mut self, other: Self) {
@@ -626,7 +626,7 @@ where
 
 impl<T, P> MulAssign<T> for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     fn mul_assign(&mut self, other: T) {
@@ -639,7 +639,7 @@ where
 //       types in `ConstrainedFloat`.
 impl<T> Nan for ConstrainedFloat<T, ()>
 where
-    T: Float + Num,
+    T: Float + Num + Primitive,
 {
     #[inline(always)]
     fn nan() -> Self {
@@ -654,7 +654,7 @@ where
 
 impl<T, P> Neg for ConstrainedFloat<T, P>
 where
-    T: Float + Num,
+    T: Float + Num + Primitive,
     P: FloatConstraint<T>,
 {
     type Output = Self;
@@ -666,7 +666,7 @@ where
 
 impl<T, P> Num for ConstrainedFloat<T, P>
 where
-    T: Float + Num,
+    T: Float + Num + Primitive,
     P: FloatConstraint<T> + FloatEq<T>,
 {
     type FromStrRadixErr = ();
@@ -682,7 +682,7 @@ where
 
 impl<T, P> NumCast for ConstrainedFloat<T, P>
 where
-    T: Float + Num,
+    T: Float + Num + Primitive,
     P: FloatConstraint<T>,
 {
     fn from<U>(value: U) -> Option<Self>
@@ -695,7 +695,7 @@ where
 
 impl<T, P> One for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     #[inline(always)]
@@ -706,7 +706,7 @@ where
 
 impl<T, P> Ord for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T> + FloatEq<T> + FloatOrd<T>,
 {
     #[inline(always)]
@@ -717,7 +717,7 @@ where
 
 impl<T, P> PartialEq for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T> + FloatEq<T>,
 {
     #[inline(always)]
@@ -728,7 +728,7 @@ where
 
 impl<T, P> PartialOrd for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T> + FloatEq<T> + FloatOrd<T>,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -738,7 +738,7 @@ where
 
 impl<T, P> Real for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     #[inline(always)]
@@ -992,7 +992,7 @@ where
 
 impl<T, P> Rem for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     type Output = Self;
@@ -1004,7 +1004,7 @@ where
 
 impl<T, P> Rem<T> for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     type Output = Self;
@@ -1016,7 +1016,7 @@ where
 
 impl<T, P> RemAssign for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     fn rem_assign(&mut self, other: Self) {
@@ -1026,7 +1026,7 @@ where
 
 impl<T, P> RemAssign<T> for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     fn rem_assign(&mut self, other: T) {
@@ -1036,7 +1036,7 @@ where
 
 impl<T, P> Signed for ConstrainedFloat<T, P>
 where
-    T: Float + Signed,
+    T: Float + Primitive + Signed,
     P: FloatConstraint<T> + FloatEq<T>,
 {
     #[inline(always)]
@@ -1067,7 +1067,7 @@ where
 
 impl<T, P> Sub for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     type Output = Self;
@@ -1079,7 +1079,7 @@ where
 
 impl<T, P> Sub<T> for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     type Output = Self;
@@ -1091,7 +1091,7 @@ where
 
 impl<T, P> SubAssign for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     fn sub_assign(&mut self, other: Self) {
@@ -1101,7 +1101,7 @@ where
 
 impl<T, P> SubAssign<T> for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     fn sub_assign(&mut self, other: T) {
@@ -1111,7 +1111,7 @@ where
 
 impl<T, P> ToPrimitive for ConstrainedFloat<T, P>
 where
-    T: Float + ToPrimitive,
+    T: Float + Primitive + ToPrimitive,
     P: FloatConstraint<T>,
 {
     fn to_i8(&self) -> Option<i8> {
@@ -1165,7 +1165,7 @@ where
 
 impl<T, P> Zero for ConstrainedFloat<T, P>
 where
-    T: Float,
+    T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     #[inline(always)]
@@ -1189,7 +1189,7 @@ mod feature_serialize_serde {
 
     impl<'a, T, P> Deserialize<'a> for ConstrainedFloat<T, P>
     where
-        T: Deserialize<'a> + Float,
+        T: Deserialize<'a> + Float + Primitive,
         P: FloatConstraint<T>,
     {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -1204,7 +1204,7 @@ mod feature_serialize_serde {
 
     impl<T, P> Serialize for ConstrainedFloat<T, P>
     where
-        T: Float + Serialize,
+        T: Float + Primitive + Serialize,
         P: FloatConstraint<T>,
     {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

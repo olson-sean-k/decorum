@@ -1,7 +1,7 @@
 use num_traits::Float;
 use std::hash::{Hash, Hasher};
 
-use Real;
+use {Primitive, Real};
 
 const SIGN_MASK: u64 = 0x8000000000000000u64;
 const EXPONENT_MASK: u64 = 0x7ff0000000000000u64;
@@ -21,7 +21,7 @@ macro_rules! float_array {
     (lengths => $($N:expr),*) => {$(
         impl<T> FloatArray for [T; $N]
         where
-            T: Float,
+            T: Float + Primitive,
         {
             fn hash<H>(&self, state: &mut H)
             where
@@ -37,15 +37,15 @@ float_array!(lengths => 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
 #[inline(always)]
 pub fn hash_float<T, H>(value: T, state: &mut H)
 where
-    T: Float,
+    T: Float + Primitive,
     H: Hasher,
 {
-    canonicalize(value).hash(state);
+    canonicalize_float(value).hash(state);
 }
 
 pub fn hash_float_slice<T, H>(values: &[T], state: &mut H)
 where
-    T: Float,
+    T: Float + Primitive,
     H: Hasher,
 {
     for value in values {
@@ -62,9 +62,9 @@ where
     array.hash(state);
 }
 
-fn canonicalize<T>(value: T) -> u64
+fn canonicalize_float<T>(value: T) -> u64
 where
-    T: Float,
+    T: Float + Primitive,
 {
     if value.is_nan() {
         CANONICAL_NAN
@@ -76,7 +76,7 @@ where
 
 fn canonicalize_not_nan<T>(value: T) -> u64
 where
-    T: Real,
+    T: Primitive + Real,
 {
     use std::mem;
 
