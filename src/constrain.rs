@@ -37,6 +37,25 @@ where
     }
 }
 
+pub trait FloatPartialOrd<T>
+where
+    T: Float + Primitive,
+{
+    fn partial_cmp(lhs: T, rhs: T) -> Option<Ordering> {
+        lhs.partial_cmp(&rhs)
+    }
+}
+
+impl<T, U> FloatPartialOrd<T> for U
+where
+    T: Float + Primitive,
+    U: FloatOrd<T>,
+{
+    fn partial_cmp(lhs: T, rhs: T) -> Option<Ordering> {
+        Some(U::cmp(lhs, rhs))
+    }
+}
+
 pub trait FloatOrd<T>
 where
     T: Float + Primitive,
@@ -56,6 +75,40 @@ where
                 Ordering::Less
             },
         }
+    }
+}
+
+pub trait FloatInfinity<T>
+where
+    T: Float + Primitive,
+{
+    fn infinity() -> T {
+        T::infinity()
+    }
+
+    fn neg_infinity() -> T {
+        T::neg_infinity()
+    }
+
+    fn is_infinite(value: T) -> bool {
+        value.is_infinite()
+    }
+
+    fn is_finite(value: T) -> bool {
+        value.is_finite()
+    }
+}
+
+pub trait FloatNan<T>
+where
+    T: Float + Primitive,
+{
+    fn nan() -> T {
+        T::nan()
+    }
+
+    fn is_nan(value: T) -> bool {
+        value.is_nan()
     }
 }
 
@@ -87,6 +140,18 @@ where
 }
 
 impl<T> FloatOrd<T> for ()
+where
+    T: Float + Primitive,
+{
+}
+
+impl<T> FloatInfinity<T> for ()
+where
+    T: Float + Primitive,
+{
+}
+
+impl<T> FloatNan<T> for ()
 where
     T: Float + Primitive,
 {
@@ -135,6 +200,12 @@ where
         // floating point values.
         lhs.partial_cmp(&rhs).unwrap()
     }
+}
+
+impl<T> FloatInfinity<T> for NotNanConstraint<T>
+where
+    T: Float + Primitive,
+{
 }
 
 /// Disallows `NaN`, `INF`, and `-INF` floating point values.
@@ -409,12 +480,10 @@ where
 {
 }
 
-// TODO: Lift these trait implementations into constraint types (like `FloatEq`
-//       and `FloatOrd`) instead of implementing them for specific constraint
-//       types in `ConstrainedFloat`.
-impl<T> Float for ConstrainedFloat<T, ()>
+impl<T, P> Float for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
+    P: FloatConstraint<T> + FloatEq<T> + FloatInfinity<T> + FloatNan<T> + FloatPartialOrd<T>,
 {
     #[inline(always)]
     fn infinity() -> Self {
@@ -840,59 +909,29 @@ where
     }
 }
 
-// TODO: Lift these trait implementations into constraint types (like `FloatEq`
-//       and `FloatOrd`) instead of implementing them for specific constraint
-//       types in `ConstrainedFloat`.
-impl<T> Infinite for ConstrainedFloat<T, ()>
+impl<T, P> Infinite for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
+    P: FloatConstraint<T> + FloatInfinity<T>,
 {
     #[inline(always)]
     fn infinity() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::infinity())
+        ConstrainedFloat::from_raw_float_unchecked(P::infinity())
     }
 
     #[inline(always)]
     fn neg_infinity() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::neg_infinity())
+        ConstrainedFloat::from_raw_float_unchecked(P::neg_infinity())
     }
 
     #[inline(always)]
     fn is_infinite(self) -> bool {
-        T::is_infinite(self.into_raw_float())
+        P::is_infinite(self.into_raw_float())
     }
 
     #[inline(always)]
     fn is_finite(self) -> bool {
-        T::is_finite(self.into_raw_float())
-    }
-}
-
-// TODO: Lift these trait implementations into constraint types (like `FloatEq`
-//       and `FloatOrd`) instead of implementing them for specific constraint
-//       types in `ConstrainedFloat`.
-impl<T> Infinite for ConstrainedFloat<T, NotNanConstraint<T>>
-where
-    T: Float + Primitive,
-{
-    #[inline(always)]
-    fn infinity() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::infinity())
-    }
-
-    #[inline(always)]
-    fn neg_infinity() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::neg_infinity())
-    }
-
-    #[inline(always)]
-    fn is_infinite(self) -> bool {
-        T::is_infinite(self.into_raw_float())
-    }
-
-    #[inline(always)]
-    fn is_finite(self) -> bool {
-        T::is_finite(self.into_raw_float())
+        P::is_finite(self.into_raw_float())
     }
 }
 
@@ -940,21 +979,19 @@ where
     }
 }
 
-// TODO: Lift these trait implementations into constraint types (like `FloatEq`
-//       and `FloatOrd`) instead of implementing them for specific constraint
-//       types in `ConstrainedFloat`.
-impl<T> Nan for ConstrainedFloat<T, ()>
+impl<T, P> Nan for ConstrainedFloat<T, P>
 where
     T: Float + Num + Primitive,
+    P: FloatConstraint<T> + FloatNan<T>,
 {
     #[inline(always)]
     fn nan() -> Self {
-        Self::from_raw_float_unchecked(T::nan())
+        Self::from_raw_float_unchecked(P::nan())
     }
 
     #[inline(always)]
     fn is_nan(self) -> bool {
-        self.into_raw_float().is_nan()
+        P::is_nan(self.into_raw_float())
     }
 }
 
@@ -972,8 +1009,9 @@ where
 
 impl<T, P> Num for ConstrainedFloat<T, P>
 where
+    Self: PartialEq,
     T: Float + Num + Primitive,
-    P: FloatConstraint<T> + FloatEq<T>,
+    P: FloatConstraint<T>,
 {
     type FromStrRadixErr = ();
 
@@ -1035,10 +1073,11 @@ where
 impl<T, P> PartialOrd for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: FloatConstraint<T> + FloatEq<T> + FloatOrd<T>,
+    P: FloatConstraint<T> + FloatEq<T> + FloatPartialOrd<T>,
 {
+    #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
+        <P as FloatPartialOrd<T>>::partial_cmp(self.into_raw_float(), other.into_raw_float())
     }
 }
 
@@ -1533,5 +1572,54 @@ mod feature_serialize_serde {
         {
             self.into_raw_float().serialize(serializer)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {Finite, NotNan, Ordered};
+    use super::*;
+
+    // TODO: This test is incomplete: it only ensures that the expected traits
+    //       are implemented, but there is no test that ensures that unwanted
+    //       traits are NOT implemented.
+    #[test]
+    fn constrained_float_impl_traits() {
+        fn as_float<T>(_: T)
+        where
+            T: Float,
+        {
+        }
+
+        fn as_infinite<T>(_: T)
+        where
+            T: Infinite,
+        {
+        }
+
+        fn as_nan<T>(_: T)
+        where
+            T: Nan,
+        {
+        }
+
+        fn as_real<T>(_: T)
+        where
+            T: Real,
+        {
+        }
+
+        let finite = Finite::<f32>::default();
+        as_real(finite);
+
+        let notnan = NotNan::<f32>::default();
+        as_infinite(notnan);
+        as_real(notnan);
+
+        let ordered = Ordered::<f32>::default();
+        as_float(ordered);
+        as_infinite(ordered);
+        as_nan(ordered);
+        as_real(ordered);
     }
 }
