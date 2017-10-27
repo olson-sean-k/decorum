@@ -12,6 +12,53 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssi
 use {Infinite, Real};
 use hash;
 
+pub trait FloatEq<T>
+where
+    T: Float,
+{
+    // TODO: Consider comparing the output of `canonicalize` here.
+    fn eq(lhs: T, rhs: T) -> bool {
+        if lhs.is_nan() {
+            if rhs.is_nan() {
+                true
+            }
+            else {
+                false
+            }
+        }
+        else {
+            if rhs.is_nan() {
+                false
+            }
+            else {
+                lhs == rhs
+            }
+        }
+    }
+}
+
+pub trait FloatOrd<T>
+where
+    T: Float,
+{
+    fn cmp(lhs: T, rhs: T) -> Ordering {
+        match lhs.partial_cmp(&rhs) {
+            Some(ordering) => ordering,
+            None => if lhs.is_nan() {
+                if rhs.is_nan() {
+                    Ordering::Equal
+                }
+                else {
+                    Ordering::Greater
+                }
+            }
+            else {
+                Ordering::Less
+            },
+        }
+    }
+}
+
 /// Constraint on floating point values.
 pub trait FloatConstraint<T>: Copy + PartialEq + PartialOrd + Sized
 where
@@ -47,6 +94,19 @@ where
     }
 }
 
+// TODO: Customize equality and ordering to omit `NaN` checks.
+impl<T> FloatEq<T> for NotNanConstraint<T>
+where
+    T: Float,
+{
+}
+
+impl<T> FloatOrd<T> for NotNanConstraint<T>
+where
+    T: Float,
+{
+}
+
 /// Disallows `NaN`, `INF`, and `-INF` floating point values.
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
 pub struct FiniteConstraint<T>
@@ -68,6 +128,19 @@ where
             Some(value)
         }
     }
+}
+
+// TODO: Customize equality and ordering to omit `NaN` and infinity checks.
+impl<T> FloatEq<T> for FiniteConstraint<T>
+where
+    T: Float,
+{
+}
+
+impl<T> FloatOrd<T> for FiniteConstraint<T>
+where
+    T: Float,
+{
 }
 
 /// Constrained, ordered, hashable floating point proxy.
@@ -293,7 +366,7 @@ where
 impl<T, P> Eq for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatConstraint<T>,
+    P: FloatConstraint<T> + FloatEq<T>,
 {
 }
 
@@ -534,7 +607,7 @@ where
 impl<T, P> Num for ConstrainedFloat<T, P>
 where
     T: Float + Num,
-    P: FloatConstraint<T>,
+    P: FloatConstraint<T> + FloatEq<T>,
 {
     type FromStrRadixErr = ();
 
@@ -574,62 +647,29 @@ where
 impl<T, P> Ord for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatConstraint<T>,
+    P: FloatConstraint<T> + FloatEq<T> + FloatOrd<T>,
 {
+    #[inline(always)]
     fn cmp(&self, other: &Self) -> Ordering {
-        let lhs = self.into_raw_float();
-        let rhs = other.into_raw_float();
-        match lhs.partial_cmp(&rhs) {
-            Some(ordering) => ordering,
-            None => if lhs.is_nan() {
-                if rhs.is_nan() {
-                    Ordering::Equal
-                }
-                else {
-                    Ordering::Greater
-                }
-            }
-            else {
-                Ordering::Less
-            },
-        }
+        <P as FloatOrd<T>>::cmp(self.into_raw_float(), other.into_raw_float())
     }
 }
 
-// TODO: Consider comparing the output of `canonicalize` here.
-// TODO: Provide seperate `PartialEq` and `Eq` implementations that omit checks
-//       for omitted values like `NaN`.
 impl<T, P> PartialEq for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatConstraint<T>,
+    P: FloatConstraint<T> + FloatEq<T>,
 {
+    #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
-        let lhs = self.into_raw_float();
-        let rhs = other.into_raw_float();
-        if lhs.is_nan() {
-            if rhs.is_nan() {
-                true
-            }
-            else {
-                false
-            }
-        }
-        else {
-            if rhs.is_nan() {
-                false
-            }
-            else {
-                lhs == rhs
-            }
-        }
+        <P as FloatEq<T>>::eq(self.into_raw_float(), other.into_raw_float())
     }
 }
 
 impl<T, P> PartialOrd for ConstrainedFloat<T, P>
 where
     T: Float,
-    P: FloatConstraint<T>,
+    P: FloatConstraint<T> + FloatEq<T> + FloatOrd<T>,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -817,7 +857,7 @@ where
 impl<T, P> Signed for ConstrainedFloat<T, P>
 where
     T: Float + Signed,
-    P: FloatConstraint<T>,
+    P: FloatConstraint<T> + FloatEq<T>,
 {
     #[inline(always)]
     fn abs(&self) -> Self {
