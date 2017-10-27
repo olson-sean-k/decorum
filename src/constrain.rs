@@ -94,17 +94,26 @@ where
     }
 }
 
-// TODO: Customize equality and ordering to omit `NaN` checks.
 impl<T> FloatEq<T> for NotNanConstraint<T>
 where
     T: Float,
 {
+    fn eq(lhs: T, rhs: T) -> bool {
+        // The input values should never be `NaN`, so just compare the raw
+        // floating point values.
+        lhs == rhs
+    }
 }
 
 impl<T> FloatOrd<T> for NotNanConstraint<T>
 where
     T: Float,
 {
+    fn cmp(lhs: T, rhs: T) -> Ordering {
+        // The input values should never be `NaN`, so just compare the raw
+        // floating point values.
+        lhs.partial_cmp(&rhs).unwrap()
+    }
 }
 
 /// Disallows `NaN`, `INF`, and `-INF` floating point values.
@@ -130,17 +139,26 @@ where
     }
 }
 
-// TODO: Customize equality and ordering to omit `NaN` and infinity checks.
 impl<T> FloatEq<T> for FiniteConstraint<T>
 where
     T: Float,
 {
+    fn eq(lhs: T, rhs: T) -> bool {
+        // The input values should never be `NaN`, so just compare the raw
+        // floating point values.
+        lhs == rhs
+    }
 }
 
 impl<T> FloatOrd<T> for FiniteConstraint<T>
 where
     T: Float,
 {
+    fn cmp(lhs: T, rhs: T) -> Ordering {
+        // The input values should never be `NaN`, so just compare the raw
+        // floating point values.
+        lhs.partial_cmp(&rhs).unwrap()
+    }
 }
 
 /// Constrained, ordered, hashable floating point proxy.
