@@ -772,6 +772,16 @@ where
     }
 
     #[inline(always)]
+    fn signum(self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::signum(self.into_raw_float()))
+    }
+
+    #[inline(always)]
+    fn abs(self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::abs(self.into_raw_float()))
+    }
+
+    #[inline(always)]
     fn classify(self) -> FpCategory {
         T::classify(self.into_raw_float())
     }
@@ -784,6 +794,116 @@ where
     #[inline(always)]
     fn integer_decode(self) -> (u64, i16, i8) {
         T::integer_decode(self.into_raw_float())
+    }
+
+    #[inline(always)]
+    fn floor(self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::floor(self.into_raw_float()))
+    }
+
+    #[inline(always)]
+    fn ceil(self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::ceil(self.into_raw_float()))
+    }
+
+    #[inline(always)]
+    fn round(self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::round(self.into_raw_float()))
+    }
+
+    #[inline(always)]
+    fn trunc(self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::trunc(self.into_raw_float()))
+    }
+
+    #[inline(always)]
+    fn fract(self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::fract(self.into_raw_float()))
+    }
+
+    #[inline(always)]
+    fn recip(self) -> Self {
+        ConstrainedFloat::from_raw_float(T::recip(self.into_raw_float()))
+    }
+
+    #[inline(always)]
+    fn mul_add(self, a: Self, b: Self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::mul_add(
+            self.into_raw_float(),
+            a.into_raw_float(),
+            b.into_raw_float(),
+        ))
+    }
+
+    #[inline(always)]
+    fn abs_sub(self, other: Self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(
+            T::abs_sub(self.into_raw_float(), other.into_raw_float()),
+        )
+    }
+
+    #[inline(always)]
+    fn powi(self, n: i32) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::powi(self.into_raw_float(), n))
+    }
+
+    #[inline(always)]
+    fn powf(self, n: Self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(
+            T::powf(self.into_raw_float(), n.into_raw_float()),
+        )
+    }
+
+    #[inline(always)]
+    fn sqrt(self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::sqrt(self.into_raw_float()))
+    }
+
+    #[inline(always)]
+    fn cbrt(self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::cbrt(self.into_raw_float()))
+    }
+
+    #[inline(always)]
+    fn exp(self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::exp(self.into_raw_float()))
+    }
+
+    #[inline(always)]
+    fn exp2(self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::exp2(self.into_raw_float()))
+    }
+
+    #[inline(always)]
+    fn exp_m1(self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::exp_m1(self.into_raw_float()))
+    }
+
+    #[inline(always)]
+    fn log(self, base: Self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(
+            T::log(self.into_raw_float(), base.into_raw_float()),
+        )
+    }
+
+    #[inline(always)]
+    fn ln(self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::ln(self.into_raw_float()))
+    }
+
+    #[inline(always)]
+    fn log2(self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::log2(self.into_raw_float()))
+    }
+
+    #[inline(always)]
+    fn log10(self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::log10(self.into_raw_float()))
+    }
+
+    #[inline(always)]
+    fn ln_1p(self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::ln_1p(self.into_raw_float()))
     }
 
     #[inline(always)]

@@ -57,11 +57,36 @@ pub trait Real: Copy + Sized {
 
     fn is_sign_positive(self) -> bool;
     fn is_sign_negative(self) -> bool;
+    fn signum(self) -> Self;
+    fn abs(self) -> Self;
 
     fn classify(self) -> FpCategory;
     fn is_normal(self) -> bool;
 
     fn integer_decode(self) -> (u64, i16, i8);
+
+    fn floor(self) -> Self;
+    fn ceil(self) -> Self;
+    fn round(self) -> Self;
+    fn trunc(self) -> Self;
+    fn fract(self) -> Self;
+    fn recip(self) -> Self;
+
+    fn mul_add(self, a: Self, b: Self) -> Self;
+    fn abs_sub(self, other: Self) -> Self;
+
+    fn powi(self, n: i32) -> Self;
+    fn powf(self, n: Self) -> Self;
+    fn sqrt(self) -> Self;
+    fn cbrt(self) -> Self;
+    fn exp(self) -> Self;
+    fn exp2(self) -> Self;
+    fn exp_m1(self) -> Self;
+    fn log(self, base: Self) -> Self;
+    fn ln(self) -> Self;
+    fn log2(self) -> Self;
+    fn log10(self) -> Self;
+    fn ln_1p(self) -> Self;
 
     fn hypot(self, other: Self) -> Self;
     fn sin(self) -> Self;
@@ -78,8 +103,6 @@ pub trait Real: Copy + Sized {
     fn asinh(self) -> Self;
     fn acosh(self) -> Self;
     fn atanh(self) -> Self;
-
-    // TODO: Provide the remaining functions from `Float`.
 }
 
 /// A value that can be infinite.
@@ -143,6 +166,16 @@ where
     }
 
     #[inline(always)]
+    fn signum(self) -> Self {
+        Float::signum(self)
+    }
+
+    #[inline(always)]
+    fn abs(self) -> Self {
+        Float::abs(self)
+    }
+
+    #[inline(always)]
     fn classify(self) -> FpCategory {
         Float::classify(self)
     }
@@ -155,6 +188,106 @@ where
     #[inline(always)]
     fn integer_decode(self) -> (u64, i16, i8) {
         Float::integer_decode(self)
+    }
+
+    #[inline(always)]
+    fn floor(self) -> Self {
+        Float::floor(self)
+    }
+
+    #[inline(always)]
+    fn ceil(self) -> Self {
+        Float::ceil(self)
+    }
+
+    #[inline(always)]
+    fn round(self) -> Self {
+        Float::round(self)
+    }
+
+    #[inline(always)]
+    fn trunc(self) -> Self {
+        Float::trunc(self)
+    }
+
+    #[inline(always)]
+    fn fract(self) -> Self {
+        Float::fract(self)
+    }
+
+    #[inline(always)]
+    fn recip(self) -> Self {
+        Float::recip(self)
+    }
+
+    #[inline(always)]
+    fn mul_add(self, a: Self, b: Self) -> Self {
+        Float::mul_add(self, a, b)
+    }
+
+    #[inline(always)]
+    fn abs_sub(self, other: Self) -> Self {
+        Float::abs_sub(self, other)
+    }
+
+    #[inline(always)]
+    fn powi(self, n: i32) -> Self {
+        Float::powi(self, n)
+    }
+
+    #[inline(always)]
+    fn powf(self, n: Self) -> Self {
+        Float::powf(self, n)
+    }
+
+    #[inline(always)]
+    fn sqrt(self) -> Self {
+        Float::sqrt(self)
+    }
+
+    #[inline(always)]
+    fn cbrt(self) -> Self {
+        Float::cbrt(self)
+    }
+
+    #[inline(always)]
+    fn exp(self) -> Self {
+        Float::exp(self)
+    }
+
+    #[inline(always)]
+    fn exp2(self) -> Self {
+        Float::exp2(self)
+    }
+
+    #[inline(always)]
+    fn exp_m1(self) -> Self {
+        Float::exp_m1(self)
+    }
+
+    #[inline(always)]
+    fn log(self, base: Self) -> Self {
+        Float::log(self, base)
+    }
+
+    #[inline(always)]
+    fn ln(self) -> Self {
+        Float::ln(self)
+    }
+
+    #[inline(always)]
+    fn log2(self) -> Self {
+        Float::log2(self)
+    }
+
+    #[inline(always)]
+    fn log10(self) -> Self {
+        Float::log10(self)
+    }
+
+    #[inline(always)]
+    fn ln_1p(self) -> Self {
+        Float::ln_1p(self)
     }
 
     #[inline(always)]
