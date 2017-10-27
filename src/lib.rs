@@ -96,6 +96,18 @@ pub trait Nan: Copy + Sized {
     fn is_nan(self) -> bool;
 }
 
+// TODO: These blanket implementations over types implementing `Float` make it
+//       difficult to implement `Float` for `ConstrainedFloat` types (because
+//       they would provide conflicting implementations for the more targeted
+//       traits like `Real`).
+//
+//       It may still be possible to implement `Float` for the `Ordered` type,
+//       but it will likely require some refactoring and constraints on
+//       `ConstrainedFloat`'s implementation of `Real`, `Infinite`, and `NaN`.
+//       In the meantime, code can use `Real + Infinite + Nan` to capture
+//       `Ordered` and raw floating point values (anything that is `Float` and
+//       anything that is "logically" `Float`).
+
 impl<T> Real for T
 where
     T: Float,
