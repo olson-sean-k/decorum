@@ -9,7 +9,7 @@ use std::marker::PhantomData;
 use std::num::FpCategory;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign};
 
-use {Infinite, Real};
+use {Infinite, Nan, Real};
 use hash;
 
 pub trait FloatEq<T>
@@ -69,6 +69,27 @@ where
     /// Returns `Some` for values that satisfy constraints and `None` for
     /// values that do not.
     fn evaluate(value: T) -> Option<T>;
+}
+
+impl<T> FloatConstraint<T> for ()
+where
+    T: Float,
+{
+    fn evaluate(value: T) -> Option<T> {
+        Some(value)
+    }
+}
+
+impl<T> FloatEq<T> for ()
+where
+    T: Float,
+{
+}
+
+impl<T> FloatOrd<T> for ()
+where
+    T: Float,
+{
 }
 
 /// Disallows `NaN` floating point values.
@@ -541,6 +562,9 @@ where
     }
 }
 
+// TODO: Lift these trait implementations into constraint types (like `FloatEq`
+//       and `FloatOrd`) instead of implementing them for specific constraint
+//       types in `ConstrainedFloat`.
 impl<T> Infinite for ConstrainedFloat<T, NotNanConstraint<T>>
 where
     T: Float,
@@ -607,6 +631,24 @@ where
 {
     fn mul_assign(&mut self, other: T) {
         *self = ConstrainedFloat::from_raw_float(self.into_raw_float() * other)
+    }
+}
+
+// TODO: Lift these trait implementations into constraint types (like `FloatEq`
+//       and `FloatOrd`) instead of implementing them for specific constraint
+//       types in `ConstrainedFloat`.
+impl<T> Nan for ConstrainedFloat<T, ()>
+where
+    T: Float + Num,
+{
+    #[inline(always)]
+    fn nan() -> Self {
+        Self::from_raw_float_unchecked(T::nan())
+    }
+
+    #[inline(always)]
+    fn is_nan(self) -> bool {
+        self.into_raw_float().is_nan()
     }
 }
 

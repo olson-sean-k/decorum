@@ -23,6 +23,10 @@ mod hash;
 pub use constrain::{ConstrainedFloat, FiniteConstraint, NotNanConstraint};
 pub use hash::{hash_float, hash_float_array, hash_float_slice};
 
+/// A floating point value that can have any IEEE-754 value, but is ordered and
+/// normalized.
+pub type Ordered<T> = ConstrainedFloat<T, ()>;
+
 /// A floating point value that cannot be `NaN`.
 pub type NotNan<T> = ConstrainedFloat<T, NotNanConstraint<T>>;
 
