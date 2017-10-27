@@ -409,6 +409,284 @@ where
 {
 }
 
+// TODO: Lift these trait implementations into constraint types (like `FloatEq`
+//       and `FloatOrd`) instead of implementing them for specific constraint
+//       types in `ConstrainedFloat`.
+impl<T> Float for ConstrainedFloat<T, ()>
+where
+    T: Float + Primitive,
+{
+    #[inline(always)]
+    fn infinity() -> Self {
+        Infinite::infinity()
+    }
+
+    #[inline(always)]
+    fn neg_infinity() -> Self {
+        Infinite::neg_infinity()
+    }
+
+    #[inline(always)]
+    fn is_infinite(self) -> bool {
+        Infinite::is_infinite(self)
+    }
+
+    #[inline(always)]
+    fn is_finite(self) -> bool {
+        Infinite::is_finite(self)
+    }
+
+    #[inline(always)]
+    fn nan() -> Self {
+        Nan::nan()
+    }
+
+    #[inline(always)]
+    fn is_nan(self) -> bool {
+        Nan::is_nan(self)
+    }
+
+    #[inline(always)]
+    fn max_value() -> Self {
+        Real::max_value()
+    }
+
+    #[inline(always)]
+    fn min_value() -> Self {
+        Real::min_value()
+    }
+
+    #[inline(always)]
+    fn min_positive_value() -> Self {
+        Real::min_positive_value()
+    }
+
+    #[inline(always)]
+    fn min(self, other: Self) -> Self {
+        Real::min(self, other)
+    }
+
+    #[inline(always)]
+    fn max(self, other: Self) -> Self {
+        Real::max(self, other)
+    }
+
+    #[inline(always)]
+    fn neg_zero() -> Self {
+        Real::neg_zero()
+    }
+
+    #[inline(always)]
+    fn is_sign_positive(self) -> bool {
+        Real::is_sign_positive(self)
+    }
+
+    #[inline(always)]
+    fn is_sign_negative(self) -> bool {
+        Real::is_sign_negative(self)
+    }
+
+    #[inline(always)]
+    fn signum(self) -> Self {
+        Real::signum(self)
+    }
+
+    #[inline(always)]
+    fn abs(self) -> Self {
+        Real::abs(self)
+    }
+
+    #[inline(always)]
+    fn classify(self) -> FpCategory {
+        Real::classify(self)
+    }
+
+    #[inline(always)]
+    fn is_normal(self) -> bool {
+        Real::is_normal(self)
+    }
+
+    #[inline(always)]
+    fn integer_decode(self) -> (u64, i16, i8) {
+        Real::integer_decode(self)
+    }
+
+    #[inline(always)]
+    fn floor(self) -> Self {
+        Real::floor(self)
+    }
+
+    #[inline(always)]
+    fn ceil(self) -> Self {
+        Real::ceil(self)
+    }
+
+    #[inline(always)]
+    fn round(self) -> Self {
+        Real::round(self)
+    }
+
+    #[inline(always)]
+    fn trunc(self) -> Self {
+        Real::trunc(self)
+    }
+
+    #[inline(always)]
+    fn fract(self) -> Self {
+        Real::fract(self)
+    }
+
+    #[inline(always)]
+    fn recip(self) -> Self {
+        Real::recip(self)
+    }
+
+    #[inline(always)]
+    fn mul_add(self, a: Self, b: Self) -> Self {
+        Real::mul_add(self, a, b)
+    }
+
+    #[inline(always)]
+    fn abs_sub(self, other: Self) -> Self {
+        Real::abs_sub(self, other)
+    }
+
+    #[inline(always)]
+    fn powi(self, n: i32) -> Self {
+        Real::powi(self, n)
+    }
+
+    #[inline(always)]
+    fn powf(self, n: Self) -> Self {
+        Real::powf(self, n)
+    }
+
+    #[inline(always)]
+    fn sqrt(self) -> Self {
+        Real::sqrt(self)
+    }
+
+    #[inline(always)]
+    fn cbrt(self) -> Self {
+        Real::cbrt(self)
+    }
+
+    #[inline(always)]
+    fn exp(self) -> Self {
+        Real::exp(self)
+    }
+
+    #[inline(always)]
+    fn exp2(self) -> Self {
+        Real::exp2(self)
+    }
+
+    #[inline(always)]
+    fn exp_m1(self) -> Self {
+        Real::exp_m1(self)
+    }
+
+    #[inline(always)]
+    fn log(self, base: Self) -> Self {
+        Real::log(self, base)
+    }
+
+    #[inline(always)]
+    fn ln(self) -> Self {
+        Real::ln(self)
+    }
+
+    #[inline(always)]
+    fn log2(self) -> Self {
+        Real::log2(self)
+    }
+
+    #[inline(always)]
+    fn log10(self) -> Self {
+        Real::log10(self)
+    }
+
+    #[inline(always)]
+    fn ln_1p(self) -> Self {
+        Real::ln_1p(self)
+    }
+
+    #[inline(always)]
+    fn hypot(self, other: Self) -> Self {
+        Real::hypot(self, other)
+    }
+
+    #[inline(always)]
+    fn sin(self) -> Self {
+        Real::sin(self)
+    }
+
+    #[inline(always)]
+    fn cos(self) -> Self {
+        Real::cos(self)
+    }
+
+    #[inline(always)]
+    fn tan(self) -> Self {
+        Real::tan(self)
+    }
+
+    #[inline(always)]
+    fn asin(self) -> Self {
+        Real::asin(self)
+    }
+
+    #[inline(always)]
+    fn acos(self) -> Self {
+        Real::acos(self)
+    }
+
+    #[inline(always)]
+    fn atan(self) -> Self {
+        Real::atan(self)
+    }
+
+    #[inline(always)]
+    fn atan2(self, other: Self) -> Self {
+        Real::atan2(self, other)
+    }
+
+    #[inline(always)]
+    fn sin_cos(self) -> (Self, Self) {
+        Real::sin_cos(self)
+    }
+
+    #[inline(always)]
+    fn sinh(self) -> Self {
+        Real::sinh(self)
+    }
+
+    #[inline(always)]
+    fn cosh(self) -> Self {
+        Real::cosh(self)
+    }
+
+    #[inline(always)]
+    fn tanh(self) -> Self {
+        Real::tanh(self)
+    }
+
+    #[inline(always)]
+    fn asinh(self) -> Self {
+        Real::asinh(self)
+    }
+
+    #[inline(always)]
+    fn acosh(self) -> Self {
+        Real::acosh(self)
+    }
+
+    #[inline(always)]
+    fn atanh(self) -> Self {
+        Real::atanh(self)
+    }
+}
+
 impl<T, P> FloatConst for ConstrainedFloat<T, P>
 where
     T: Float + FloatConst + Primitive,
@@ -559,6 +837,34 @@ where
         H: Hasher,
     {
         hash::hash_float(self.into_raw_float(), state);
+    }
+}
+
+// TODO: Lift these trait implementations into constraint types (like `FloatEq`
+//       and `FloatOrd`) instead of implementing them for specific constraint
+//       types in `ConstrainedFloat`.
+impl<T> Infinite for ConstrainedFloat<T, ()>
+where
+    T: Float + Primitive,
+{
+    #[inline(always)]
+    fn infinity() -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::infinity())
+    }
+
+    #[inline(always)]
+    fn neg_infinity() -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(T::neg_infinity())
+    }
+
+    #[inline(always)]
+    fn is_infinite(self) -> bool {
+        T::is_infinite(self.into_raw_float())
+    }
+
+    #[inline(always)]
+    fn is_finite(self) -> bool {
+        T::is_finite(self.into_raw_float())
     }
 }
 
@@ -754,6 +1060,20 @@ where
     #[inline(always)]
     fn min_positive_value() -> Self {
         ConstrainedFloat::from_raw_float_unchecked(T::min_positive_value())
+    }
+
+    #[inline(always)]
+    fn min(self, other: Self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(
+            T::min(self.into_raw_float(), other.into_raw_float()),
+        )
+    }
+
+    #[inline(always)]
+    fn max(self, other: Self) -> Self {
+        ConstrainedFloat::from_raw_float_unchecked(
+            T::max(self.into_raw_float(), other.into_raw_float()),
+        )
     }
 
     #[inline(always)]

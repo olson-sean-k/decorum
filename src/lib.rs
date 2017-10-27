@@ -52,6 +52,8 @@ pub trait Real: Copy + Sized {
     fn max_value() -> Self;
     fn min_value() -> Self;
     fn min_positive_value() -> Self;
+    fn min(self, other: Self) -> Self;
+    fn max(self, other: Self) -> Self;
 
     fn neg_zero() -> Self;
 
@@ -119,18 +121,6 @@ pub trait Nan: Copy + Sized {
     fn is_nan(self) -> bool;
 }
 
-// TODO: These blanket implementations over types implementing `Float` make it
-//       difficult to implement `Float` for `ConstrainedFloat` types (because
-//       they would provide conflicting implementations for the more targeted
-//       traits like `Real`).
-//
-//       It may still be possible to implement `Float` for the `Ordered` type,
-//       but it will likely require some refactoring and constraints on
-//       `ConstrainedFloat`'s implementation of `Real`, `Infinite`, and `NaN`.
-//       In the meantime, code can use `Real + Infinite + Nan` to capture
-//       `Ordered` and raw floating point values (anything that is `Float` and
-//       anything that is "logically" `Float`).
-
 impl<T> Real for T
 where
     T: Float + Primitive,
@@ -148,6 +138,16 @@ where
     #[inline(always)]
     fn min_positive_value() -> Self {
         Float::min_positive_value()
+    }
+
+    #[inline(always)]
+    fn min(self, other: Self) -> Self {
+        Float::min(self, other)
+    }
+
+    #[inline(always)]
+    fn max(self, other: Self) -> Self {
+        Float::max(self, other)
     }
 
     #[inline(always)]
