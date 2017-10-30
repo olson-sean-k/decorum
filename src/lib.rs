@@ -11,10 +11,12 @@ use std::num::FpCategory;
 
 // TODO: Emit useful errors and use the error_chain crate.
 
-mod constrain;
+mod constraint;
 mod hash;
+mod proxy;
 
-use constrain::{ConstrainedFloat, FiniteConstraint, NotNanConstraint};
+use constraint::{FiniteConstraint, NotNanConstraint};
+use proxy::ConstrainedFloat;
 
 pub use hash::{hash_float, hash_float_array, hash_float_slice};
 
@@ -42,9 +44,9 @@ pub trait Primitive {}
 impl Primitive for f32 {}
 impl Primitive for f64 {}
 
-// This is essentially `num_traits::Float` without its NaN or INF functions.
-// Until such a distinction is made upstream, this can be used to be generic
-// over both raw and constrained floats.
+// This is essentially `num_traits::Float` without its `NaN` or `INF`
+// functions.  Until such a distinction is made upstream, this can be used to
+// be generic over both raw and constrained floats.
 //
 // Implementations for `Real`, `Infinity` and `Nan` are provided for all types
 // implementing `num_traits::Float`.
