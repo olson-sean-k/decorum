@@ -34,6 +34,11 @@ macro_rules! float_array {
 }
 float_array!(lengths => 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
 
+/// Hashes a raw floating point value.
+///
+/// To perform the hash, the floating point value is normalized. If `NaN` or
+/// zero, a canonical form is used, so all `NaN`s result in the same hash and
+/// all zeroes (positive and negative) result in the same hash.
 #[inline(always)]
 pub fn hash_float<T, H>(value: T, state: &mut H)
 where
@@ -43,6 +48,9 @@ where
     canonicalize_float(value).hash(state);
 }
 
+/// Hashes a slice of raw floating point values.
+///
+/// See `hash_float` for details.
 pub fn hash_float_slice<T, H>(values: &[T], state: &mut H)
 where
     T: Float + Primitive,
@@ -54,6 +62,9 @@ where
 }
 
 // TODO: Use integer generics to implement hashing over arrays.
+/// Hashes an array of raw floating point values.
+///
+/// Supports arrays up to length 16. See `hash_float` for details.
 pub fn hash_float_array<T, H>(array: &T, state: &mut H)
 where
     T: FloatArray,

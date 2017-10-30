@@ -20,22 +20,25 @@ use proxy::ConstrainedFloat;
 
 pub use hash::{hash_float, hash_float_array, hash_float_slice};
 
-/// A floating point value that can have any IEEE-754 value, but is ordered and
-/// normalized.
+/// A floating point value that can be `NaN`, `INF`, negative zero, etc., but
+/// is ordered and normalized.
 pub type Ordered<T> = ConstrainedFloat<T, ()>;
 
 /// A floating point value that cannot be `NaN`.
 pub type NotNan<T> = ConstrainedFloat<T, NotNanConstraint<T>>;
 
-/// A floating point value that cannot be `NaN`, `INF`, or `-INF` (i.e., a
-/// represnetation of a real value).
+/// A floating point value that cannot be `NaN`, `INF`, or `-INF`.
+///
+/// This is essentially a representation of a real value, and is sometimes
+/// referred to as a "real".
 pub type Finite<T> = ConstrainedFloat<T, FiniteConstraint<T>>;
 
 pub type N32 = NotNan<f32>;
 pub type N64 = NotNan<f64>;
 
-// Use "R" for "real" instead of "F" for "finite", because then this name would
-// be very similar to `f32` and `f64`, differentiated only be capitalization.
+// Use "R" for "real" instead of "F" for "finite", because if "F" were used,
+// then this name would be very similar to `f32` and `f64`, differentiated only
+// be capitalization.
 pub type R32 = Finite<f32>;
 pub type R64 = Finite<f64>;
 

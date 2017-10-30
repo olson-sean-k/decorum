@@ -16,7 +16,8 @@ the [num-traits](https://crates.io/crate/num-traits) crate. More targeted
 traits that complement the `Float` trait are also introduced: `Nan`,
 `Infinite`, and `Real`.
 
-Wrapper types also implement `Eq`, `Hash`, and `Ord`. Hashing uses a
+Wrapper types also implement `Eq`, `Hash`, and `Ord`. The `Ordered` wrapper
+does so while allowing values like `NaN` and `INF`. Hashing uses a
 canonicalized form that normalizes `NaN` values and expands all floating point
 values into a 64-bit sequence. A similar approach is used for `Eq`, normalizing
 `NaN` values. Because `NotNan` and `Finite` disallow `NaN` values, they support
@@ -38,9 +39,9 @@ This feature should be enabled unless performance is a concern.
 
 ## Hashing Functions
 
-The `NotNan` and `Finite` types implement `Hash`, but sometimes it is not
-possible or ergonomic to use these. Hashing functions for raw floating point
-values can be used instead.
+The `Ordered`, `NotNan` and `Finite` types implement `Hash`, but sometimes it
+is not possible or ergonomic to use these. Hashing functions for raw floating
+point values can be used instead.
 
 With the [derivative](https://crates.io/crates/derivative) crate, floating
 point fields can be hashed using one of these functions when deriving `Hash`.
