@@ -8,7 +8,8 @@ use std::num::FpCategory;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign};
 
 use {Infinite, Nan, Primitive, Real};
-use constraint::{FloatConstraint, FloatEq, FloatInfinity, FloatNan, FloatOrd, FloatPartialOrd};
+use constraint::{FloatConstraint, FloatEq, FloatInfinity, FloatNan, FloatOrd, FloatPartialOrd,
+                 SubsetOf, SupersetOf};
 use hash;
 
 /// Constrained, ordered, hashable floating point proxy.
@@ -45,6 +46,20 @@ where
     pub fn into_raw_float(self) -> T {
         let ConstrainedFloat { value, .. } = self;
         value
+    }
+
+    pub fn from_subset<Q>(other: ConstrainedFloat<T, Q>) -> Self
+    where
+        Q: FloatConstraint<T> + SubsetOf<P>,
+    {
+        Self::from_raw_float_unchecked(other.into_raw_float())
+    }
+
+    pub fn into_superset<Q>(self) -> ConstrainedFloat<T, Q>
+    where
+        Q: FloatConstraint<T> + SupersetOf<P>,
+    {
+        ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float())
     }
 
     fn from_raw_float_unchecked(value: T) -> Self {

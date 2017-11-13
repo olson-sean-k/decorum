@@ -110,6 +110,16 @@ where
     }
 }
 
+pub trait SupersetOf<P> {}
+
+pub trait SubsetOf<P> {}
+
+impl<P, Q> SubsetOf<Q> for P
+where
+    Q: SupersetOf<P>,
+{
+}
+
 /// Constraint on floating point values.
 pub trait FloatConstraint<T>: Copy + PartialEq + PartialOrd + Sized
 where
@@ -150,6 +160,18 @@ where
 }
 
 impl<T> FloatNan<T> for ()
+where
+    T: Float + Primitive,
+{
+}
+
+impl<T> SupersetOf<NotNanConstraint<T>> for ()
+where
+    T: Float + Primitive,
+{
+}
+
+impl<T> SupersetOf<FiniteConstraint<T>> for ()
 where
     T: Float + Primitive,
 {
@@ -201,6 +223,12 @@ where
 }
 
 impl<T> FloatInfinity<T> for NotNanConstraint<T>
+where
+    T: Float + Primitive,
+{
+}
+
+impl<T> SupersetOf<FiniteConstraint<T>> for NotNanConstraint<T>
 where
     T: Float + Primitive,
 {
