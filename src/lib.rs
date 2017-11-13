@@ -9,7 +9,7 @@ extern crate serde;
 use num_traits::Float;
 use std::num::FpCategory;
 
-// TODO: Emit useful errors and use the error_chain crate.
+// TODO: Emit useful errors using the failure or error-chain crate.
 
 mod constraint;
 mod hash;
@@ -20,39 +20,51 @@ use proxy::ConstrainedFloat;
 
 pub use hash::{hash_float, hash_float_array, hash_float_slice};
 
-/// A floating point value that can be `NaN`, `INF`, negative zero, etc., but
-/// is ordered and normalized.
+/// An ordered and normalized floating point value that does not constraint its
+/// values. Any IEEE-754 value is allowed, such as `NaN`, `INF`, and negative
+/// zero.
 pub type Ordered<T> = ConstrainedFloat<T, ()>;
 
-/// A floating point value that cannot be `NaN`.
+/// An ordered and normalized floating point value that cannot be `NaN`. Other
+/// IEEE-754 values like `INF` and negative zero are allowed.
 pub type NotNan<T> = ConstrainedFloat<T, NotNanConstraint<T>>;
 
-/// A floating point value that cannot be `NaN`, `INF`, or `-INF`.
-///
-/// This is essentially a representation of a real value, and is sometimes
-/// referred to as a "real".
-pub type Finite<T> = ConstrainedFloat<T, FiniteConstraint<T>>;
-
+/// An alias for a floating point value that cannot be `NaN`.
 pub type N32 = NotNan<f32>;
+/// An alias for a floating point value that cannot be `NaN`.
 pub type N64 = NotNan<f64>;
 
-// Use "R" for "real" instead of "F" for "finite", because if "F" were used,
-// then this name would be very similar to `f32` and `f64`, differentiated only
-// be capitalization.
+/// An ordered and normalized floating point value that must represent a real
+/// number. `NaN`, `INF`, etc. are not allowed. This is sometimes referred to
+/// simply as a "real".
+pub type Finite<T> = ConstrainedFloat<T, FiniteConstraint<T>>;
+
+/// An alias for a floating point value that represents a real number.
+///
+/// The prefix "R" for "real" is used instead of "F" for "finite", because if
+/// "F" were used, then this name would be very similar to `f32`,
+/// differentiated only by capitalization.
 pub type R32 = Finite<f32>;
+/// An alias for a floating point value that represents a real number.
+///
+/// The prefix "R" for "real" is used instead of "F" for "finite", because if
+/// "F" were used, then this name would be very similar to `f64`,
+/// differentiated only by capitalization.
 pub type R64 = Finite<f64>;
 
+/// A raw floating point value.
+///
+/// This trait differentiates types that implement floating point traits but
+/// may not be primitive types.
 pub trait Primitive {}
 
 impl Primitive for f32 {}
 impl Primitive for f64 {}
 
-// This is essentially `num_traits::Float` without its `NaN` or `INF`
-// functions.  Until such a distinction is made upstream, this can be used to
-// be generic over both raw and constrained floats.
-//
-// Implementations for `Real`, `Infinity` and `Nan` are provided for all types
-// implementing `num_traits::Float`.
+/// A floating point representation of a real number.
+///
+/// This is essentially the `Float` trait without its `NaN` or `INF`
+/// components. An equivalent bound for `Float` is `Infinite + Nan + Real`.
 pub trait Real: Copy + Sized {
     fn max_value() -> Self;
     fn min_value() -> Self;
@@ -112,7 +124,7 @@ pub trait Real: Copy + Sized {
     fn atanh(self) -> Self;
 }
 
-/// A value that can be infinite.
+/// A floating point value that can be infinite.
 pub trait Infinite: Copy + Sized {
     fn infinity() -> Self;
     fn neg_infinity() -> Self;
@@ -120,7 +132,7 @@ pub trait Infinite: Copy + Sized {
     fn is_finite(self) -> bool;
 }
 
-/// A value that can be `NaN`.
+/// A floating point value that can be `NaN`.
 pub trait Nan: Copy + Sized {
     fn nan() -> Self;
     fn is_nan(self) -> bool;
