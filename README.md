@@ -10,15 +10,14 @@ floating point types.
 ## Proxy Types
 
 Several proxy (wrapper) types are provided. Every proxy is normalized to
-implement `Hash`, but different types place different constraints on the values
-that can be represented. This influences which numeric and ordering traits are
-implemented.
+implement `Eq`, `Hash`, and `Ord`, but different types place different
+constraints on the values that can be represented.
 
-| Type      | Numeric Traits                  | Operation Traits    |
-|-----------|---------------------------------|---------------------|
-| `Ordered` | `Infinite` `Float` `Nan` `Real` | `Eq` `Hash` `Ord`   |
-| `NotNan`  | `Infinite` `Real`               | `Eq` `Hash` `Ord`   |
-| `Finite`  | `Real`                          | `Eq` `Hash` `Ord`   |
+| Type      | Numeric Traits                  | Disallowed Values  |
+|-----------|---------------------------------|--------------------|
+| `Ordered` | `Infinite` `Float` `Nan` `Real` | None               |
+| `NotNan`  | `Infinite` `Real`               | `NaN`              |
+| `Finite`  | `Real`                          | `-INF` `INF` `NaN` |
 
 All proxy types implement the expected operation traits, such as `Add` and
 `Mul`. These types also implement numeric traits from the
@@ -29,18 +28,29 @@ Note that `Ordered`, which allows `NaN` values, is still ordered. `NaN` values
 are considered greater than non-`NaN` values, and `NaN`s are considered equal
 regardless of their internal representation.
 
-## Constrained Proxy Types
+## Constraints
 
 The `NotNan` and `Finite` types wrap raw floating point values and disallow
 certain values like `NaN`, `INF`, and `-INF`. They will panic if an operation
-invalidates these constraints. Depending on configuration, the `from_raw_float`
-function may panic or continue silently. The `try_from_raw_float` function
-always checks constraints, returning a `Result`.
+or conversion invalidates these constraints depending on configuration.
 
 Constraint checking can be toggled with the `enforce-constraints` feature. This
 is useful if code would like to enforce constraints for some builds but not
 others (e.g., debug vs. release builds). Constraint checking is enabled by
 default. If checking is disabled, `from_raw_float` will never panic.
+
+## Conversions
+
+Proxy types are used via conversions to and from primitive floating point
+values and other proxy types.
+
+| Conversion           | Failure      | Description                          |
+|----------------------|--------------|--------------------------------------|
+| `from_raw_float`     | Panic / None | Creates a proxy from a primitive.    |
+| `try_from_raw_float` | `Result`     | Creates a proxy from a primitive.    |
+| `into_raw_float`     | None         | Converts a proxy into a primitive.   |
+| `into_superset`      | None         | Converts a proxy into another proxy. |
+| `from_subset`        | None         | Creates a proxy from another proxy.  |
 
 ## Hashing Functions
 
