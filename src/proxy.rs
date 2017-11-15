@@ -12,6 +12,44 @@ use constraint::{FloatConstraint, FloatEq, FloatInfinity, FloatNan, FloatOrd, Fl
                  SubsetOf, SupersetOf};
 use hash;
 
+/// A floating point proxy.
+///
+/// This trait allows code to be generic over proxy types and exposes functions
+/// for converting primitives to and from a proxy.
+///
+/// This would typically be used along with other bounds, such as `Eq +
+/// FloatProxy<T> + Hash` or `FloatProxy<T> + Real`.
+///
+/// It is not necessary to import this trait to use these functions; because it
+/// would be burdensome to import this every time a proxy is used, the trait
+/// implementation simply forwards calls to functions directly associated with
+/// the type.
+pub trait FloatProxy<T>: Sized
+where
+    T: Float + Primitive,
+{
+    /// Converts a primitive into a floating point proxy.
+    ///
+    /// # Panics
+    ///
+    /// If the `enforce-constraints` feature is enabled, then this function
+    /// will panic if the primitive value is not allowed by the contraints of
+    /// the proxy. If the feature is disabled, this function will always
+    /// succeed.
+    fn from_raw_float(value: T) -> Self;
+
+    /// Tries to convert a primitive into a floating point proxy.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the primitive value is not allowed by the
+    /// constraints of the proxy.
+    fn try_from_raw_float(value: T) -> Result<Self, ()>;
+
+    /// Converts the float proxy into a primitive value.
+    fn into_raw_float(self) -> T;
+}
+
 /// Constrained, ordered, hashable floating point proxy.
 ///
 /// Wraps floating point values and provides a proxy that implements operation
@@ -32,6 +70,24 @@ where
     T: Float + Primitive,
     P: FloatConstraint<T>,
 {
+    #[cfg(feature = "enforce-constraints")]
+    pub fn from_raw_float(value: T) -> Self {
+        P::evaluate(value)
+            .map(|value| {
+                ConstrainedFloat {
+                    value,
+                    phantom: PhantomData,
+                }
+            })
+            .unwrap()
+    }
+
+    #[cfg(not(feature = "enforce-constraints"))]
+    #[inline(always)]
+    pub fn from_raw_float(value: T) -> Self {
+        Self::from_raw_float_unchecked(value)
+    }
+
     pub fn try_from_raw_float(value: T) -> Result<Self, ()> {
         P::evaluate(value)
             .map(|value| {
@@ -70,33 +126,27 @@ where
     }
 }
 
-#[cfg(feature = "enforce-constraints")]
-impl<T, P> ConstrainedFloat<T, P>
-where
-    T: Float + Primitive,
-    P: FloatConstraint<T>,
-{
-    pub fn from_raw_float(value: T) -> Self {
-        P::evaluate(value)
-            .map(|value| {
-                ConstrainedFloat {
-                    value,
-                    phantom: PhantomData,
-                }
-            })
-            .unwrap()
-    }
-}
-
-#[cfg(not(feature = "enforce-constraints"))]
-impl<T, P> ConstrainedFloat<T, P>
+// It is burdensome and probably unexpected to need to import this trait to use
+// a proxy, so instead the trait implementation just forwards calls to a direct
+// implementation for `ConstrainedFloat`.
+impl<T, P> FloatProxy<T> for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     #[inline(always)]
-    pub fn from_raw_float(value: T) -> Self {
-        Self::from_raw_float_unchecked(value)
+    fn from_raw_float(value: T) -> Self {
+        Self::from_raw_float(value)
+    }
+
+    #[inline(always)]
+    fn try_from_raw_float(value: T) -> Result<Self, ()> {
+        Self::try_from_raw_float(value)
+    }
+
+    #[inline(always)]
+    fn into_raw_float(self) -> T {
+        Self::into_raw_float(self)
     }
 }
 

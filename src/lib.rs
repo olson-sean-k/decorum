@@ -19,6 +19,7 @@ use constraint::{FiniteConstraint, NotNanConstraint};
 use proxy::ConstrainedFloat;
 
 pub use hash::{hash_float, hash_float_array, hash_float_slice};
+pub use proxy::FloatProxy;
 
 /// An ordered and normalized floating point value that does not constraint its
 /// values. Any IEEE-754 value is allowed, such as `NaN`, `INF`, and negative
