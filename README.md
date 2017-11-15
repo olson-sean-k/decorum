@@ -45,13 +45,15 @@ default. If checking is disabled, `from_raw_float` will never panic.
 Proxy types are used via conversions to and from primitive floating point
 values and other proxy types.
 
-| Conversion           | Failure      | Description                          |
-|----------------------|--------------|--------------------------------------|
-| `from_raw_float`     | Panic / None | Creates a proxy from a primitive.    |
-| `try_from_raw_float` | `Result`     | Creates a proxy from a primitive.    |
-| `into_raw_float`     | None         | Converts a proxy into a primitive.   |
-| `into_superset`      | None         | Converts a proxy into another proxy. |
-| `from_subset`        | None         | Creates a proxy from another proxy.  |
+| Conversion           | Failure | Description                          |
+|----------------------|---------|--------------------------------------|
+| `from_raw_float`     | Panic   | Creates a proxy from a primitive.    |
+| `into_raw_float`     | None    | Converts a proxy into a primitive.   |
+| `into_superset`      | None    | Converts a proxy into another proxy. |
+| `from_subset`        | None    | Creates a proxy from another proxy.  |
+
+The `from_raw_float` and `into_raw_float` conversions are exposed by the
+`FloatProxy` trait, which can be used in generic code.
 
 ## Hashing Functions
 

@@ -38,14 +38,6 @@ where
     /// succeed.
     fn from_raw_float(value: T) -> Self;
 
-    /// Tries to convert a primitive into a floating point proxy.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the primitive value is not allowed by the
-    /// constraints of the proxy.
-    fn try_from_raw_float(value: T) -> Result<Self, ()>;
-
     /// Converts the float proxy into a primitive value.
     fn into_raw_float(self) -> T;
 }
@@ -72,31 +64,13 @@ where
 {
     #[cfg(feature = "enforce-constraints")]
     pub fn from_raw_float(value: T) -> Self {
-        P::evaluate(value)
-            .map(|value| {
-                ConstrainedFloat {
-                    value,
-                    phantom: PhantomData,
-                }
-            })
-            .unwrap()
+        Self::try_from_raw_float(value).unwrap()
     }
 
     #[cfg(not(feature = "enforce-constraints"))]
     #[inline(always)]
     pub fn from_raw_float(value: T) -> Self {
         Self::from_raw_float_unchecked(value)
-    }
-
-    pub fn try_from_raw_float(value: T) -> Result<Self, ()> {
-        P::evaluate(value)
-            .map(|value| {
-                ConstrainedFloat {
-                    value,
-                    phantom: PhantomData,
-                }
-            })
-            .ok_or(())
     }
 
     pub fn into_raw_float(self) -> T {
@@ -118,6 +92,17 @@ where
         ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float())
     }
 
+    fn try_from_raw_float(value: T) -> Result<Self, ()> {
+        P::evaluate(value)
+            .map(|value| {
+                ConstrainedFloat {
+                    value,
+                    phantom: PhantomData,
+                }
+            })
+            .ok_or(())
+    }
+
     fn from_raw_float_unchecked(value: T) -> Self {
         ConstrainedFloat {
             value,
@@ -137,11 +122,6 @@ where
     #[inline(always)]
     fn from_raw_float(value: T) -> Self {
         Self::from_raw_float(value)
-    }
-
-    #[inline(always)]
-    fn try_from_raw_float(value: T) -> Result<Self, ()> {
-        Self::try_from_raw_float(value)
     }
 
     #[inline(always)]
