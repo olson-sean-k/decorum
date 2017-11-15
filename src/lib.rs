@@ -1,4 +1,4 @@
-//! Constrained, ordered, hashable floating point values.
+//! Ordering, equality, and hasing for floating point types.
 
 #[macro_use]
 extern crate derivative;

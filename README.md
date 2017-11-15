@@ -33,7 +33,7 @@ regardless of their internal representation.
 
 The `NotNan` and `Finite` types wrap raw floating point values and disallow
 certain values like `NaN`, `INF`, and `-INF`. They will panic if an operation
-or conversion invalidates these constraints depending on configuration.
+or conversion invalidates these constraints and checking is enabled.
 
 Constraint checking can be toggled with the `enforce-constraints` feature. This
 is useful if code would like to enforce constraints for some builds but not
@@ -53,7 +53,8 @@ values and other proxy types.
 | `from_subset`        | None    | Creates a proxy from another proxy.  |
 
 The `from_raw_float` and `into_raw_float` conversions are exposed by the
-`FloatProxy` trait, which can be used in generic code.
+`FloatProxy` trait, which can be used in generic code to support different
+proxy types.
 
 ## Hashing Functions
 
