@@ -8,6 +8,7 @@ use std::num::FpCategory;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign};
 
 use {Infinite, Nan, Primitive, Real};
+use {Finite, NotNan, Ordered};
 use constraint::{FloatConstraint, FloatEq, FloatInfinity, FloatNan, FloatOrd, FloatPartialOrd,
                  SubsetOf, SupersetOf};
 use hash;
@@ -137,6 +138,36 @@ where
 {
     fn as_ref(&self) -> &T {
         &self.value
+    }
+}
+
+// It is not possible to implement `From` for proxies in a generic way, because
+// the `FloatConstraint` types `T` and `U` may be the same and conflict with
+// the reflexive implementation in core.
+impl<T> From<NotNan<T>> for Ordered<T>
+where
+    T: Float + Primitive,
+{
+    fn from(other: NotNan<T>) -> Self {
+        Self::from_subset(other)
+    }
+}
+
+impl<T> From<Finite<T>> for Ordered<T>
+where
+    T: Float + Primitive,
+{
+    fn from(other: Finite<T>) -> Self {
+        Self::from_subset(other)
+    }
+}
+
+impl<T> From<Finite<T>> for NotNan<T>
+where
+    T: Float + Primitive,
+{
+    fn from(other: Finite<T>) -> Self {
+        Self::from_subset(other)
     }
 }
 
