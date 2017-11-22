@@ -6,8 +6,9 @@ extern crate num_traits;
 #[cfg(feature = "serialize-serde")]
 extern crate serde;
 
-use num_traits::Float;
+use num_traits::{Float, Num, NumCast};
 use std::num::FpCategory;
+use std::ops::Neg;
 
 // TODO: Emit useful errors using the failure or error-chain crate.
 
@@ -66,7 +67,7 @@ impl Primitive for f64 {}
 ///
 /// This is essentially the `Float` trait without its `NaN` or `INF`
 /// components. An equivalent bound for `Float` is `Infinite + Nan + Real`.
-pub trait Real: Copy + Sized {
+pub trait Real: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd<Self> {
     fn max_value() -> Self;
     fn min_value() -> Self;
     fn min_positive_value() -> Self;
@@ -126,7 +127,7 @@ pub trait Real: Copy + Sized {
 }
 
 /// A floating point value that can be infinite.
-pub trait Infinite: Copy + Sized {
+pub trait Infinite: Copy + NumCast {
     fn infinity() -> Self;
     fn neg_infinity() -> Self;
     fn is_infinite(self) -> bool;
@@ -134,7 +135,7 @@ pub trait Infinite: Copy + Sized {
 }
 
 /// A floating point value that can be `NaN`.
-pub trait Nan: Copy + Sized {
+pub trait Nan: Copy + NumCast {
     fn nan() -> Self;
     fn is_nan(self) -> bool;
 }

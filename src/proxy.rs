@@ -915,10 +915,12 @@ where
     }
 }
 
+// This requires `P: FloatEq<T> + FloatPartialOrd<T>`, because `Real` requires
+// `PartialEq<Self>` and `PartialOrd<Self>`.
 impl<T, P> Real for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: FloatConstraint<T>,
+    P: FloatConstraint<T> + FloatEq<T> + FloatPartialOrd<T>,
 {
     #[inline(always)]
     fn max_value() -> Self {
