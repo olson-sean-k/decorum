@@ -12,14 +12,15 @@ use std::ops::Neg;
 
 // TODO: Emit useful errors using the failure or error-chain crate.
 
+mod canonical;
 mod constraint;
-mod hash;
 mod proxy;
 
 use constraint::{FiniteConstraint, NotNanConstraint};
 use proxy::ConstrainedFloat;
 
-pub use hash::{hash_float, hash_float_array, hash_float_slice};
+pub use canonical::{cmp_float, cmp_float_array, cmp_float_slice, eq_float, eq_float_array,
+                    eq_float_slice, hash_float, hash_float_array, hash_float_slice};
 pub use proxy::FloatProxy;
 
 /// An ordered and normalized floating point value that does not constraint its

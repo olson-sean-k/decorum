@@ -9,9 +9,9 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssi
 
 use {Infinite, Nan, Primitive, Real};
 use {Finite, NotNan, Ordered};
+use canonical;
 use constraint::{FloatConstraint, FloatEq, FloatInfinity, FloatNan, FloatOrd, FloatPartialOrd,
                  SubsetOf, SupersetOf};
-use hash;
 
 /// A floating point proxy.
 ///
@@ -739,7 +739,7 @@ where
     where
         H: Hasher,
     {
-        hash::hash_float(self.into_raw_float(), state);
+        canonical::hash_float(self.into_raw_float(), state);
     }
 }
 

@@ -3,29 +3,14 @@ use std::cmp::Ordering;
 use std::marker::PhantomData;
 
 use Primitive;
+use canonical;
 
 pub trait FloatEq<T>
 where
     T: Float + Primitive,
 {
-    // TODO: Consider comparing the output of `hash::canonicalize` here.
     fn eq(lhs: T, rhs: T) -> bool {
-        if lhs.is_nan() {
-            if rhs.is_nan() {
-                true
-            }
-            else {
-                false
-            }
-        }
-        else {
-            if rhs.is_nan() {
-                false
-            }
-            else {
-                lhs == rhs
-            }
-        }
+        canonical::eq_float(lhs, rhs)
     }
 }
 
@@ -53,20 +38,7 @@ where
     T: Float + Primitive,
 {
     fn cmp(lhs: T, rhs: T) -> Ordering {
-        match lhs.partial_cmp(&rhs) {
-            Some(ordering) => ordering,
-            None => if lhs.is_nan() {
-                if rhs.is_nan() {
-                    Ordering::Equal
-                }
-                else {
-                    Ordering::Greater
-                }
-            }
-            else {
-                Ordering::Less
-            },
-        }
+        canonical::cmp_float(lhs, rhs)
     }
 }
 
