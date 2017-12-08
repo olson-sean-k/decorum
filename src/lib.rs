@@ -5,6 +5,9 @@ extern crate derivative;
 extern crate num_traits;
 #[cfg(feature = "serialize-serde")]
 extern crate serde;
+#[cfg(feature = "serialize-serde")]
+#[macro_use]
+extern crate serde_derive;
 
 use num_traits::{Float, Num, NumCast};
 use std::num::FpCategory;

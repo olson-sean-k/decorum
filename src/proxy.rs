@@ -47,6 +47,7 @@ where
 ///
 /// Wraps floating point values and provides a proxy that implements operation
 /// and numerical traits, including `Hash`, `Ord`, and `Eq`.
+#[cfg_attr(feature = "serialize-serde", derive(Deserialize, Serialize))]
 #[derivative(Clone, Copy, Debug, Default)]
 #[derive(Derivative)]
 pub struct ConstrainedFloat<T, P>
@@ -1371,43 +1372,6 @@ where
     #[inline(always)]
     fn is_zero(&self) -> bool {
         T::is_zero(&self.into_raw_float())
-    }
-}
-
-#[cfg(feature = "serialize-serde")]
-mod feature_serialize_serde {
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
-    use serde::de::{Error, Unexpected};
-    use std::f64;
-
-    use super::*;
-
-    impl<'a, T, P> Deserialize<'a> for ConstrainedFloat<T, P>
-    where
-        T: Deserialize<'a> + Float + Primitive,
-        P: FloatConstraint<T>,
-    {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'a>,
-        {
-            let value = T::deserialize(deserializer)?;
-            ConstrainedFloat::try_from_raw_float(value)
-                .map_err(|_| Error::invalid_value(Unexpected::Float(f64::NAN), &""))
-        }
-    }
-
-    impl<T, P> Serialize for ConstrainedFloat<T, P>
-    where
-        T: Float + Primitive + Serialize,
-        P: FloatConstraint<T>,
-    {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            self.into_raw_float().serialize(serializer)
-        }
     }
 }
 
