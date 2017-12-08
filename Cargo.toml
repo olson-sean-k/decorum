@@ -13,8 +13,7 @@ appveyor = { repository = "olson-sean-k/plexus" }
 travis-ci = { repository = "olson-sean-k/plexus" }
 
 [features]
-default = ["enforce-constraints", "serialize-serde"]
-enforce-constraints = []
+default = ["serialize-serde"]
 serialize-serde = ["serde", "serde_derive"]
 
 [dependencies]

@@ -35,11 +35,6 @@ The `NotNan` and `Finite` types wrap raw floating point values and disallow
 certain values like `NaN`, `INF`, and `-INF`. They will panic if an operation
 or conversion invalidates these constraints and checking is enabled.
 
-Constraint checking can be toggled with the `enforce-constraints` feature. This
-is useful if code would like to enforce constraints for some builds but not
-others (e.g., debug vs. release builds). Constraint checking is enabled by
-default. If checking is disabled, `from_raw_float` will never panic.
-
 ## Conversions
 
 Proxy types are used via conversions to and from primitive floating point

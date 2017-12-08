@@ -33,10 +33,8 @@ where
     ///
     /// # Panics
     ///
-    /// If the `enforce-constraints` feature is enabled, then this function
-    /// will panic if the primitive value is not allowed by the contraints of
-    /// the proxy. If the feature is disabled, this function will always
-    /// succeed.
+    /// This function will panic if the primitive value is not allowed by the
+    /// contraints of the proxy.
     fn from_raw_float(value: T) -> Self;
 
     /// Converts the float proxy into a primitive value.
@@ -64,15 +62,12 @@ where
     T: Float + Primitive,
     P: FloatConstraint<T>,
 {
-    #[cfg(feature = "enforce-constraints")]
-    pub fn from_raw_float(value: T) -> Self {
-        Self::try_from_raw_float(value).unwrap()
-    }
-
-    #[cfg(not(feature = "enforce-constraints"))]
+    // TODO: Avoid the overhead of `evaluate` and `unwrap` for the `()`
+    //       constraint (i.e., no constraints). When specialization lands, this
+    //       may be easy to implement.
     #[inline(always)]
     pub fn from_raw_float(value: T) -> Self {
-        Self::from_raw_float_unchecked(value)
+        Self::try_from_raw_float(value).unwrap()
     }
 
     pub fn into_raw_float(self) -> T {
