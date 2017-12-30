@@ -35,10 +35,10 @@ where
     ///
     /// This function will panic if the primitive value is not allowed by the
     /// contraints of the proxy.
-    fn from_raw_float(value: T) -> Self;
+    fn from_inner(value: T) -> Self;
 
     /// Converts the float proxy into a primitive value.
-    fn into_raw_float(self) -> T;
+    fn into_inner(self) -> T;
 }
 
 /// Constrained, ordered, hashable floating point proxy.
@@ -66,11 +66,11 @@ where
     //       constraint (i.e., no constraints). When specialization lands, this
     //       may be easy to implement.
     #[inline(always)]
-    pub fn from_raw_float(value: T) -> Self {
-        Self::try_from_raw_float(value).unwrap()
+    pub fn from_inner(value: T) -> Self {
+        Self::try_from_inner(value).unwrap()
     }
 
-    pub fn into_raw_float(self) -> T {
+    pub fn into_inner(self) -> T {
         let ConstrainedFloat { value, .. } = self;
         value
     }
@@ -79,28 +79,26 @@ where
     where
         Q: FloatConstraint<T> + SubsetOf<P>,
     {
-        Self::from_raw_float_unchecked(other.into_raw_float())
+        Self::from_inner_unchecked(other.into_inner())
     }
 
     pub fn into_superset<Q>(self) -> ConstrainedFloat<T, Q>
     where
         Q: FloatConstraint<T> + SupersetOf<P>,
     {
-        ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float())
+        ConstrainedFloat::from_inner_unchecked(self.into_inner())
     }
 
-    fn try_from_raw_float(value: T) -> Result<Self, ()> {
+    fn try_from_inner(value: T) -> Result<Self, ()> {
         P::evaluate(value)
-            .map(|value| {
-                ConstrainedFloat {
-                    value,
-                    phantom: PhantomData,
-                }
+            .map(|value| ConstrainedFloat {
+                value,
+                phantom: PhantomData,
             })
             .ok_or(())
     }
 
-    fn from_raw_float_unchecked(value: T) -> Self {
+    fn from_inner_unchecked(value: T) -> Self {
         ConstrainedFloat {
             value,
             phantom: PhantomData,
@@ -117,13 +115,13 @@ where
     P: FloatConstraint<T>,
 {
     #[inline(always)]
-    fn from_raw_float(value: T) -> Self {
-        Self::from_raw_float(value)
+    fn from_inner(value: T) -> Self {
+        Self::from_inner(value)
     }
 
     #[inline(always)]
-    fn into_raw_float(self) -> T {
-        Self::into_raw_float(self)
+    fn into_inner(self) -> T {
+        Self::into_inner(self)
     }
 }
 
@@ -174,7 +172,7 @@ where
     P: FloatConstraint<f32>,
 {
     fn into(self) -> f32 {
-        self.into_raw_float()
+        self.into_inner()
     }
 }
 
@@ -185,7 +183,7 @@ where
     P: FloatConstraint<f64>,
 {
     fn into(self) -> f64 {
-        self.into_raw_float()
+        self.into_inner()
     }
 }
 
@@ -197,7 +195,7 @@ where
     type Output = Self;
 
     fn add(self, other: Self) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() + other.into_raw_float())
+        ConstrainedFloat::from_inner(self.into_inner() + other.into_inner())
     }
 }
 
@@ -209,7 +207,7 @@ where
     type Output = Self;
 
     fn add(self, other: T) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() + other)
+        ConstrainedFloat::from_inner(self.into_inner() + other)
     }
 }
 
@@ -219,7 +217,7 @@ where
     P: FloatConstraint<T>,
 {
     fn add_assign(&mut self, other: Self) {
-        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() + other.into_raw_float())
+        *self = ConstrainedFloat::from_inner(self.into_inner() + other.into_inner())
     }
 }
 
@@ -229,7 +227,7 @@ where
     P: FloatConstraint<T>,
 {
     fn add_assign(&mut self, other: T) {
-        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() + other)
+        *self = ConstrainedFloat::from_inner(self.into_inner() + other)
     }
 }
 
@@ -240,12 +238,12 @@ where
 {
     #[inline(always)]
     fn min_value() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::min_value())
+        ConstrainedFloat::from_inner_unchecked(T::min_value())
     }
 
     #[inline(always)]
     fn max_value() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::max_value())
+        ConstrainedFloat::from_inner_unchecked(T::max_value())
     }
 }
 
@@ -267,7 +265,7 @@ where
     type Output = Self;
 
     fn div(self, other: Self) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() / other.into_raw_float())
+        ConstrainedFloat::from_inner(self.into_inner() / other.into_inner())
     }
 }
 
@@ -279,7 +277,7 @@ where
     type Output = Self;
 
     fn div(self, other: T) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() / other)
+        ConstrainedFloat::from_inner(self.into_inner() / other)
     }
 }
 
@@ -289,7 +287,7 @@ where
     P: FloatConstraint<T>,
 {
     fn div_assign(&mut self, other: Self) {
-        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() / other.into_raw_float())
+        *self = ConstrainedFloat::from_inner(self.into_inner() / other.into_inner())
     }
 }
 
@@ -299,7 +297,7 @@ where
     P: FloatConstraint<T>,
 {
     fn div_assign(&mut self, other: T) {
-        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() / other)
+        *self = ConstrainedFloat::from_inner(self.into_inner() / other)
     }
 }
 
@@ -593,82 +591,82 @@ where
 {
     #[inline(always)]
     fn E() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::E())
+        ConstrainedFloat::from_inner_unchecked(T::E())
     }
 
     #[inline(always)]
     fn PI() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::PI())
+        ConstrainedFloat::from_inner_unchecked(T::PI())
     }
 
     #[inline(always)]
     fn SQRT_2() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::SQRT_2())
+        ConstrainedFloat::from_inner_unchecked(T::SQRT_2())
     }
 
     #[inline(always)]
     fn FRAC_1_PI() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::FRAC_1_PI())
+        ConstrainedFloat::from_inner_unchecked(T::FRAC_1_PI())
     }
 
     #[inline(always)]
     fn FRAC_2_PI() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::FRAC_2_PI())
+        ConstrainedFloat::from_inner_unchecked(T::FRAC_2_PI())
     }
 
     #[inline(always)]
     fn FRAC_1_SQRT_2() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::FRAC_1_SQRT_2())
+        ConstrainedFloat::from_inner_unchecked(T::FRAC_1_SQRT_2())
     }
 
     #[inline(always)]
     fn FRAC_2_SQRT_PI() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::FRAC_2_SQRT_PI())
+        ConstrainedFloat::from_inner_unchecked(T::FRAC_2_SQRT_PI())
     }
 
     #[inline(always)]
     fn FRAC_PI_2() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::FRAC_PI_2())
+        ConstrainedFloat::from_inner_unchecked(T::FRAC_PI_2())
     }
 
     #[inline(always)]
     fn FRAC_PI_3() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::FRAC_PI_3())
+        ConstrainedFloat::from_inner_unchecked(T::FRAC_PI_3())
     }
 
     #[inline(always)]
     fn FRAC_PI_4() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::FRAC_PI_4())
+        ConstrainedFloat::from_inner_unchecked(T::FRAC_PI_4())
     }
 
     #[inline(always)]
     fn FRAC_PI_6() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::FRAC_PI_6())
+        ConstrainedFloat::from_inner_unchecked(T::FRAC_PI_6())
     }
 
     #[inline(always)]
     fn FRAC_PI_8() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::FRAC_PI_8())
+        ConstrainedFloat::from_inner_unchecked(T::FRAC_PI_8())
     }
 
     #[inline(always)]
     fn LN_10() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::LN_10())
+        ConstrainedFloat::from_inner_unchecked(T::LN_10())
     }
 
     #[inline(always)]
     fn LN_2() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::LN_2())
+        ConstrainedFloat::from_inner_unchecked(T::LN_2())
     }
 
     #[inline(always)]
     fn LOG10_E() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::LOG10_E())
+        ConstrainedFloat::from_inner_unchecked(T::LOG10_E())
     }
 
     #[inline(always)]
     fn LOG2_E() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::LOG2_E())
+        ConstrainedFloat::from_inner_unchecked(T::LOG2_E())
     }
 }
 
@@ -678,51 +676,51 @@ where
     P: FloatConstraint<T>,
 {
     fn from_i8(value: i8) -> Option<Self> {
-        T::from_i8(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
+        T::from_i8(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
     }
 
     fn from_u8(value: u8) -> Option<Self> {
-        T::from_u8(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
+        T::from_u8(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
     }
 
     fn from_i16(value: i16) -> Option<Self> {
-        T::from_i16(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
+        T::from_i16(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
     }
 
     fn from_u16(value: u16) -> Option<Self> {
-        T::from_u16(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
+        T::from_u16(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
     }
 
     fn from_i32(value: i32) -> Option<Self> {
-        T::from_i32(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
+        T::from_i32(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
     }
 
     fn from_u32(value: u32) -> Option<Self> {
-        T::from_u32(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
+        T::from_u32(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
     }
 
     fn from_i64(value: i64) -> Option<Self> {
-        T::from_i64(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
+        T::from_i64(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
     }
 
     fn from_u64(value: u64) -> Option<Self> {
-        T::from_u64(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
+        T::from_u64(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
     }
 
     fn from_isize(value: isize) -> Option<Self> {
-        T::from_isize(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
+        T::from_isize(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
     }
 
     fn from_usize(value: usize) -> Option<Self> {
-        T::from_usize(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
+        T::from_usize(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
     }
 
     fn from_f32(value: f32) -> Option<Self> {
-        T::from_f32(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
+        T::from_f32(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
     }
 
     fn from_f64(value: f64) -> Option<Self> {
-        T::from_f64(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
+        T::from_f64(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
     }
 }
 
@@ -735,7 +733,7 @@ where
     where
         H: Hasher,
     {
-        canonical::hash_float(self.into_raw_float(), state);
+        canonical::hash_float(self.into_inner(), state);
     }
 }
 
@@ -746,22 +744,22 @@ where
 {
     #[inline(always)]
     fn infinity() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(P::infinity())
+        ConstrainedFloat::from_inner_unchecked(P::infinity())
     }
 
     #[inline(always)]
     fn neg_infinity() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(P::neg_infinity())
+        ConstrainedFloat::from_inner_unchecked(P::neg_infinity())
     }
 
     #[inline(always)]
     fn is_infinite(self) -> bool {
-        P::is_infinite(self.into_raw_float())
+        P::is_infinite(self.into_inner())
     }
 
     #[inline(always)]
     fn is_finite(self) -> bool {
-        P::is_finite(self.into_raw_float())
+        P::is_finite(self.into_inner())
     }
 }
 
@@ -773,7 +771,7 @@ where
     type Output = Self;
 
     fn mul(self, other: Self) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() * other.into_raw_float())
+        ConstrainedFloat::from_inner(self.into_inner() * other.into_inner())
     }
 }
 
@@ -785,7 +783,7 @@ where
     type Output = Self;
 
     fn mul(self, other: T) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() * other)
+        ConstrainedFloat::from_inner(self.into_inner() * other)
     }
 }
 
@@ -795,7 +793,7 @@ where
     P: FloatConstraint<T>,
 {
     fn mul_assign(&mut self, other: Self) {
-        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() * other.into_raw_float())
+        *self = ConstrainedFloat::from_inner(self.into_inner() * other.into_inner())
     }
 }
 
@@ -805,7 +803,7 @@ where
     P: FloatConstraint<T>,
 {
     fn mul_assign(&mut self, other: T) {
-        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() * other)
+        *self = ConstrainedFloat::from_inner(self.into_inner() * other)
     }
 }
 
@@ -816,12 +814,12 @@ where
 {
     #[inline(always)]
     fn nan() -> Self {
-        Self::from_raw_float_unchecked(P::nan())
+        Self::from_inner_unchecked(P::nan())
     }
 
     #[inline(always)]
     fn is_nan(self) -> bool {
-        P::is_nan(self.into_raw_float())
+        P::is_nan(self.into_inner())
     }
 }
 
@@ -833,7 +831,7 @@ where
     type Output = Self;
 
     fn neg(self) -> Self::Output {
-        ConstrainedFloat::from_raw_float_unchecked(-self.into_raw_float())
+        ConstrainedFloat::from_inner_unchecked(-self.into_inner())
     }
 }
 
@@ -848,9 +846,7 @@ where
     fn from_str_radix(source: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
         T::from_str_radix(source, radix)
             .map_err(|_| ())
-            .and_then(|value| {
-                ConstrainedFloat::try_from_raw_float(value).map_err(|_| ())
-            })
+            .and_then(|value| ConstrainedFloat::try_from_inner(value).map_err(|_| ()))
     }
 }
 
@@ -863,7 +859,7 @@ where
     where
         U: ToPrimitive,
     {
-        T::from(value).and_then(|value| ConstrainedFloat::try_from_raw_float(value).ok())
+        T::from(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
     }
 }
 
@@ -874,7 +870,7 @@ where
 {
     #[inline(always)]
     fn one() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::one())
+        ConstrainedFloat::from_inner_unchecked(T::one())
     }
 }
 
@@ -885,7 +881,7 @@ where
 {
     #[inline(always)]
     fn cmp(&self, other: &Self) -> Ordering {
-        <P as FloatOrd<T>>::cmp(self.into_raw_float(), other.into_raw_float())
+        <P as FloatOrd<T>>::cmp(self.into_inner(), other.into_inner())
     }
 }
 
@@ -896,7 +892,7 @@ where
 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
-        <P as FloatEq<T>>::eq(self.into_raw_float(), other.into_raw_float())
+        <P as FloatEq<T>>::eq(self.into_inner(), other.into_inner())
     }
 }
 
@@ -907,7 +903,7 @@ where
 {
     #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        <P as FloatPartialOrd<T>>::partial_cmp(self.into_raw_float(), other.into_raw_float())
+        <P as FloatPartialOrd<T>>::partial_cmp(self.into_inner(), other.into_inner())
     }
 }
 
@@ -930,254 +926,240 @@ where
 
     #[inline(always)]
     fn min_positive_value() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::min_positive_value())
+        ConstrainedFloat::from_inner_unchecked(T::min_positive_value())
     }
 
     #[inline(always)]
     fn min(self, other: Self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(
-            T::min(self.into_raw_float(), other.into_raw_float()),
-        )
+        ConstrainedFloat::from_inner_unchecked(T::min(self.into_inner(), other.into_inner()))
     }
 
     #[inline(always)]
     fn max(self, other: Self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(
-            T::max(self.into_raw_float(), other.into_raw_float()),
-        )
+        ConstrainedFloat::from_inner_unchecked(T::max(self.into_inner(), other.into_inner()))
     }
 
     #[inline(always)]
     fn neg_zero() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::neg_zero())
+        ConstrainedFloat::from_inner_unchecked(T::neg_zero())
     }
 
     #[inline(always)]
     fn is_sign_positive(self) -> bool {
-        T::is_sign_positive(self.into_raw_float())
+        T::is_sign_positive(self.into_inner())
     }
 
     #[inline(always)]
     fn is_sign_negative(self) -> bool {
-        T::is_sign_negative(self.into_raw_float())
+        T::is_sign_negative(self.into_inner())
     }
 
     #[inline(always)]
     fn signum(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::signum(self.into_raw_float()))
+        ConstrainedFloat::from_inner_unchecked(T::signum(self.into_inner()))
     }
 
     #[inline(always)]
     fn abs(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::abs(self.into_raw_float()))
+        ConstrainedFloat::from_inner_unchecked(T::abs(self.into_inner()))
     }
 
     #[inline(always)]
     fn classify(self) -> FpCategory {
-        T::classify(self.into_raw_float())
+        T::classify(self.into_inner())
     }
 
     #[inline(always)]
     fn is_normal(self) -> bool {
-        T::is_normal(self.into_raw_float())
+        T::is_normal(self.into_inner())
     }
 
     #[inline(always)]
     fn integer_decode(self) -> (u64, i16, i8) {
-        T::integer_decode(self.into_raw_float())
+        T::integer_decode(self.into_inner())
     }
 
     #[inline(always)]
     fn floor(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::floor(self.into_raw_float()))
+        ConstrainedFloat::from_inner_unchecked(T::floor(self.into_inner()))
     }
 
     #[inline(always)]
     fn ceil(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::ceil(self.into_raw_float()))
+        ConstrainedFloat::from_inner_unchecked(T::ceil(self.into_inner()))
     }
 
     #[inline(always)]
     fn round(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::round(self.into_raw_float()))
+        ConstrainedFloat::from_inner_unchecked(T::round(self.into_inner()))
     }
 
     #[inline(always)]
     fn trunc(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::trunc(self.into_raw_float()))
+        ConstrainedFloat::from_inner_unchecked(T::trunc(self.into_inner()))
     }
 
     #[inline(always)]
     fn fract(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::fract(self.into_raw_float()))
+        ConstrainedFloat::from_inner_unchecked(T::fract(self.into_inner()))
     }
 
     #[inline(always)]
     fn recip(self) -> Self {
-        ConstrainedFloat::from_raw_float(T::recip(self.into_raw_float()))
+        ConstrainedFloat::from_inner(T::recip(self.into_inner()))
     }
 
     #[inline(always)]
     fn mul_add(self, a: Self, b: Self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::mul_add(
-            self.into_raw_float(),
-            a.into_raw_float(),
-            b.into_raw_float(),
+        ConstrainedFloat::from_inner_unchecked(T::mul_add(
+            self.into_inner(),
+            a.into_inner(),
+            b.into_inner(),
         ))
     }
 
     #[inline(always)]
     fn abs_sub(self, other: Self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(
-            T::abs_sub(self.into_raw_float(), other.into_raw_float()),
-        )
+        ConstrainedFloat::from_inner_unchecked(T::abs_sub(self.into_inner(), other.into_inner()))
     }
 
     #[inline(always)]
     fn powi(self, n: i32) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::powi(self.into_raw_float(), n))
+        ConstrainedFloat::from_inner_unchecked(T::powi(self.into_inner(), n))
     }
 
     #[inline(always)]
     fn powf(self, n: Self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(
-            T::powf(self.into_raw_float(), n.into_raw_float()),
-        )
+        ConstrainedFloat::from_inner_unchecked(T::powf(self.into_inner(), n.into_inner()))
     }
 
     #[inline(always)]
     fn sqrt(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::sqrt(self.into_raw_float()))
+        ConstrainedFloat::from_inner_unchecked(T::sqrt(self.into_inner()))
     }
 
     #[inline(always)]
     fn cbrt(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::cbrt(self.into_raw_float()))
+        ConstrainedFloat::from_inner_unchecked(T::cbrt(self.into_inner()))
     }
 
     #[inline(always)]
     fn exp(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::exp(self.into_raw_float()))
+        ConstrainedFloat::from_inner_unchecked(T::exp(self.into_inner()))
     }
 
     #[inline(always)]
     fn exp2(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::exp2(self.into_raw_float()))
+        ConstrainedFloat::from_inner_unchecked(T::exp2(self.into_inner()))
     }
 
     #[inline(always)]
     fn exp_m1(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::exp_m1(self.into_raw_float()))
+        ConstrainedFloat::from_inner_unchecked(T::exp_m1(self.into_inner()))
     }
 
     #[inline(always)]
     fn log(self, base: Self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(
-            T::log(self.into_raw_float(), base.into_raw_float()),
-        )
+        ConstrainedFloat::from_inner_unchecked(T::log(self.into_inner(), base.into_inner()))
     }
 
     #[inline(always)]
     fn ln(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::ln(self.into_raw_float()))
+        ConstrainedFloat::from_inner_unchecked(T::ln(self.into_inner()))
     }
 
     #[inline(always)]
     fn log2(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::log2(self.into_raw_float()))
+        ConstrainedFloat::from_inner_unchecked(T::log2(self.into_inner()))
     }
 
     #[inline(always)]
     fn log10(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::log10(self.into_raw_float()))
+        ConstrainedFloat::from_inner_unchecked(T::log10(self.into_inner()))
     }
 
     #[inline(always)]
     fn ln_1p(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::ln_1p(self.into_raw_float()))
+        ConstrainedFloat::from_inner_unchecked(T::ln_1p(self.into_inner()))
     }
 
     #[inline(always)]
     fn hypot(self, other: Self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(
-            self.into_raw_float().hypot(other.into_raw_float()),
-        )
+        ConstrainedFloat::from_inner_unchecked(self.into_inner().hypot(other.into_inner()))
     }
 
     #[inline(always)]
     fn sin(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float().sin())
+        ConstrainedFloat::from_inner_unchecked(self.into_inner().sin())
     }
 
     #[inline(always)]
     fn cos(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float().cos())
+        ConstrainedFloat::from_inner_unchecked(self.into_inner().cos())
     }
 
     #[inline(always)]
     fn tan(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float().tan())
+        ConstrainedFloat::from_inner_unchecked(self.into_inner().tan())
     }
 
     #[inline(always)]
     fn asin(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float().asin())
+        ConstrainedFloat::from_inner_unchecked(self.into_inner().asin())
     }
 
     #[inline(always)]
     fn acos(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float().acos())
+        ConstrainedFloat::from_inner_unchecked(self.into_inner().acos())
     }
 
     #[inline(always)]
     fn atan(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float().atan())
+        ConstrainedFloat::from_inner_unchecked(self.into_inner().atan())
     }
 
     #[inline(always)]
     fn atan2(self, other: Self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(
-            self.into_raw_float().atan2(other.into_raw_float()),
-        )
+        ConstrainedFloat::from_inner_unchecked(self.into_inner().atan2(other.into_inner()))
     }
 
     #[inline(always)]
     fn sin_cos(self) -> (Self, Self) {
-        let (sin, cos) = self.into_raw_float().sin_cos();
+        let (sin, cos) = self.into_inner().sin_cos();
         (
-            ConstrainedFloat::from_raw_float_unchecked(sin),
-            ConstrainedFloat::from_raw_float_unchecked(cos),
+            ConstrainedFloat::from_inner_unchecked(sin),
+            ConstrainedFloat::from_inner_unchecked(cos),
         )
     }
 
     #[inline(always)]
     fn sinh(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float().sinh())
+        ConstrainedFloat::from_inner_unchecked(self.into_inner().sinh())
     }
 
     #[inline(always)]
     fn cosh(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float().cosh())
+        ConstrainedFloat::from_inner_unchecked(self.into_inner().cosh())
     }
 
     #[inline(always)]
     fn tanh(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float().tanh())
+        ConstrainedFloat::from_inner_unchecked(self.into_inner().tanh())
     }
 
     #[inline(always)]
     fn asinh(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float().asinh())
+        ConstrainedFloat::from_inner_unchecked(self.into_inner().asinh())
     }
 
     #[inline(always)]
     fn acosh(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float().acosh())
+        ConstrainedFloat::from_inner_unchecked(self.into_inner().acosh())
     }
 
     #[inline(always)]
     fn atanh(self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float().atanh())
+        ConstrainedFloat::from_inner_unchecked(self.into_inner().atanh())
     }
 }
 
@@ -1189,7 +1171,7 @@ where
     type Output = Self;
 
     fn rem(self, other: Self) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() % other.into_raw_float())
+        ConstrainedFloat::from_inner(self.into_inner() % other.into_inner())
     }
 }
 
@@ -1201,7 +1183,7 @@ where
     type Output = Self;
 
     fn rem(self, other: T) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() % other)
+        ConstrainedFloat::from_inner(self.into_inner() % other)
     }
 }
 
@@ -1211,7 +1193,7 @@ where
     P: FloatConstraint<T>,
 {
     fn rem_assign(&mut self, other: Self) {
-        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() % other.into_raw_float())
+        *self = ConstrainedFloat::from_inner(self.into_inner() % other.into_inner())
     }
 }
 
@@ -1221,7 +1203,7 @@ where
     P: FloatConstraint<T>,
 {
     fn rem_assign(&mut self, other: T) {
-        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() % other)
+        *self = ConstrainedFloat::from_inner(self.into_inner() % other)
     }
 }
 
@@ -1232,27 +1214,27 @@ where
 {
     #[inline(always)]
     fn abs(&self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float().abs())
+        ConstrainedFloat::from_inner_unchecked(self.into_inner().abs())
     }
 
     #[inline(always)]
     fn abs_sub(&self, other: &Self) -> Self {
-        ConstrainedFloat::from_raw_float(self.into_raw_float().abs_sub(other.into_raw_float()))
+        ConstrainedFloat::from_inner(self.into_inner().abs_sub(other.into_inner()))
     }
 
     #[inline(always)]
     fn signum(&self) -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(self.into_raw_float().signum())
+        ConstrainedFloat::from_inner_unchecked(self.into_inner().signum())
     }
 
     #[inline(always)]
     fn is_positive(&self) -> bool {
-        self.into_raw_float().is_positive()
+        self.into_inner().is_positive()
     }
 
     #[inline(always)]
     fn is_negative(&self) -> bool {
-        self.into_raw_float().is_negative()
+        self.into_inner().is_negative()
     }
 }
 
@@ -1264,7 +1246,7 @@ where
     type Output = Self;
 
     fn sub(self, other: Self) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() - other.into_raw_float())
+        ConstrainedFloat::from_inner(self.into_inner() - other.into_inner())
     }
 }
 
@@ -1276,7 +1258,7 @@ where
     type Output = Self;
 
     fn sub(self, other: T) -> Self::Output {
-        ConstrainedFloat::from_raw_float(self.into_raw_float() - other)
+        ConstrainedFloat::from_inner(self.into_inner() - other)
     }
 }
 
@@ -1286,7 +1268,7 @@ where
     P: FloatConstraint<T>,
 {
     fn sub_assign(&mut self, other: Self) {
-        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() - other.into_raw_float())
+        *self = ConstrainedFloat::from_inner(self.into_inner() - other.into_inner())
     }
 }
 
@@ -1296,7 +1278,7 @@ where
     P: FloatConstraint<T>,
 {
     fn sub_assign(&mut self, other: T) {
-        *self = ConstrainedFloat::from_raw_float(self.into_raw_float() - other)
+        *self = ConstrainedFloat::from_inner(self.into_inner() - other)
     }
 }
 
@@ -1306,51 +1288,51 @@ where
     P: FloatConstraint<T>,
 {
     fn to_i8(&self) -> Option<i8> {
-        self.into_raw_float().to_i8()
+        self.into_inner().to_i8()
     }
 
     fn to_u8(&self) -> Option<u8> {
-        self.into_raw_float().to_u8()
+        self.into_inner().to_u8()
     }
 
     fn to_i16(&self) -> Option<i16> {
-        self.into_raw_float().to_i16()
+        self.into_inner().to_i16()
     }
 
     fn to_u16(&self) -> Option<u16> {
-        self.into_raw_float().to_u16()
+        self.into_inner().to_u16()
     }
 
     fn to_i32(&self) -> Option<i32> {
-        self.into_raw_float().to_i32()
+        self.into_inner().to_i32()
     }
 
     fn to_u32(&self) -> Option<u32> {
-        self.into_raw_float().to_u32()
+        self.into_inner().to_u32()
     }
 
     fn to_i64(&self) -> Option<i64> {
-        self.into_raw_float().to_i64()
+        self.into_inner().to_i64()
     }
 
     fn to_u64(&self) -> Option<u64> {
-        self.into_raw_float().to_u64()
+        self.into_inner().to_u64()
     }
 
     fn to_isize(&self) -> Option<isize> {
-        self.into_raw_float().to_isize()
+        self.into_inner().to_isize()
     }
 
     fn to_usize(&self) -> Option<usize> {
-        self.into_raw_float().to_usize()
+        self.into_inner().to_usize()
     }
 
     fn to_f32(&self) -> Option<f32> {
-        self.into_raw_float().to_f32()
+        self.into_inner().to_f32()
     }
 
     fn to_f64(&self) -> Option<f64> {
-        self.into_raw_float().to_f64()
+        self.into_inner().to_f64()
     }
 }
 
@@ -1361,12 +1343,12 @@ where
 {
     #[inline(always)]
     fn zero() -> Self {
-        ConstrainedFloat::from_raw_float_unchecked(T::zero())
+        ConstrainedFloat::from_inner_unchecked(T::zero())
     }
 
     #[inline(always)]
     fn is_zero(&self) -> bool {
-        T::is_zero(&self.into_raw_float())
+        T::is_zero(&self.into_inner())
     }
 }
 

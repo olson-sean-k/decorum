@@ -43,16 +43,15 @@ valid IEEE-754 value (there are no constraints).
 Proxy types are used via conversions to and from primitive floating point
 values and other proxy types.
 
-| Conversion           | Failure | Description                          |
-|----------------------|---------|--------------------------------------|
-| `from_raw_float`     | Panic   | Creates a proxy from a primitive.    |
-| `into_raw_float`     |         | Converts a proxy into a primitive.   |
-| `into_superset`      |         | Converts a proxy into another proxy. |
-| `from_subset`        |         | Creates a proxy from another proxy.  |
+| Conversion      | Failure | Description                          |
+|-----------------|---------|--------------------------------------|
+| `from_inner`    | Panic   | Creates a proxy from a primitive.    |
+| `into_inner`    |         | Converts a proxy into a primitive.   |
+| `into_superset` |         | Converts a proxy into another proxy. |
+| `from_subset`   |         | Creates a proxy from another proxy.  |
 
-The `from_raw_float` and `into_raw_float` conversions are exposed by the
-`FloatProxy` trait, which can be used in generic code to support different
-proxy types.
+The `from_inner` and `into_inner` conversions are exposed by the `FloatProxy`
+trait, which can be used in generic code to support different proxy types.
 
 The `into_superset` and `from_subset` conversions provide an inexpensive way to
 convert between proxy types with different (and compatible) constraints.
