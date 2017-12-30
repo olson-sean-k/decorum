@@ -187,6 +187,24 @@ where
     }
 }
 
+impl<P> Into<ConstrainedFloat<f32, P>> for f32
+where
+    P: FloatConstraint<f32>,
+{
+    fn into(self) -> ConstrainedFloat<f32, P> {
+        ConstrainedFloat::from_inner(self)
+    }
+}
+
+impl<P> Into<ConstrainedFloat<f64, P>> for f64
+where
+    P: FloatConstraint<f64>,
+{
+    fn into(self) -> ConstrainedFloat<f64, P> {
+        ConstrainedFloat::from_inner(self)
+    }
+}
+
 impl<T, P> Add for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
