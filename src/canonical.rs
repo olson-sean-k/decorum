@@ -4,11 +4,11 @@ use std::hash::{Hash, Hasher};
 
 use {Primitive, Real};
 
-const SIGN_MASK: u64 = 0x8000000000000000u64;
-const EXPONENT_MASK: u64 = 0x7ff0000000000000u64;
-const MANTISSA_MASK: u64 = 0x000fffffffffffffu64;
+const SIGN_MASK: u64 = 0x8000_0000_0000_0000u64;
+const EXPONENT_MASK: u64 = 0x7ff0_0000_0000_0000u64;
+const MANTISSA_MASK: u64 = 0x000f_ffff_ffff_ffffu64;
 
-const CANONICAL_NAN: u64 = 0x7ff8000000000000u64;
+const CANONICAL_NAN: u64 = 0x7ff8_0000_0000_0000u64;
 const CANONICAL_ZERO: u64 = 0x0u64;
 
 pub trait FloatArray: Sized {
@@ -114,20 +114,13 @@ where
     T: Float + Primitive,
 {
     if lhs.is_nan() {
-        if rhs.is_nan() {
-            true
-        }
-        else {
-            false
-        }
+        rhs.is_nan()
+    }
+    else if rhs.is_nan() {
+        false
     }
     else {
-        if rhs.is_nan() {
-            false
-        }
-        else {
-            lhs == rhs
-        }
+        lhs == rhs
     }
 }
 
@@ -213,7 +206,7 @@ where
         CANONICAL_ZERO
     }
     else {
-        let exponent = unsafe { mem::transmute::<i16, u16>(exponent) } as u64;
+        let exponent = u64::from(unsafe { mem::transmute::<i16, u16>(exponent) });
         let sign = if sign > 0 { 1u64 } else { 0u64 };
 
         (mantissa & MANTISSA_MASK) | ((exponent << 52) & EXPONENT_MASK) | ((sign << 63) & SIGN_MASK)
