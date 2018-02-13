@@ -157,7 +157,6 @@ where
 /// To perform the hash, the floating point value is normalized. If `NaN` or
 /// zero, a canonical form is used, so all `NaN`s result in the same hash and
 /// all zeroes (positive and negative) result in the same hash.
-#[inline(always)]
 pub fn hash_float<T, H>(value: T, state: &mut H)
 where
     T: Float + Primitive,

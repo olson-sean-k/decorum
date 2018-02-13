@@ -46,22 +46,18 @@ pub trait FloatInfinity<T>
 where
     T: Float + Primitive,
 {
-    #[inline(always)]
     fn infinity() -> T {
         T::infinity()
     }
 
-    #[inline(always)]
     fn neg_infinity() -> T {
         T::neg_infinity()
     }
 
-    #[inline(always)]
     fn is_infinite(value: T) -> bool {
         value.is_infinite()
     }
 
-    #[inline(always)]
     fn is_finite(value: T) -> bool {
         value.is_finite()
     }
@@ -71,12 +67,10 @@ pub trait FloatNan<T>
 where
     T: Float + Primitive,
 {
-    #[inline(always)]
     fn nan() -> T {
         T::nan()
     }
 
-    #[inline(always)]
     fn is_nan(value: T) -> bool {
         value.is_nan()
     }
