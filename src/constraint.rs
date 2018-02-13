@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use Primitive;
 use canonical;
 
-pub trait FloatEq<T>
+pub trait ConstraintEq<T>
 where
     T: Float + Primitive,
 {
@@ -14,7 +14,7 @@ where
     }
 }
 
-pub trait FloatPartialOrd<T>
+pub trait ConstraintPartialOrd<T>
 where
     T: Float + Primitive,
 {
@@ -23,17 +23,17 @@ where
     }
 }
 
-impl<T, U> FloatPartialOrd<T> for U
+impl<T, U> ConstraintPartialOrd<T> for U
 where
     T: Float + Primitive,
-    U: FloatOrd<T>,
+    U: ConstraintOrd<T>,
 {
     fn partial_cmp(lhs: T, rhs: T) -> Option<Ordering> {
         Some(U::cmp(lhs, rhs))
     }
 }
 
-pub trait FloatOrd<T>
+pub trait ConstraintOrd<T>
 where
     T: Float + Primitive,
 {
@@ -42,7 +42,7 @@ where
     }
 }
 
-pub trait FloatInfinity<T>
+pub trait ConstraintInfinity<T>
 where
     T: Float + Primitive,
 {
@@ -63,7 +63,7 @@ where
     }
 }
 
-pub trait FloatNan<T>
+pub trait ConstraintNan<T>
 where
     T: Float + Primitive,
 {
@@ -107,25 +107,25 @@ where
     }
 }
 
-impl<T> FloatEq<T> for ()
+impl<T> ConstraintEq<T> for ()
 where
     T: Float + Primitive,
 {
 }
 
-impl<T> FloatOrd<T> for ()
+impl<T> ConstraintOrd<T> for ()
 where
     T: Float + Primitive,
 {
 }
 
-impl<T> FloatInfinity<T> for ()
+impl<T> ConstraintInfinity<T> for ()
 where
     T: Float + Primitive,
 {
 }
 
-impl<T> FloatNan<T> for ()
+impl<T> ConstraintNan<T> for ()
 where
     T: Float + Primitive,
 {
@@ -166,7 +166,7 @@ where
     }
 }
 
-impl<T> FloatEq<T> for NotNanConstraint<T>
+impl<T> ConstraintEq<T> for NotNanConstraint<T>
 where
     T: Float + Primitive,
 {
@@ -177,7 +177,7 @@ where
     }
 }
 
-impl<T> FloatOrd<T> for NotNanConstraint<T>
+impl<T> ConstraintOrd<T> for NotNanConstraint<T>
 where
     T: Float + Primitive,
 {
@@ -188,7 +188,7 @@ where
     }
 }
 
-impl<T> FloatInfinity<T> for NotNanConstraint<T>
+impl<T> ConstraintInfinity<T> for NotNanConstraint<T>
 where
     T: Float + Primitive,
 {
@@ -223,7 +223,7 @@ where
     }
 }
 
-impl<T> FloatEq<T> for FiniteConstraint<T>
+impl<T> ConstraintEq<T> for FiniteConstraint<T>
 where
     T: Float + Primitive,
 {
@@ -234,7 +234,7 @@ where
     }
 }
 
-impl<T> FloatOrd<T> for FiniteConstraint<T>
+impl<T> ConstraintOrd<T> for FiniteConstraint<T>
 where
     T: Float + Primitive,
 {

@@ -10,8 +10,8 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssi
 use {Infinite, Nan, Primitive, Real};
 use {Finite, NotNan, Ordered};
 use canonical;
-use constraint::{FloatConstraint, FloatEq, FloatInfinity, FloatNan, FloatOrd, FloatPartialOrd,
-                 SubsetOf, SupersetOf};
+use constraint::{ConstraintEq, ConstraintInfinity, ConstraintNan, ConstraintOrd,
+                 ConstraintPartialOrd, FloatConstraint, SubsetOf, SupersetOf};
 
 /// A floating point proxy.
 ///
@@ -317,14 +317,18 @@ where
 impl<T, P> Eq for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: FloatConstraint<T> + FloatEq<T>,
+    P: FloatConstraint<T> + ConstraintEq<T>,
 {
 }
 
 impl<T, P> Float for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: FloatConstraint<T> + FloatEq<T> + FloatInfinity<T> + FloatNan<T> + FloatPartialOrd<T>,
+    P: FloatConstraint<T>
+        + ConstraintEq<T>
+        + ConstraintInfinity<T>
+        + ConstraintNan<T>
+        + ConstraintPartialOrd<T>,
 {
     fn infinity() -> Self {
         Infinite::infinity()
@@ -683,7 +687,7 @@ where
 impl<T, P> Infinite for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: FloatConstraint<T> + FloatInfinity<T>,
+    P: FloatConstraint<T> + ConstraintInfinity<T>,
 {
     fn infinity() -> Self {
         ConstrainedFloat::from_inner_unchecked(P::infinity())
@@ -749,7 +753,7 @@ where
 impl<T, P> Nan for ConstrainedFloat<T, P>
 where
     T: Float + Num + Primitive,
-    P: FloatConstraint<T> + FloatNan<T>,
+    P: FloatConstraint<T> + ConstraintNan<T>,
 {
     fn nan() -> Self {
         Self::from_inner_unchecked(P::nan())
@@ -813,39 +817,39 @@ where
 impl<T, P> Ord for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: FloatConstraint<T> + FloatEq<T> + FloatOrd<T>,
+    P: FloatConstraint<T> + ConstraintEq<T> + ConstraintOrd<T>,
 {
     fn cmp(&self, other: &Self) -> Ordering {
-        <P as FloatOrd<T>>::cmp(self.into_inner(), other.into_inner())
+        <P as ConstraintOrd<T>>::cmp(self.into_inner(), other.into_inner())
     }
 }
 
 impl<T, P> PartialEq for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: FloatConstraint<T> + FloatEq<T>,
+    P: FloatConstraint<T> + ConstraintEq<T>,
 {
     fn eq(&self, other: &Self) -> bool {
-        <P as FloatEq<T>>::eq(self.into_inner(), other.into_inner())
+        <P as ConstraintEq<T>>::eq(self.into_inner(), other.into_inner())
     }
 }
 
 impl<T, P> PartialOrd for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: FloatConstraint<T> + FloatEq<T> + FloatPartialOrd<T>,
+    P: FloatConstraint<T> + ConstraintEq<T> + ConstraintPartialOrd<T>,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        <P as FloatPartialOrd<T>>::partial_cmp(self.into_inner(), other.into_inner())
+        <P as ConstraintPartialOrd<T>>::partial_cmp(self.into_inner(), other.into_inner())
     }
 }
 
-// This requires `P: FloatEq<T> + FloatPartialOrd<T>`, because `Real` requires
+// This requires `P: ConstraintEq<T> + ConstraintPartialOrd<T>`, because `Real` requires
 // `PartialEq<Self>` and `PartialOrd<Self>`.
 impl<T, P> Real for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: FloatConstraint<T> + FloatEq<T> + FloatPartialOrd<T>,
+    P: FloatConstraint<T> + ConstraintEq<T> + ConstraintPartialOrd<T>,
 {
     fn max_value() -> Self {
         <Self as Bounded>::max_value()
@@ -1095,7 +1099,7 @@ where
 impl<T, P> Signed for ConstrainedFloat<T, P>
 where
     T: Float + Primitive + Signed,
-    P: FloatConstraint<T> + FloatEq<T>,
+    P: FloatConstraint<T> + ConstraintEq<T>,
 {
     fn abs(&self) -> Self {
         ConstrainedFloat::from_inner_unchecked(self.into_inner().abs())
