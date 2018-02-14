@@ -134,7 +134,9 @@ where
 
 // It is not possible to implement `From` for proxies in a generic way, because
 // the `FloatConstraint` types `T` and `U` may be the same and conflict with
-// the reflexive implementation in core.
+// the reflexive implementation in core. A similar problem prevents
+// implementing `From` over a type `T: Float`.
+
 impl<T> From<NotNan<T>> for Ordered<T>
 where
     T: Float + Primitive,
@@ -162,8 +164,15 @@ where
     }
 }
 
-// Because of the reflexive implementation in core, this `Into` cannot be
-// implemented over a type `T`.
+impl<P> From<f32> for ConstrainedFloat<f32, P>
+where
+    P: FloatConstraint<f32>,
+{
+    fn from(value: f32) -> Self {
+        Self::from_inner(value)
+    }
+}
+
 impl<P> Into<f32> for ConstrainedFloat<f32, P>
 where
     P: FloatConstraint<f32>,
@@ -173,32 +182,21 @@ where
     }
 }
 
-// Because of the reflexive implementation in core, this `Into` cannot be
-// implemented over a type `T`.
+impl<P> From<f64> for ConstrainedFloat<f64, P>
+where
+    P: FloatConstraint<f64>,
+{
+    fn from(value: f64) -> Self {
+        Self::from_inner(value)
+    }
+}
+
 impl<P> Into<f64> for ConstrainedFloat<f64, P>
 where
     P: FloatConstraint<f64>,
 {
     fn into(self) -> f64 {
         self.into_inner()
-    }
-}
-
-impl<P> Into<ConstrainedFloat<f32, P>> for f32
-where
-    P: FloatConstraint<f32>,
-{
-    fn into(self) -> ConstrainedFloat<f32, P> {
-        ConstrainedFloat::from_inner(self)
-    }
-}
-
-impl<P> Into<ConstrainedFloat<f64, P>> for f64
-where
-    P: FloatConstraint<f64>,
-{
-    fn into(self) -> ConstrainedFloat<f64, P> {
-        ConstrainedFloat::from_inner(self)
     }
 }
 

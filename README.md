@@ -16,11 +16,11 @@ features: they canonicalize floating-point values to support `Eq`, `Hash`, and
 different constraints on the values that they can represent, with the `Ordered`
 type applying no constraints (only ordering).
 
-| Type      | Numeric Traits                  | Disallowed Values  |
-|-----------|---------------------------------|--------------------|
-| `Ordered` | `Real + Infinite + Nan + Float` |                    |
-| `NotNan`  | `Real + Infinite`               | `NaN`              |
-| `Finite`  | `Real`                          | `-INF` `INF` `NaN` |
+| Type      | Numeric Traits                  | Disallowed Values    |
+|-----------|---------------------------------|----------------------|
+| `Ordered` | `Real + Infinite + Nan + Float` | n/a                  |
+| `NotNan`  | `Real + Infinite`               | `NaN`                |
+| `Finite`  | `Real`                          | `NaN`, `-INF`, `INF` |
 
 All proxy types implement the expected operation traits, such as `Add` and
 `Mul`. These types also implement numeric traits from the
@@ -59,22 +59,18 @@ valid IEEE-754 value (there are no constraints). For most use cases, either
 Proxy types are used via conversions to and from primitive floating-point
 values and other proxy types.
 
-| Conversion      | Failure | Description                          |
-|-----------------|---------|--------------------------------------|
-| `from_inner`    | Panic   | Creates a proxy from a primitive.    |
-| `into_inner`    |         | Converts a proxy into a primitive.   |
-| `into_superset` |         | Converts a proxy into another proxy. |
-| `from_subset`   |         | Creates a proxy from another proxy.  |
+| Conversion      | Input     | Output    | Failure |
+|-----------------|-----------|-----------|---------|
+| `from_inner`    | primitive | proxy     | panic   |
+| `into_inner`    | proxy     | primitive | n/a     |
+| `from_subset`   | proxy     | proxy     | n/a     |
+| `into_superset` | proxy     | proxy     | n/a     |
 
-The `from_inner` and `into_inner` conversions are exposed directly by proxy
-types as well as the `FloatProxy` trait, which can be used in generic code to
-support different proxy types.
-
-The `into_superset` and `from_subset` conversions provide an inexpensive way to
-convert between proxy types with different (and compatible) constraints.
-
-Decorum also implements `Into` for floating-point primitives, which provides a
-reasonably ergonomic way to perform inline conversions:
+The `from_inner` and `into_inner` conversions move primitive floating-point
+values into and out of proxies. The `into_superset` and `from_subset`
+conversions provide an inexpensive way to convert between proxy types with
+different (and compatible) constraints. All conversions also support the
+standard `From` and `Into` traits, which can also be applied to literals:
 
 ```rust
 use decorum::R32;
@@ -84,6 +80,7 @@ fn f(x: R32) -> R32 {
 }
 let y: R32 = 3.1459.into();
 let z = f(2.7182.into());
+let w: f32 = z.into();
 ```
 
 ## Functions
@@ -92,19 +89,27 @@ All proxy types implement `Eq`, `Hash`, and `Ord`, but sometimes it is not
 possible or ergonomic to use a proxy type. Functions accepting raw floating
 point values can be used for equality, hashing, and ordering instead.
 
-| Function     | Description                                      |
-|--------------|--------------------------------------------------|
-| `eq_float`   | Determines if canonicalized values are equal.    |
-| `hash_float` | Hashes a canonicalized value.                    |
-| `ord_float`  | Determines the ordering of canonicalized values. |
+| Function     | Analogous Trait  |
+|--------------|------------------|
+| `eq_float`   | `Eq`             |
+| `hash_float` | `Hash`           |
+| `ord_float`  | `Ord`            |
+
+These functions all canonicalize their inputs and the output is equivalent to
+wrapping the input values in the `Ordered` proxy and using `Eq`, `Hash`, or
+`Ord`.
 
 Each basic function has a variant for arrays and slices, such as
-`eq_float_slice` and `ord_float_array`.
+`eq_float_slice` and `ord_float_array`. Arrays up to length 16 are supported.
+When comparing sequences, longer sequences are always greater than shorter
+sequences. For sequences of the same length, order is determined by the first
+corresponding elements that differ, and if no such elements exist then the
+sequences are equal.
 
 For example, with the [derivative](https://crates.io/crates/derivative) crate,
-floating-point fields can be hashed using one of these functions when deriving
-`Hash`. A `Vertex` type used by a rendering pipeline could use this for
-floating-point fields:
+floating-point fields can be hashed easily using one of these functions when
+deriving `Hash`. A `Vertex` type used by a rendering pipeline could use this
+for floating-point fields:
 
 ```rust
 use decorum;
@@ -117,5 +122,3 @@ pub struct Vertex {
     ...
 }
 ```
-
-Scalar values, slices, and arrays up to length 16 are supported.
