@@ -1234,12 +1234,73 @@ where
 
 #[cfg(test)]
 mod tests {
-    use {Finite, NotNan, Ordered};
+    use {Finite, N32, NotNan, Ordered, R32};
     use super::*;
 
-    // TODO: This test is incomplete: it only ensures that the expected traits
-    //       are implemented, but there is no test that ensures that unwanted
-    //       traits are NOT implemented.
+    #[test]
+    fn ordered_no_panic_on_inf() {
+        let x: Ordered<f32> = 1.0.into();
+        let y = x / 0.0;
+        assert!(Infinite::is_infinite(y));
+    }
+
+    #[test]
+    fn ordered_no_panic_on_nan() {
+        let x: Ordered<f32> = 0.0.into();
+        let y = x / 0.0;
+        assert!(Nan::is_nan(y));
+    }
+
+    #[test]
+    fn notnan_no_panic_on_inf() {
+        let x: N32 = 1.0.into();
+        let y = x / 0.0;
+        assert!(Infinite::is_infinite(y));
+    }
+
+    #[test]
+    #[should_panic]
+    fn notnan_panic_on_nan() {
+        let x: N32 = 0.0.into();
+        let _ = x / 0.0;
+    }
+
+    #[test]
+    #[should_panic]
+    fn finite_panic_on_nan() {
+        let x: R32 = 0.0.into();
+        let _ = x / 0.0;
+    }
+
+    #[test]
+    #[should_panic]
+    fn finite_panic_on_inf() {
+        let x: R32 = 1.0.into();
+        let _ = x / 0.0;
+    }
+
+    #[test]
+    #[should_panic]
+    fn finite_panic_on_neg_inf() {
+        let x: R32 = (-1.0).into();
+        let _ = x / 0.0;
+    }
+
+    #[test]
+    fn ordered_nan_eq() {
+        let x: Ordered<f32> = (0.0 / 0.0).into();
+        let y: Ordered<f32> = (0.0 / 0.0).into();
+        assert_eq!(x, y);
+
+        let z: Ordered<f32> =
+            (<f32 as Infinite>::infinity() + <f32 as Infinite>::neg_infinity()).into();
+        assert_eq!(x, z);
+
+        let w: Ordered<f32> = (Real::sqrt(-1.0)).into();
+        assert_eq!(x, w);
+    }
+
+    // TODO: This test is questionable.
     #[test]
     fn constrained_float_impl_traits() {
         fn as_float<T>(_: T)
