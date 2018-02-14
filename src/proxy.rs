@@ -13,7 +13,7 @@ use canonical;
 use constraint::{ConstraintEq, ConstraintInfinity, ConstraintNan, ConstraintOrd,
                  ConstraintPartialOrd, FloatConstraint, SubsetOf, SupersetOf};
 
-/// A floating point proxy.
+/// A floating-point proxy.
 ///
 /// This trait allows code to be generic over proxy types and exposes functions
 /// for converting primitives to and from a proxy.
@@ -29,7 +29,7 @@ pub trait FloatProxy<T>: Sized
 where
     T: Float + Primitive,
 {
-    /// Converts a primitive into a floating point proxy.
+    /// Converts a primitive into a floating-point proxy.
     ///
     /// # Panics
     ///
@@ -41,9 +41,9 @@ where
     fn into_inner(self) -> T;
 }
 
-/// Constrained, ordered, hashable floating point proxy.
+/// Constrained, ordered, hashable floating-point proxy.
 ///
-/// Wraps floating point values and provides a proxy that implements operation
+/// Wraps floating-point values and provides a proxy that implements operation
 /// and numerical traits, including `Hash`, `Ord`, and `Eq`.
 #[cfg_attr(feature = "serialize-serde", derive(Deserialize, Serialize))]
 #[derivative(Clone, Copy, Debug, Default)]

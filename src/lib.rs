@@ -1,4 +1,4 @@
-//! Ordering, equality, and hasing for floating point types.
+//! Ordering, equality, hashing, and constraints for floating-point types.
 
 #[macro_use]
 extern crate derivative;
@@ -26,48 +26,48 @@ pub use canonical::{cmp_float, cmp_float_array, cmp_float_slice, eq_float, eq_fl
                     eq_float_slice, hash_float, hash_float_array, hash_float_slice};
 pub use proxy::FloatProxy;
 
-/// An ordered and normalized floating point value that does not constraint its
-/// values. Any IEEE-754 value is allowed, such as `NaN`, `INF`, and negative
-/// zero.
+/// An ordered and canonicalized floating-point value that does not constraint
+/// its values. Any IEEE-754 value is allowed, such as `NaN`, `INF`, and
+/// negative zero.
 pub type Ordered<T> = ConstrainedFloat<T, ()>;
 
-/// An ordered and normalized floating point value that cannot be `NaN`. Other
-/// IEEE-754 values like `INF` and negative zero are allowed.
+/// An ordered and canonicalized floating-point value that cannot be `NaN`.
+/// Other IEEE-754 values like `INF` and negative zero are allowed.
 pub type NotNan<T> = ConstrainedFloat<T, NotNanConstraint<T>>;
 
-/// An alias for a floating point value that cannot be `NaN`.
+/// An alias for a floating-point value that cannot be `NaN`.
 pub type N32 = NotNan<f32>;
-/// An alias for a floating point value that cannot be `NaN`.
+/// An alias for a floating-point value that cannot be `NaN`.
 pub type N64 = NotNan<f64>;
 
-/// An ordered and normalized floating point value that must represent a real
-/// number. `NaN`, `INF`, etc. are not allowed. This is sometimes referred to
-/// simply as a "real".
+/// An ordered and canonicalized floating-point value that must represent a
+/// real number. `NaN`, `INF`, etc. are not allowed. This is sometimes referred
+/// to simply as a "real".
 pub type Finite<T> = ConstrainedFloat<T, FiniteConstraint<T>>;
 
-/// An alias for a floating point value that represents a real number.
+/// An alias for a floating-point value that represents a real number.
 ///
 /// The prefix "R" for "real" is used instead of "F" for "finite", because if
 /// "F" were used, then this name would be very similar to `f32`,
 /// differentiated only by capitalization.
 pub type R32 = Finite<f32>;
-/// An alias for a floating point value that represents a real number.
+/// An alias for a floating-point value that represents a real number.
 ///
 /// The prefix "R" for "real" is used instead of "F" for "finite", because if
 /// "F" were used, then this name would be very similar to `f64`,
 /// differentiated only by capitalization.
 pub type R64 = Finite<f64>;
 
-/// A raw floating point value.
+/// A raw floating-point value.
 ///
-/// This trait differentiates types that implement floating point traits but
+/// This trait differentiates types that implement floating-point traits but
 /// may not be primitive types.
 pub trait Primitive {}
 
 impl Primitive for f32 {}
 impl Primitive for f64 {}
 
-/// A floating point representation of a real number.
+/// A floating-point representation of a real number.
 ///
 /// This is essentially the `Float` trait without its `NaN` or `INF`
 /// components. An equivalent bound for `Float` is `Infinite + Nan + Real`.
@@ -130,7 +130,7 @@ pub trait Real: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd<Self> {
     fn atanh(self) -> Self;
 }
 
-/// A floating point value that can be infinite.
+/// A floating-point value that can be infinite.
 pub trait Infinite: Copy + NumCast {
     fn infinity() -> Self;
     fn neg_infinity() -> Self;
@@ -138,7 +138,7 @@ pub trait Infinite: Copy + NumCast {
     fn is_finite(self) -> bool;
 }
 
-/// A floating point value that can be `NaN`.
+/// A floating-point value that can be `NaN`.
 pub trait Nan: Copy + NumCast {
     fn nan() -> Self;
     fn is_nan(self) -> bool;

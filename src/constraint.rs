@@ -1,3 +1,14 @@
+//! Constraints on floating-point values.
+//!
+//! The `FloatConstraint` trait describes a constraint by filtering illegal
+//! values and optionally supporting variants of `Ord`, `Eq`, etc. that are
+//! also provided in this module. These analogous traits determine if and how
+//! constrained values support these operations and in turn whether or not a
+//! proxy using a constraint does too.
+//!
+//! The unit type `()` is used to implement an empty constraint that has no
+//! illegal values.
+
 use num_traits::Float;
 use std::cmp::Ordering;
 use std::marker::PhantomData;
@@ -86,12 +97,12 @@ where
 {
 }
 
-/// Constraint on floating point values.
+/// Constraint on floating-point values.
 pub trait FloatConstraint<T>: Copy + PartialEq + PartialOrd + Sized
 where
     T: Float + Primitive,
 {
-    /// Filters a floating point value based on some constraints.
+    /// Filters a floating-point value based on some constraints.
     ///
     /// Returns `Some` for values that satisfy constraints and `None` for
     /// values that do not.
@@ -143,7 +154,7 @@ where
 {
 }
 
-/// Disallows `NaN` floating point values.
+/// Disallows `NaN` floating-point values.
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
 pub struct NotNanConstraint<T>
 where
@@ -172,7 +183,7 @@ where
 {
     fn eq(lhs: T, rhs: T) -> bool {
         // The input values should never be `NaN`, so just compare the raw
-        // floating point values.
+        // floating-point values.
         lhs == rhs
     }
 }
@@ -183,7 +194,7 @@ where
 {
     fn cmp(lhs: T, rhs: T) -> Ordering {
         // The input values should never be `NaN`, so just compare the raw
-        // floating point values.
+        // floating-point values.
         lhs.partial_cmp(&rhs).unwrap()
     }
 }
@@ -200,7 +211,7 @@ where
 {
 }
 
-/// Disallows `NaN`, `INF`, and `-INF` floating point values.
+/// Disallows `NaN`, `INF`, and `-INF` floating-point values.
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
 pub struct FiniteConstraint<T>
 where
@@ -229,7 +240,7 @@ where
 {
     fn eq(lhs: T, rhs: T) -> bool {
         // The input values should never be `NaN`, so just compare the raw
-        // floating point values.
+        // floating-point values.
         lhs == rhs
     }
 }
@@ -240,7 +251,7 @@ where
 {
     fn cmp(lhs: T, rhs: T) -> Ordering {
         // The input values should never be `NaN`, so just compare the raw
-        // floating point values.
+        // floating-point values.
         lhs.partial_cmp(&rhs).unwrap()
     }
 }
