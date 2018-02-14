@@ -10,7 +10,7 @@ floating-point types.
 
 ## Proxy Types
 
-Decorum exposes Several proxy (wrapper) types. Proxy types provide two primary
+Decorum exposes several proxy (wrapper) types. Proxy types provide two primary
 features: they canonicalize floating-point values to support `Eq`, `Hash`, and
 `Ord`, and they constrain the values they support. Different types place
 different constraints on the values that they can represent, with the `Ordered`
@@ -27,6 +27,10 @@ All proxy types implement the expected operation traits, such as `Add` and
 [num-traits](https://crates.io/crate/num-traits) crate (such as `Float`, `Num`,
 `NumCast`, etc.), in addition to more targeted traits like `Real` and `Nan`
 provided by Decorum.
+
+Proxy types should work as a drop-in replacement for primitive types in most
+applications, with the most common exception being initialization (because it
+may require a conversion).
 
 ## Ordering
 
@@ -62,11 +66,25 @@ values and other proxy types.
 | `into_superset` |         | Converts a proxy into another proxy. |
 | `from_subset`   |         | Creates a proxy from another proxy.  |
 
-The `from_inner` and `into_inner` conversions are exposed by the `FloatProxy`
-trait, which can be used in generic code to support different proxy types.
+The `from_inner` and `into_inner` conversions are exposed directly by proxy
+types as well as the `FloatProxy` trait, which can be used in generic code to
+support different proxy types.
 
 The `into_superset` and `from_subset` conversions provide an inexpensive way to
 convert between proxy types with different (and compatible) constraints.
+
+Decorum also implements `Into` for floating-point primitives, which provides a
+reasonably ergonomic way to perform inline conversions:
+
+```rust
+use decorum::R32;
+
+fn f(x: R32) -> R32 {
+    x * 2.0
+}
+let y: R32 = 3.1459.into();
+let z = f(2.7182.into());
+```
 
 ## Functions
 
