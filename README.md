@@ -16,11 +16,11 @@ features: they canonicalize floating-point values to support `Eq`, `Hash`, and
 different constraints on the values that they can represent, with the `Ordered`
 type applying no constraints (only ordering).
 
-| Type      | Numeric Traits                  | Disallowed Values    |
-|-----------|---------------------------------|----------------------|
-| `Ordered` | `Real + Infinite + Nan + Float` | n/a                  |
-| `NotNan`  | `Real + Infinite`               | `NaN`                |
-| `Finite`  | `Real`                          | `NaN`, `-INF`, `INF` |
+| Type      | Aliases      | Numeric Traits                  | Disallowed Values    |
+|-----------|--------------|---------------------------------|----------------------|
+| `Ordered` | none         | `Real + Infinite + Nan + Float` | n/a                  |
+| `NotNan`  | `N32`, `N64` | `Real + Infinite`               | `NaN`                |
+| `Finite`  | `R32`, `R64` | `Real`                          | `NaN`, `-INF`, `INF` |
 
 All proxy types implement the expected operation traits, such as `Add` and
 `Mul`. These types also implement numeric traits from the
