@@ -13,7 +13,7 @@ use num_traits::{Float, Num, NumCast};
 use std::num::FpCategory;
 use std::ops::Neg;
 
-// TODO: Emit useful errors using the failure or error-chain crate.
+// TODO: Support `f128`.
 
 mod canonical;
 mod constraint;
@@ -27,12 +27,10 @@ pub use canonical::{cmp_float, cmp_float_array, cmp_float_slice, eq_float, eq_fl
 pub use proxy::FloatProxy;
 
 /// An ordered and canonicalized floating-point value that does not constraint
-/// its values. Any IEEE-754 value is allowed, such as `NaN`, `INF`, and
-/// negative zero.
+/// its values.
 pub type Ordered<T> = ConstrainedFloat<T, ()>;
 
 /// An ordered and canonicalized floating-point value that cannot be `NaN`.
-/// Other IEEE-754 values like `INF` and negative zero are allowed.
 pub type NotNan<T> = ConstrainedFloat<T, NotNanConstraint<T>>;
 
 /// An alias for a floating-point value that cannot be `NaN`.
@@ -41,8 +39,10 @@ pub type N32 = NotNan<f32>;
 pub type N64 = NotNan<f64>;
 
 /// An ordered and canonicalized floating-point value that must represent a
-/// real number. `NaN`, `INF`, etc. are not allowed. This is sometimes referred
-/// to simply as a "real".
+/// real number.
+///
+/// `NaN`, `INF`, etc. are not allowed. This is sometimes referred to simply as
+/// a "real" as seen in the `R32` and `R64` aliases.
 pub type Finite<T> = ConstrainedFloat<T, FiniteConstraint<T>>;
 
 /// An alias for a floating-point value that represents a real number.
@@ -58,7 +58,7 @@ pub type R32 = Finite<f32>;
 /// differentiated only by capitalization.
 pub type R64 = Finite<f64>;
 
-/// A raw floating-point value.
+/// A primitive floating-point value.
 ///
 /// This trait differentiates types that implement floating-point traits but
 /// may not be primitive types.
@@ -130,7 +130,7 @@ pub trait Real: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd<Self> {
     fn atanh(self) -> Self;
 }
 
-/// A floating-point value that can be infinite.
+/// A floating-point value that can be infinite (`-INF` or `INF`).
 pub trait Infinite: Copy + NumCast {
     fn infinity() -> Self;
     fn neg_infinity() -> Self;

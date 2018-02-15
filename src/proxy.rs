@@ -44,7 +44,8 @@ where
 /// Constrained, ordered, hashable floating-point proxy.
 ///
 /// Wraps floating-point values and provides a proxy that implements operation
-/// and numerical traits, including `Hash`, `Ord`, and `Eq`.
+/// and numerical traits, including `Hash`, `Ord`, and `Eq`. May apply
+/// constraints that prevent certain values from occurring (by panicing).
 #[cfg_attr(feature = "serialize-serde", derive(Deserialize, Serialize))]
 #[derivative(Clone, Copy, Debug, Default)]
 #[derive(Derivative)]
