@@ -17,9 +17,11 @@ use std::ops::Neg;
 
 mod canonical;
 mod constraint;
+mod primitive;
 mod proxy;
 
 use constraint::{FiniteConstraint, NotNanConstraint};
+use primitive::Primitive;
 use proxy::ConstrainedFloat;
 
 pub use canonical::{cmp_float, cmp_float_array, cmp_float_slice, eq_float, eq_float_array,
@@ -57,15 +59,6 @@ pub type R32 = Finite<f32>;
 /// "F" were used, then this name would be very similar to `f64`,
 /// differentiated only by capitalization.
 pub type R64 = Finite<f64>;
-
-/// A primitive floating-point value.
-///
-/// This trait differentiates types that implement floating-point traits but
-/// may not be primitive types.
-pub trait Primitive {}
-
-impl Primitive for f32 {}
-impl Primitive for f64 {}
 
 /// A floating-point representation of a real number.
 ///

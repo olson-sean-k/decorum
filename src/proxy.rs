@@ -7,11 +7,12 @@ use std::marker::PhantomData;
 use std::num::FpCategory;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign};
 
-use {Infinite, Nan, Primitive, Real};
+use {Infinite, Nan, Real};
 use {Finite, NotNan, Ordered};
 use canonical;
 use constraint::{ConstraintEq, ConstraintInfinity, ConstraintNan, ConstraintOrd,
                  ConstraintPartialOrd, FloatConstraint, SubsetOf, SupersetOf};
+use primitive::Primitive;
 
 /// A floating-point proxy.
 ///
