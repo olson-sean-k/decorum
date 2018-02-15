@@ -68,7 +68,9 @@ Real` are equivalent, and for all types `T: Float ⇒ T: Infinite + Nan + Real`.
 For example, code that wishes to be generic over floating-point types
 representing real numbers, a bound on the `Real` trait can be used:
 
-```
+```rust
+use decorum::Real;
+
 fn f<T>(x: T, y: T) -> T
 where
     T: Real,
