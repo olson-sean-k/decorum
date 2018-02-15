@@ -54,6 +54,29 @@ or conversion invalidates these constraints. The `Ordered` type allows any
 valid IEEE-754 value (there are no constraints). For most use cases, either
 `Ordered` or `NotNan` are appropriate.
 
+## Traits
+
+Numeric traits are essential for generic programming, but the constraints used
+by some proxy types prevent them from implementing the ubiquitous `Float`
+trait, because it implies the presence of `-INF`, `INF`, and `NaN`.
+
+Decorum provides more granular traits that separate these APIs: `Real`,
+`Infinite`, and `Nan`. These traits are monkey-patched using blanket
+implementations so that the trait bounds `T: Float` and `T: Infinite + Nan +
+Real` are equivalent, and for all types `T: Float ⇒ T: Infinite + Nan + Real`.
+
+For example, code that wishes to be generic over floating-point types
+representing real numbers, a bound on the `Real` trait can be used:
+
+```
+fn f<T>(x: T, y: T) -> T
+where
+    T: Real,
+{
+    x + y
+}
+```
+
 ## Conversions
 
 Proxy types are used via conversions to and from primitive floating-point
