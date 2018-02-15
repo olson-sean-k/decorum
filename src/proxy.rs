@@ -834,6 +834,21 @@ where
     }
 }
 
+impl<T, P> PartialEq<T> for ConstrainedFloat<T, P>
+where
+    T: Float + Primitive,
+    P: FloatConstraint<T> + ConstraintEq<T>,
+{
+    fn eq(&self, other: &T) -> bool {
+        if let Ok(other) = Self::try_from_inner(*other) {
+            Self::eq(self, &other)
+        }
+        else {
+            false
+        }
+    }
+}
+
 impl<T, P> PartialOrd for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
@@ -844,8 +859,20 @@ where
     }
 }
 
-// This requires `P: ConstraintEq<T> + ConstraintPartialOrd<T>`, because `Real` requires
-// `PartialEq<Self>` and `PartialOrd<Self>`.
+impl<T, P> PartialOrd<T> for ConstrainedFloat<T, P>
+where
+    T: Float + Primitive,
+    P: FloatConstraint<T> + ConstraintEq<T> + ConstraintPartialOrd<T>,
+{
+    fn partial_cmp(&self, other: &T) -> Option<Ordering> {
+        Self::try_from_inner(*other)
+            .ok()
+            .and_then(|other| Self::partial_cmp(self, &other))
+    }
+}
+
+// This requires `P: ConstraintEq<T> + ConstraintPartialOrd<T>`, because `Real`
+// requires `PartialEq<Self>` and `PartialOrd<Self>`.
 impl<T, P> Real for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
@@ -1300,6 +1327,22 @@ mod tests {
 
         let w: Ordered<f32> = (Real::sqrt(-1.0)).into();
         assert_eq!(x, w);
+    }
+
+    #[test]
+    fn cmp_proxy_to_primitive() {
+        // Compare a canonicalized `NaN` with a primitive `NaN` with a
+        // different representation.
+        let x: Ordered<f32> = (0.0 / 0.0).into();
+        assert_eq!(x, f32::sqrt(-1.0));
+
+        // Compare a canonicalized `INF` with a primitive `NaN`.
+        let y: Ordered<f32> = (1.0 / 0.0).into();
+        assert!(y < (0.0 / 0.0));
+
+        // Compare a proxy that disallows `INF` to a primitive `INF`.
+        let z: R32 = 0.0.into();
+        assert_eq!(z.partial_cmp(&(1.0 / 0.0)), None);
     }
 
     // TODO: This test is questionable.
