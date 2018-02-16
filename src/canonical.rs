@@ -1,3 +1,13 @@
+//! Canonicalization of floating-point values.
+//!
+//! This module provides canonicalization of floating-point values, converting
+//! `NaN` and zero to the canonical forms `CNaN` and `C0` for the following
+//! total ordering: `[-INF | ... | C0 | ... | INF | CNaN ]`.
+//!
+//! This form is used for hashing and comparisons. Functions are provided that
+//! operate on primitive floating-point values which can be used by user code
+//! and are also used internally by Decorum.
+
 use num_traits::Float;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
@@ -68,6 +78,13 @@ macro_rules! float_array {
 }
 float_array!(lengths => 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
 
+/// Compares primitive floating-point values.
+///
+/// To perform the comparison, the floating-point value is canonicalized. If
+/// `NaN` or zero, a canonical form is used (`CNaN` and `C0` respectively) so
+/// that all `NaN`s and zeroes (positive and negative) are considered equal.
+///
+/// The total ordering is: `[-INF | ... | C0 | ... | INF | CNaN ]`.
 pub fn cmp_float<T>(lhs: T, rhs: T) -> Ordering
 where
     T: Float + Primitive,
@@ -88,6 +105,14 @@ where
     }
 }
 
+/// Compares primitive floating-point slices.
+///
+/// See `cmp_float` for details of scalar comparisons. The ordering of slices
+/// is determined by the first instance of non-equal corresponding elements. If
+/// no such instance exists, then the length of the slices are compared; longer
+/// slices are considered greater than shorter slices.  Naturally, this means
+/// that slices of the same length with equivalent elements are considered
+/// equal.
 pub fn cmp_float_slice<T>(lhs: &[T], rhs: &[T]) -> Ordering
 where
     T: Float + Primitive,
@@ -102,6 +127,11 @@ where
     }
 }
 
+/// Compares primitive floating-point arrays.
+///
+/// See `cmp_float` for details of scalar comparisons. The ordering of arrays
+/// is determined by the first instance of non-equal corresponding elements. If
+/// no such instance exists, then the arrays are equal.
 pub fn cmp_float_array<T>(lhs: &T, rhs: &T) -> Ordering
 where
     T: FloatArray,
@@ -110,6 +140,11 @@ where
 }
 
 // TODO: Consider comparing the output of `canonicalize` here.
+/// Determines if primitive floating-point values are equal.
+///
+/// To perform the comparison, the floating-point value is canonicalized. If
+/// `NaN` or zero, a canonical form is used so that all `NaN`s and zeroes
+/// (positive and negative) are considered equal.
 pub fn eq_float<T>(lhs: T, rhs: T) -> bool
 where
     T: Float + Primitive,
@@ -125,6 +160,11 @@ where
     }
 }
 
+/// Determines if primitive floating-point slices are equal.
+///
+/// See `eq_float` for details of scalar comparisons. Slices are equal if all
+/// of their corresponding elements are equal. Slices of different lengths are
+/// never considered equal.
 pub fn eq_float_slice<T>(lhs: &[T], rhs: &[T]) -> bool
 where
     T: Float + Primitive,
@@ -139,6 +179,10 @@ where
     }
 }
 
+/// Determines if primitive floating-point arrays are equal.
+///
+/// See `eq_float` for details of scalar comparisons. Arrays are equal if all
+/// of their corresponding elements are equal.
 pub fn eq_float_array<T>(lhs: &T, rhs: &T) -> bool
 where
     T: FloatArray,
@@ -149,8 +193,8 @@ where
 /// Hashes a primitive floating-point value.
 ///
 /// To perform the hash, the floating-point value is canonicalized. If `NaN` or
-/// zero, a canonical form is used, so all `NaN`s result in the same hash and
-/// all zeroes (positive and negative) result in the same hash.
+/// zero, a canonical form is used so that all `NaN`s result in the same hash
+/// and all zeroes (positive and negative) result in the same hash.
 pub fn hash_float<T, H>(value: T, state: &mut H)
 where
     T: Float + Primitive,

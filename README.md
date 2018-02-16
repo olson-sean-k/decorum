@@ -1,7 +1,7 @@
 ![Decorum](https://raw.githubusercontent.com/olson-sean-k/decorum/master/doc/decorum.png)
 
-**Decorum** is a Rust library that provides ordering, equality, and hashing for
-floating-point types.
+**Decorum** is a Rust library that provides ordering, equality, hashing, and
+constraints for floating-point types.
 
 [![Build Status](https://travis-ci.org/olson-sean-k/decorum.svg?branch=master)](https://travis-ci.org/olson-sean-k/decorum)
 [![Build Status](https://ci.appveyor.com/api/projects/status/3630cscs05c6ux86?svg=true)](https://ci.appveyor.com/project/olson-sean-k/decorum)
@@ -66,7 +66,7 @@ implementations so that the trait bounds `T: Float` and `T: Infinite + Nan +
 Real` are equivalent, and for all types `T: Float ⇒ T: Infinite + Nan + Real`.
 
 For example, code that wishes to be generic over floating-point types
-representing real numbers, a bound on the `Real` trait can be used:
+representing real numbers can use a bound on the `Real` trait:
 
 ```rust
 use decorum::Real;

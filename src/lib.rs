@@ -1,4 +1,5 @@
-//! Ordering, equality, hashing, and constraints for floating-point types.
+//! Making floating-point values behave: ordering, equality, hashing, and
+//! constraints for floating-point types.
 
 #[macro_use]
 extern crate derivative;
@@ -334,6 +335,7 @@ where
     }
 }
 
+/// A floating-point type that supports infinities.
 impl<T> Infinite for T
 where
     T: Float + Primitive,
@@ -355,6 +357,7 @@ where
     }
 }
 
+/// A floating-point type that supports `NaN`.
 impl<T> Nan for T
 where
     T: Float + Primitive,

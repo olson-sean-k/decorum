@@ -7,8 +7,7 @@ use std::marker::PhantomData;
 use std::num::FpCategory;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign};
 
-use {Infinite, Nan, Real};
-use {Finite, NotNan, Ordered};
+use {Finite, Infinite, Nan, NotNan, Ordered, Real};
 use canonical;
 use constraint::{ConstraintEq, ConstraintInfinity, ConstraintNan, ConstraintOrd,
                  ConstraintPartialOrd, FloatConstraint, SubsetOf, SupersetOf};
