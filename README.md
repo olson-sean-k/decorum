@@ -61,9 +61,10 @@ by some proxy types prevent them from implementing the ubiquitous `Float`
 trait, because it implies the presence of `-INF`, `INF`, and `NaN`.
 
 Decorum provides more granular traits that separate these APIs: `Real`,
-`Infinite`, and `Nan`. These traits are monkey-patched using blanket
-implementations so that the trait bounds `T: Float` and `T: Infinite + Nan +
-Real` are equivalent, and for all types `T: Float ⇒ T: Infinite + Nan + Real`.
+`Infinite`, `Nan`, and `Encoding`. These traits are monkey-patched using
+blanket implementations so that the trait bounds `T: Float` and `T: Encoding +
+Infinite + Nan + Real` are equivalent, and for all types `T: Float ⇒ T:
+Encoding + Infinite + Nan + Real`.
 
 For example, code that wishes to be generic over floating-point types
 representing real numbers can use a bound on the `Real` trait:

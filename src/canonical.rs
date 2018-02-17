@@ -12,7 +12,7 @@ use num_traits::Float;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
-use Real;
+use {Encoding, Real};
 use primitive::Primitive;
 
 const SIGN_MASK: u64 = 0x8000_0000_0000_0000u64;
@@ -242,7 +242,7 @@ where
 
 fn canonicalize_not_nan<T>(value: T) -> u64
 where
-    T: Primitive + Real,
+    T: Encoding + Primitive + Real,
 {
     use std::mem;
 

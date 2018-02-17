@@ -61,28 +61,39 @@ pub type R32 = Finite<f32>;
 /// differentiated only by capitalization.
 pub type R64 = Finite<f64>;
 
+/// A floating-point value that can be infinite (`-INF` or `INF`).
+pub trait Infinite: Copy + NumCast {
+    fn infinity() -> Self;
+    fn neg_infinity() -> Self;
+    fn is_infinite(self) -> bool;
+    fn is_finite(self) -> bool;
+}
+
+/// A floating-point value that can be `NaN`.
+pub trait Nan: Copy + NumCast {
+    fn nan() -> Self;
+    fn is_nan(self) -> bool;
+}
+
+/// Floating-point encoding.
+pub trait Encoding: Copy + NumCast {
+    fn classify(self) -> FpCategory;
+    fn is_normal(self) -> bool;
+    fn integer_decode(self) -> (u64, i16, i8);
+}
+
 /// A floating-point representation of a real number.
-///
-/// This is essentially the `Float` trait without its `NaN` or `INF`
-/// components. An equivalent bound for `Float` is `Infinite + Nan + Real`.
-pub trait Real: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd<Self> {
+pub trait Real: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd {
     fn max_value() -> Self;
     fn min_value() -> Self;
     fn min_positive_value() -> Self;
     fn min(self, other: Self) -> Self;
     fn max(self, other: Self) -> Self;
 
-    fn neg_zero() -> Self;
-
     fn is_sign_positive(self) -> bool;
     fn is_sign_negative(self) -> bool;
     fn signum(self) -> Self;
     fn abs(self) -> Self;
-
-    fn classify(self) -> FpCategory;
-    fn is_normal(self) -> bool;
-
-    fn integer_decode(self) -> (u64, i16, i8);
 
     fn floor(self) -> Self;
     fn ceil(self) -> Self;
@@ -124,18 +135,55 @@ pub trait Real: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd<Self> {
     fn atanh(self) -> Self;
 }
 
-/// A floating-point value that can be infinite (`-INF` or `INF`).
-pub trait Infinite: Copy + NumCast {
-    fn infinity() -> Self;
-    fn neg_infinity() -> Self;
-    fn is_infinite(self) -> bool;
-    fn is_finite(self) -> bool;
+impl<T> Infinite for T
+where
+    T: Float + Primitive,
+{
+    fn infinity() -> Self {
+        Float::infinity()
+    }
+
+    fn neg_infinity() -> Self {
+        Float::neg_infinity()
+    }
+
+    fn is_infinite(self) -> bool {
+        Float::is_infinite(self)
+    }
+
+    fn is_finite(self) -> bool {
+        Float::is_finite(self)
+    }
 }
 
-/// A floating-point value that can be `NaN`.
-pub trait Nan: Copy + NumCast {
-    fn nan() -> Self;
-    fn is_nan(self) -> bool;
+impl<T> Nan for T
+where
+    T: Float + Primitive,
+{
+    fn nan() -> Self {
+        Float::nan()
+    }
+
+    fn is_nan(self) -> bool {
+        Float::is_nan(self)
+    }
+}
+
+impl<T> Encoding for T
+where
+    T: Float + Primitive,
+{
+    fn classify(self) -> FpCategory {
+        Float::classify(self)
+    }
+
+    fn is_normal(self) -> bool {
+        Float::is_normal(self)
+    }
+
+    fn integer_decode(self) -> (u64, i16, i8) {
+        Float::integer_decode(self)
+    }
 }
 
 impl<T> Real for T
@@ -162,10 +210,6 @@ where
         Float::max(self, other)
     }
 
-    fn neg_zero() -> Self {
-        Float::neg_zero()
-    }
-
     fn is_sign_positive(self) -> bool {
         Float::is_sign_positive(self)
     }
@@ -180,18 +224,6 @@ where
 
     fn abs(self) -> Self {
         Float::abs(self)
-    }
-
-    fn classify(self) -> FpCategory {
-        Float::classify(self)
-    }
-
-    fn is_normal(self) -> bool {
-        Float::is_normal(self)
-    }
-
-    fn integer_decode(self) -> (u64, i16, i8) {
-        Float::integer_decode(self)
     }
 
     fn floor(self) -> Self {
@@ -332,41 +364,5 @@ where
 
     fn atanh(self) -> Self {
         Float::atanh(self)
-    }
-}
-
-/// A floating-point type that supports infinities.
-impl<T> Infinite for T
-where
-    T: Float + Primitive,
-{
-    fn infinity() -> Self {
-        Float::infinity()
-    }
-
-    fn neg_infinity() -> Self {
-        Float::neg_infinity()
-    }
-
-    fn is_infinite(self) -> bool {
-        Float::is_infinite(self)
-    }
-
-    fn is_finite(self) -> bool {
-        Float::is_finite(self)
-    }
-}
-
-/// A floating-point type that supports `NaN`.
-impl<T> Nan for T
-where
-    T: Float + Primitive,
-{
-    fn nan() -> Self {
-        Float::nan()
-    }
-
-    fn is_nan(self) -> bool {
-        Float::is_nan(self)
     }
 }

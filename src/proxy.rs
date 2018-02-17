@@ -7,7 +7,7 @@ use std::marker::PhantomData;
 use std::num::FpCategory;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign};
 
-use {Finite, Infinite, Nan, NotNan, Ordered, Real};
+use {Encoding, Finite, Infinite, Nan, NotNan, Ordered, Real};
 use canonical;
 use constraint::{ConstraintEq, ConstraintInfinity, ConstraintNan, ConstraintOrd,
                  ConstraintPartialOrd, FloatConstraint, SubsetOf, SupersetOf};
@@ -313,6 +313,24 @@ where
     }
 }
 
+impl<T, P> Encoding for ConstrainedFloat<T, P>
+where
+    T: Float + Primitive,
+    P: FloatConstraint<T>,
+{
+    fn classify(self) -> FpCategory {
+        T::classify(self.into_inner())
+    }
+
+    fn is_normal(self) -> bool {
+        T::is_normal(self.into_inner())
+    }
+
+    fn integer_decode(self) -> (u64, i16, i8) {
+        T::integer_decode(self.into_inner())
+    }
+}
+
 impl<T, P> Eq for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
@@ -374,7 +392,7 @@ where
     }
 
     fn neg_zero() -> Self {
-        Real::neg_zero()
+        Self::from_inner(T::neg_zero())
     }
 
     fn is_sign_positive(self) -> bool {
@@ -394,15 +412,15 @@ where
     }
 
     fn classify(self) -> FpCategory {
-        Real::classify(self)
+        Encoding::classify(self)
     }
 
     fn is_normal(self) -> bool {
-        Real::is_normal(self)
+        Encoding::is_normal(self)
     }
 
     fn integer_decode(self) -> (u64, i16, i8) {
-        Real::integer_decode(self)
+        Encoding::integer_decode(self)
     }
 
     fn floor(self) -> Self {
@@ -870,8 +888,6 @@ where
     }
 }
 
-// This requires `P: ConstraintEq<T> + ConstraintPartialOrd<T>`, because `Real`
-// requires `PartialEq<Self>` and `PartialOrd<Self>`.
 impl<T, P> Real for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
@@ -897,10 +913,6 @@ where
         ConstrainedFloat::from_inner_unchecked(T::max(self.into_inner(), other.into_inner()))
     }
 
-    fn neg_zero() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::neg_zero())
-    }
-
     fn is_sign_positive(self) -> bool {
         T::is_sign_positive(self.into_inner())
     }
@@ -915,18 +927,6 @@ where
 
     fn abs(self) -> Self {
         ConstrainedFloat::from_inner_unchecked(T::abs(self.into_inner()))
-    }
-
-    fn classify(self) -> FpCategory {
-        T::classify(self.into_inner())
-    }
-
-    fn is_normal(self) -> bool {
-        T::is_normal(self.into_inner())
-    }
-
-    fn integer_decode(self) -> (u64, i16, i8) {
-        T::integer_decode(self.into_inner())
     }
 
     fn floor(self) -> Self {
