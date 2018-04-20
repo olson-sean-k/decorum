@@ -13,8 +13,8 @@ use num_traits::Float;
 use std::cmp::Ordering;
 use std::marker::PhantomData;
 
-use Primitive;
 use canonical;
+use Primitive;
 
 pub trait ConstraintEq<T>
 where

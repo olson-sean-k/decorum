@@ -1,5 +1,5 @@
-//! Making floating-point values behave: ordering, equality, hashing, and
-//! constraints for floating-point types.
+//! Making floating-point values behave: traits, ordering, equality, hashing,
+//! and constraints for floating-point types.
 
 #[macro_use]
 extern crate derivative;
@@ -10,7 +10,7 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
-use num_traits::{Float, Num, NumCast};
+use num_traits::{real, Float, Num, NumCast};
 use std::num::FpCategory;
 use std::ops::Neg;
 
@@ -76,17 +76,24 @@ pub trait Nan: Copy + NumCast {
 }
 
 /// Floating-point encoding.
+///
+/// Provides values and operations that directly relate to the encoding of an
+/// IEEE-754 floating-point value with the exception of `-INF`, `INF`, and
+/// `NaN`. See the `Infinite` and `Nan` traits.
 pub trait Encoding: Copy + NumCast {
+    fn max_value() -> Self;
+    fn min_value() -> Self;
+    fn min_positive_value() -> Self;
+    fn epsilon() -> Self;
     fn classify(self) -> FpCategory;
     fn is_normal(self) -> bool;
     fn integer_decode(self) -> (u64, i16, i8);
 }
 
-/// A floating-point representation of a real number.
+/// A floating-point value that can represent a real number.
+///
+/// Provides values and operations that generally apply to real numbers.
 pub trait Real: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd {
-    fn max_value() -> Self;
-    fn min_value() -> Self;
-    fn min_positive_value() -> Self;
     fn min(self, other: Self) -> Self;
     fn max(self, other: Self) -> Self;
 
@@ -133,6 +140,9 @@ pub trait Real: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd {
     fn asinh(self) -> Self;
     fn acosh(self) -> Self;
     fn atanh(self) -> Self;
+
+    fn into_degrees(self) -> Self;
+    fn into_radians(self) -> Self;
 }
 
 impl<T> Infinite for T
@@ -173,6 +183,22 @@ impl<T> Encoding for T
 where
     T: Float + Primitive,
 {
+    fn max_value() -> Self {
+        Float::max_value()
+    }
+
+    fn min_value() -> Self {
+        Float::min_value()
+    }
+
+    fn min_positive_value() -> Self {
+        Float::min_positive_value()
+    }
+
+    fn epsilon() -> Self {
+        Float::epsilon()
+    }
+
     fn classify(self) -> FpCategory {
         Float::classify(self)
     }
@@ -190,18 +216,6 @@ impl<T> Real for T
 where
     T: Float + Primitive,
 {
-    fn max_value() -> Self {
-        Float::max_value()
-    }
-
-    fn min_value() -> Self {
-        Float::min_value()
-    }
-
-    fn min_positive_value() -> Self {
-        Float::min_positive_value()
-    }
-
     fn min(self, other: Self) -> Self {
         Float::min(self, other)
     }
@@ -365,4 +379,223 @@ where
     fn atanh(self) -> Self {
         Float::atanh(self)
     }
+
+    fn into_degrees(self) -> Self {
+        Float::to_degrees(self)
+    }
+
+    fn into_radians(self) -> Self {
+        Float::to_radians(self)
+    }
 }
+
+/// Implements the `Real` trait from
+/// [num-traits](https://crates.io/crates/num-traits) in terms of Decorum's
+/// numeric traits.
+///
+/// This is not generic, because the blanket implementation provided by
+/// num-traits prevents a constraint-based implementation. Instead, this macro
+/// must be applied manually to each proxy type exported by Decorum that is
+/// `Real` but not `Float`.
+///
+/// See the following issues:
+///
+/// - https://github.com/olson-sean-k/decorum/issues/10
+/// - https://github.com/rust-num/num-traits/issues/49
+macro_rules! real {
+    (proxy => $T:ty) => {
+        impl real::Real for $T {
+            fn max_value() -> Self {
+                Encoding::max_value()
+            }
+
+            fn min_value() -> Self {
+                Encoding::min_value()
+            }
+
+            fn min_positive_value() -> Self {
+                Encoding::min_positive_value()
+            }
+
+            fn epsilon() -> Self {
+                Encoding::epsilon()
+            }
+
+            fn min(self, other: Self) -> Self {
+                Real::min(self, other)
+            }
+
+            fn max(self, other: Self) -> Self {
+                Real::max(self, other)
+            }
+
+            fn is_sign_positive(self) -> bool {
+                Real::is_sign_positive(self)
+            }
+
+            fn is_sign_negative(self) -> bool {
+                Real::is_sign_negative(self)
+            }
+
+            fn signum(self) -> Self {
+                Real::signum(self)
+            }
+
+            fn abs(self) -> Self {
+                Real::abs(self)
+            }
+
+            fn floor(self) -> Self {
+                Real::floor(self)
+            }
+
+            fn ceil(self) -> Self {
+                Real::ceil(self)
+            }
+
+            fn round(self) -> Self {
+                Real::round(self)
+            }
+
+            fn trunc(self) -> Self {
+                Real::trunc(self)
+            }
+
+            fn fract(self) -> Self {
+                Real::fract(self)
+            }
+
+            fn recip(self) -> Self {
+                Real::recip(self)
+            }
+
+            fn mul_add(self, a: Self, b: Self) -> Self {
+                Real::mul_add(self, a, b)
+            }
+
+            fn abs_sub(self, other: Self) -> Self {
+                Real::abs_sub(self, other)
+            }
+
+            fn powi(self, n: i32) -> Self {
+                Real::powi(self, n)
+            }
+
+            fn powf(self, n: Self) -> Self {
+                Real::powf(self, n)
+            }
+
+            fn sqrt(self) -> Self {
+                Real::sqrt(self)
+            }
+
+            fn cbrt(self) -> Self {
+                Real::cbrt(self)
+            }
+
+            fn exp(self) -> Self {
+                Real::exp(self)
+            }
+
+            fn exp2(self) -> Self {
+                Real::exp2(self)
+            }
+
+            fn exp_m1(self) -> Self {
+                Real::exp_m1(self)
+            }
+
+            fn log(self, base: Self) -> Self {
+                Real::log(self, base)
+            }
+
+            fn ln(self) -> Self {
+                Real::ln(self)
+            }
+
+            fn log2(self) -> Self {
+                Real::log2(self)
+            }
+
+            fn log10(self) -> Self {
+                Real::log10(self)
+            }
+
+            fn to_degrees(self) -> Self {
+                Real::into_degrees(self)
+            }
+
+            fn to_radians(self) -> Self {
+                Real::into_radians(self)
+            }
+
+            fn ln_1p(self) -> Self {
+                Real::ln_1p(self)
+            }
+
+            fn hypot(self, other: Self) -> Self {
+                Real::hypot(self, other)
+            }
+
+            fn sin(self) -> Self {
+                Real::sin(self)
+            }
+
+            fn cos(self) -> Self {
+                Real::cos(self)
+            }
+
+            fn tan(self) -> Self {
+                Real::tan(self)
+            }
+
+            fn asin(self) -> Self {
+                Real::asin(self)
+            }
+
+            fn acos(self) -> Self {
+                Real::acos(self)
+            }
+
+            fn atan(self) -> Self {
+                Real::atan(self)
+            }
+
+            fn atan2(self, other: Self) -> Self {
+                Real::atan2(self, other)
+            }
+
+            fn sin_cos(self) -> (Self, Self) {
+                Real::sin_cos(self)
+            }
+
+            fn sinh(self) -> Self {
+                Real::sinh(self)
+            }
+
+            fn cosh(self) -> Self {
+                Real::cosh(self)
+            }
+
+            fn tanh(self) -> Self {
+                Real::tanh(self)
+            }
+
+            fn asinh(self) -> Self {
+                Real::asinh(self)
+            }
+
+            fn acosh(self) -> Self {
+                Real::acosh(self)
+            }
+
+            fn atanh(self) -> Self {
+                Real::atanh(self)
+            }
+        }
+    };
+}
+real!(proxy => N32);
+real!(proxy => N64);
+real!(proxy => R32);
+real!(proxy => R64);

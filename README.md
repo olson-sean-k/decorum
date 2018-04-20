@@ -63,7 +63,7 @@ trait, because it implies the presence of `-INF`, `INF`, and `NaN`.
 Decorum provides more granular traits that separate these APIs: `Real`,
 `Infinite`, `Nan`, and `Encoding`. These traits are monkey-patched using
 blanket implementations so that the trait bounds `T: Float` and `T: Encoding +
-Infinite + Nan + Real` are equivalent, and for all types `T: Float ⇒ T:
+Infinite + Nan + Real` are equivalent, and for all primitive and proxy types `T: Float ⇒ T:
 Encoding + Infinite + Nan + Real`.
 
 For example, code that wishes to be generic over floating-point types
@@ -79,6 +79,12 @@ where
     x + y
 }
 ```
+
+Both Decorum and [num-traits](https://crates.io/crate/num-traits) expose a
+`Real` trait. Due to some subtle differences and [an
+issue](https://github.com/rust-num/num-traits/issues/49) with the num-traits API
+that makes implementing `Real` difficult, Decorum continues to vendor its own.
+However, both traits are implemented for proxy types.
 
 ## Conversions
 

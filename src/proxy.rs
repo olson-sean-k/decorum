@@ -7,11 +7,11 @@ use std::marker::PhantomData;
 use std::num::FpCategory;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign};
 
-use {Encoding, Finite, Infinite, Nan, NotNan, Ordered, Real};
 use canonical;
 use constraint::{ConstraintEq, ConstraintInfinity, ConstraintNan, ConstraintOrd,
                  ConstraintPartialOrd, FloatConstraint, SubsetOf, SupersetOf};
 use primitive::Primitive;
+use {Encoding, Finite, Infinite, Nan, NotNan, Ordered, Real};
 
 /// A floating-point proxy.
 ///
@@ -55,7 +55,8 @@ where
     P: FloatConstraint<T>,
 {
     value: T,
-    #[derivative(Debug = "ignore")] phantom: PhantomData<P>,
+    #[derivative(Debug = "ignore")]
+    phantom: PhantomData<P>,
 }
 
 impl<T, P> ConstrainedFloat<T, P>
@@ -318,6 +319,22 @@ where
     T: Float + Primitive,
     P: FloatConstraint<T>,
 {
+    fn max_value() -> Self {
+        <Self as Bounded>::max_value()
+    }
+
+    fn min_value() -> Self {
+        <Self as Bounded>::min_value()
+    }
+
+    fn min_positive_value() -> Self {
+        ConstrainedFloat::from_inner_unchecked(T::min_positive_value())
+    }
+
+    fn epsilon() -> Self {
+        ConstrainedFloat::from_inner_unchecked(T::epsilon())
+    }
+
     fn classify(self) -> FpCategory {
         T::classify(self.into_inner())
     }
@@ -372,15 +389,19 @@ where
     }
 
     fn max_value() -> Self {
-        Real::max_value()
+        Encoding::max_value()
     }
 
     fn min_value() -> Self {
-        Real::min_value()
+        Encoding::min_value()
     }
 
     fn min_positive_value() -> Self {
-        Real::min_positive_value()
+        Encoding::min_positive_value()
+    }
+
+    fn epsilon() -> Self {
+        Encoding::epsilon()
     }
 
     fn min(self, other: Self) -> Self {
@@ -893,18 +914,6 @@ where
     T: Float + Primitive,
     P: FloatConstraint<T> + ConstraintEq<T> + ConstraintPartialOrd<T>,
 {
-    fn max_value() -> Self {
-        <Self as Bounded>::max_value()
-    }
-
-    fn min_value() -> Self {
-        <Self as Bounded>::min_value()
-    }
-
-    fn min_positive_value() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::min_positive_value())
-    }
-
     fn min(self, other: Self) -> Self {
         ConstrainedFloat::from_inner_unchecked(T::min(self.into_inner(), other.into_inner()))
     }
@@ -1075,6 +1084,14 @@ where
 
     fn atanh(self) -> Self {
         ConstrainedFloat::from_inner_unchecked(self.into_inner().atanh())
+    }
+
+    fn into_degrees(self) -> Self {
+        ConstrainedFloat::from_inner_unchecked(self.into_inner().to_degrees())
+    }
+
+    fn into_radians(self) -> Self {
+        ConstrainedFloat::from_inner_unchecked(self.into_inner().to_radians())
     }
 }
 
@@ -1262,8 +1279,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use {Finite, N32, NotNan, Ordered, R32};
     use super::*;
+    use {Finite, N32, NotNan, Ordered, R32};
 
     #[test]
     fn ordered_no_panic_on_inf() {
