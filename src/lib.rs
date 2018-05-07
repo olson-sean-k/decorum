@@ -34,6 +34,8 @@ pub use proxy::FloatProxy;
 pub type Ordered<T> = ConstrainedFloat<T, ()>;
 
 /// An ordered and canonicalized floating-point value that cannot be `NaN`.
+///
+/// If any operation results in a `NaN` value, then a panic will occur.
 pub type NotNan<T> = ConstrainedFloat<T, NotNanConstraint<T>>;
 
 /// An alias for a floating-point value that cannot be `NaN`.
@@ -44,8 +46,9 @@ pub type N64 = NotNan<f64>;
 /// An ordered and canonicalized floating-point value that must represent a
 /// real number.
 ///
-/// `NaN`, `INF`, etc. are not allowed. This is sometimes referred to simply as
-/// a "real" as seen in the `R32` and `R64` aliases.
+/// `NaN`, `INF`, etc. are not allowed and a panic will occur if any operation
+/// results in such a value. This is sometimes referred to simply as a "real" as
+/// seen in the `R32` and `R64` aliases.
 pub type Finite<T> = ConstrainedFloat<T, FiniteConstraint<T>>;
 
 /// An alias for a floating-point value that represents a real number.
@@ -90,7 +93,7 @@ pub trait Encoding: Copy + NumCast {
     fn integer_decode(self) -> (u64, i16, i8);
 }
 
-/// A floating-point value that can represent a real number.
+/// A value that can represent a real number.
 ///
 /// Provides values and operations that generally apply to real numbers.
 pub trait Real: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd {

@@ -13,7 +13,7 @@ use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
 use primitive::Primitive;
-use {Encoding, Real};
+use Encoding;
 
 const SIGN_MASK: u64 = 0x8000_0000_0000_0000u64;
 const EXPONENT_MASK: u64 = 0x7ff0_0000_0000_0000u64;
@@ -80,15 +80,18 @@ float_array!(lengths => 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
 
 /// Compares primitive floating-point values.
 ///
-/// To perform the comparison, the floating-point value is canonicalized. If
-/// `NaN` or zero, a canonical form is used (`CNaN` and `C0` respectively) so
-/// that all `NaN`s and zeroes (positive and negative) are considered equal.
+/// To perform the comparison, the floating-point values are interpretted in
+/// canonicalized form. All `NaN`s and zeroes (positive and negative) are
+/// considered equal to each other.
 ///
 /// The total ordering is: `[-INF | ... | C0 | ... | INF | CNaN ]`.
 pub fn cmp_float<T>(lhs: T, rhs: T) -> Ordering
 where
     T: Float + Primitive,
 {
+    // Using `canonicalize_float` here would be difficult, because comparing the
+    // `u64` encoding would not always have the expected results. `+0` and `-0`
+    // already compare as equal, so only `NaN`s must be handled explicitly.
     match lhs.partial_cmp(&rhs) {
         Some(ordering) => ordering,
         None => if lhs.is_nan() {
@@ -139,7 +142,6 @@ where
     lhs.cmp(rhs)
 }
 
-// TODO: Consider comparing the output of `canonicalize` here.
 /// Determines if primitive floating-point values are equal.
 ///
 /// To perform the comparison, the floating-point value is canonicalized. If
@@ -149,15 +151,7 @@ pub fn eq_float<T>(lhs: T, rhs: T) -> bool
 where
     T: Float + Primitive,
 {
-    if lhs.is_nan() {
-        rhs.is_nan()
-    }
-    else if rhs.is_nan() {
-        false
-    }
-    else {
-        lhs == rhs
-    }
+    canonicalize_float(lhs) == canonicalize_float(rhs)
 }
 
 /// Determines if primitive floating-point slices are equal.
@@ -242,7 +236,7 @@ where
 
 fn canonicalize_not_nan<T>(value: T) -> u64
 where
-    T: Encoding + Primitive + Real,
+    T: Encoding + Primitive,
 {
     use std::mem;
 
