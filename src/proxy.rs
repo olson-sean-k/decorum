@@ -909,6 +909,11 @@ where
     }
 }
 
+// This implementation uses unchecked conversions for some operations, but
+// applies to general proxy types and so must support the most constrained types
+// exposed by Decorum. Operations that use unchecked conversions must be chosen
+// carefully to avoid exposing `NaN`, `INF`, and other potentially disallowed
+// values from going unchecked.
 impl<T, P> Real for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
@@ -963,7 +968,7 @@ where
     }
 
     fn mul_add(self, a: Self, b: Self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::mul_add(
+        ConstrainedFloat::from_inner(T::mul_add(
             self.into_inner(),
             a.into_inner(),
             b.into_inner(),
@@ -971,59 +976,59 @@ where
     }
 
     fn abs_sub(self, other: Self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::abs_sub(self.into_inner(), other.into_inner()))
+        ConstrainedFloat::from_inner(T::abs_sub(self.into_inner(), other.into_inner()))
     }
 
     fn powi(self, n: i32) -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::powi(self.into_inner(), n))
+        ConstrainedFloat::from_inner(T::powi(self.into_inner(), n))
     }
 
     fn powf(self, n: Self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::powf(self.into_inner(), n.into_inner()))
+        ConstrainedFloat::from_inner(T::powf(self.into_inner(), n.into_inner()))
     }
 
     fn sqrt(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::sqrt(self.into_inner()))
+        ConstrainedFloat::from_inner(T::sqrt(self.into_inner()))
     }
 
     fn cbrt(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::cbrt(self.into_inner()))
+        ConstrainedFloat::from_inner(T::cbrt(self.into_inner()))
     }
 
     fn exp(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::exp(self.into_inner()))
+        ConstrainedFloat::from_inner(T::exp(self.into_inner()))
     }
 
     fn exp2(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::exp2(self.into_inner()))
+        ConstrainedFloat::from_inner(T::exp2(self.into_inner()))
     }
 
     fn exp_m1(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::exp_m1(self.into_inner()))
+        ConstrainedFloat::from_inner(T::exp_m1(self.into_inner()))
     }
 
     fn log(self, base: Self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::log(self.into_inner(), base.into_inner()))
+        ConstrainedFloat::from_inner(T::log(self.into_inner(), base.into_inner()))
     }
 
     fn ln(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::ln(self.into_inner()))
+        ConstrainedFloat::from_inner(T::ln(self.into_inner()))
     }
 
     fn log2(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::log2(self.into_inner()))
+        ConstrainedFloat::from_inner(T::log2(self.into_inner()))
     }
 
     fn log10(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::log10(self.into_inner()))
+        ConstrainedFloat::from_inner(T::log10(self.into_inner()))
     }
 
     fn ln_1p(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::ln_1p(self.into_inner()))
+        ConstrainedFloat::from_inner(T::ln_1p(self.into_inner()))
     }
 
     fn hypot(self, other: Self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(self.into_inner().hypot(other.into_inner()))
+        ConstrainedFloat::from_inner(self.into_inner().hypot(other.into_inner()))
     }
 
     fn sin(self) -> Self {
@@ -1039,19 +1044,19 @@ where
     }
 
     fn asin(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(self.into_inner().asin())
+        ConstrainedFloat::from_inner(self.into_inner().asin())
     }
 
     fn acos(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(self.into_inner().acos())
+        ConstrainedFloat::from_inner(self.into_inner().acos())
     }
 
     fn atan(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(self.into_inner().atan())
+        ConstrainedFloat::from_inner(self.into_inner().atan())
     }
 
     fn atan2(self, other: Self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(self.into_inner().atan2(other.into_inner()))
+        ConstrainedFloat::from_inner(self.into_inner().atan2(other.into_inner()))
     }
 
     fn sin_cos(self) -> (Self, Self) {
@@ -1063,35 +1068,35 @@ where
     }
 
     fn sinh(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(self.into_inner().sinh())
+        ConstrainedFloat::from_inner(self.into_inner().sinh())
     }
 
     fn cosh(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(self.into_inner().cosh())
+        ConstrainedFloat::from_inner(self.into_inner().cosh())
     }
 
     fn tanh(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(self.into_inner().tanh())
+        ConstrainedFloat::from_inner(self.into_inner().tanh())
     }
 
     fn asinh(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(self.into_inner().asinh())
+        ConstrainedFloat::from_inner(self.into_inner().asinh())
     }
 
     fn acosh(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(self.into_inner().acosh())
+        ConstrainedFloat::from_inner(self.into_inner().acosh())
     }
 
     fn atanh(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(self.into_inner().atanh())
+        ConstrainedFloat::from_inner(self.into_inner().atanh())
     }
 
     fn into_degrees(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(self.into_inner().to_degrees())
+        ConstrainedFloat::from_inner(self.into_inner().to_degrees())
     }
 
     fn into_radians(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(self.into_inner().to_radians())
+        ConstrainedFloat::from_inner(self.into_inner().to_radians())
     }
 }
 
