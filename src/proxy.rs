@@ -64,11 +64,11 @@ where
     T: Float + Primitive,
     P: FloatConstraint<T>,
 {
-    // TODO: Avoid the overhead of `evaluate` and `unwrap` for the `()`
+    // TODO: Avoid the overhead of `evaluate` and `expect` for the `()`
     //       constraint (i.e., no constraints). When specialization lands, this
     //       may be easy to implement.
     pub fn from_inner(value: T) -> Self {
-        Self::try_from_inner(value).unwrap()
+        Self::try_from_inner(value).expect("floating-point constraint violated")
     }
 
     pub fn into_inner(self) -> T {
