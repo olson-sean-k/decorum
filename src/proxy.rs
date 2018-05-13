@@ -1,45 +1,22 @@
-use num_traits::{Bounded, Float, FloatConst, FromPrimitive, Num, NumCast, One, Signed,
-                 ToPrimitive, Zero};
+use num_traits::{
+    Bounded, Float, FloatConst, FromPrimitive, Num, NumCast, One, Signed, ToPrimitive, Zero,
+};
 use std::cmp::Ordering;
 use std::fmt::{self, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::num::FpCategory;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign};
+use std::ops::{
+    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
+};
 
 use canonical;
-use constraint::{ConstraintEq, ConstraintInfinity, ConstraintNan, ConstraintOrd,
-                 ConstraintPartialOrd, FloatConstraint, SubsetOf, SupersetOf};
+use constraint::{
+    ConstraintEq, ConstraintInfinity, ConstraintNan, ConstraintOrd, ConstraintPartialOrd,
+    FloatConstraint, SubsetOf, SupersetOf,
+};
 use primitive::Primitive;
 use {Encoding, Finite, Infinite, Nan, NotNan, Ordered, Real};
-
-/// A floating-point proxy.
-///
-/// This trait allows code to be generic over proxy types and exposes functions
-/// for converting primitives to and from a proxy.
-///
-/// This would typically be used along with other bounds, such as `Eq +
-/// FloatProxy<T> + Hash` or `FloatProxy<T> + Real`.
-///
-/// It is not necessary to import this trait to use these functions; because it
-/// would be burdensome to import this every time a proxy is used, the trait
-/// implementation simply forwards calls to functions directly associated with
-/// the type.
-pub trait FloatProxy<T>: Sized
-where
-    T: Float + Primitive,
-{
-    /// Converts a primitive into a floating-point proxy.
-    ///
-    /// # Panics
-    ///
-    /// This function will panic if the primitive value is not allowed by the
-    /// contraints of the proxy.
-    fn from_inner(value: T) -> Self;
-
-    /// Converts the float proxy into a primitive value.
-    fn into_inner(self) -> T;
-}
 
 /// Constrained, ordered, hashable floating-point proxy.
 ///
@@ -107,23 +84,6 @@ where
     }
 }
 
-// It is burdensome and probably unexpected to need to import this trait to use
-// a proxy, so instead the trait implementation just forwards calls to a direct
-// implementation for `ConstrainedFloat`.
-impl<T, P> FloatProxy<T> for ConstrainedFloat<T, P>
-where
-    T: Float + Primitive,
-    P: FloatConstraint<T>,
-{
-    fn from_inner(value: T) -> Self {
-        Self::from_inner(value)
-    }
-
-    fn into_inner(self) -> T {
-        Self::into_inner(self)
-    }
-}
-
 impl<T, P> AsRef<T> for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
@@ -166,39 +126,31 @@ where
     }
 }
 
-impl<P> From<f32> for ConstrainedFloat<f32, P>
+impl<T, P> From<T> for ConstrainedFloat<T, P>
 where
-    P: FloatConstraint<f32>,
+    T: Float + Primitive,
+    P: FloatConstraint<T>,
 {
-    fn from(value: f32) -> Self {
+    fn from(value: T) -> Self {
         Self::from_inner(value)
     }
 }
 
-impl<P> Into<f32> for ConstrainedFloat<f32, P>
+impl<P> From<ConstrainedFloat<f32, P>> for f32
 where
     P: FloatConstraint<f32>,
 {
-    fn into(self) -> f32 {
-        self.into_inner()
+    fn from(value: ConstrainedFloat<f32, P>) -> Self {
+        value.into_inner()
     }
 }
 
-impl<P> From<f64> for ConstrainedFloat<f64, P>
+impl<P> From<ConstrainedFloat<f64, P>> for f64
 where
     P: FloatConstraint<f64>,
 {
-    fn from(value: f64) -> Self {
-        Self::from_inner(value)
-    }
-}
-
-impl<P> Into<f64> for ConstrainedFloat<f64, P>
-where
-    P: FloatConstraint<f64>,
-{
-    fn into(self) -> f64 {
-        self.into_inner()
+    fn from(value: ConstrainedFloat<f64, P>) -> Self {
+        value.into_inner()
     }
 }
 

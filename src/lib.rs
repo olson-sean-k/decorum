@@ -25,9 +25,10 @@ use constraint::{FiniteConstraint, NotNanConstraint};
 use primitive::Primitive;
 use proxy::ConstrainedFloat;
 
-pub use canonical::{cmp_float, cmp_float_array, cmp_float_slice, eq_float, eq_float_array,
-                    eq_float_slice, hash_float, hash_float_array, hash_float_slice};
-pub use proxy::FloatProxy;
+pub use canonical::{
+    cmp_float, cmp_float_array, cmp_float_slice, eq_float, eq_float_array, eq_float_slice,
+    hash_float, hash_float_array, hash_float_slice,
+};
 
 /// An ordered and canonicalized floating-point value that does not constraint
 /// its values.
