@@ -1042,14 +1042,6 @@ where
     fn atanh(self) -> Self {
         ConstrainedFloat::from_inner(self.into_inner().atanh())
     }
-
-    fn into_degrees(self) -> Self {
-        ConstrainedFloat::from_inner(self.into_inner().to_degrees())
-    }
-
-    fn into_radians(self) -> Self {
-        ConstrainedFloat::from_inner(self.into_inner().to_radians())
-    }
 }
 
 impl<T, P> Rem for ConstrainedFloat<T, P>

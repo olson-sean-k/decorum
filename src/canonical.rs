@@ -120,7 +120,8 @@ pub fn cmp_float_slice<T>(lhs: &[T], rhs: &[T]) -> Ordering
 where
     T: Float + Primitive,
 {
-    match lhs.iter()
+    match lhs
+        .iter()
         .zip(rhs.iter())
         .map(|(lhs, rhs)| cmp_float(*lhs, *rhs))
         .find(|ordering| *ordering != Ordering::Equal)

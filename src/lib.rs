@@ -144,9 +144,6 @@ pub trait Real: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd {
     fn asinh(self) -> Self;
     fn acosh(self) -> Self;
     fn atanh(self) -> Self;
-
-    fn into_degrees(self) -> Self;
-    fn into_radians(self) -> Self;
 }
 
 impl<T> Infinite for T
@@ -383,14 +380,6 @@ where
     fn atanh(self) -> Self {
         Float::atanh(self)
     }
-
-    fn into_degrees(self) -> Self {
-        Float::to_degrees(self)
-    }
-
-    fn into_radians(self) -> Self {
-        Float::to_radians(self)
-    }
 }
 
 /// Implements the `Real` trait from
@@ -526,11 +515,11 @@ macro_rules! real {
             }
 
             fn to_degrees(self) -> Self {
-                Real::into_degrees(self)
+                Self::from_inner(self.into_inner().to_degrees())
             }
 
             fn to_radians(self) -> Self {
-                Real::into_radians(self)
+                Self::from_inner(self.into_inner().to_radians())
             }
 
             fn ln_1p(self) -> Self {
