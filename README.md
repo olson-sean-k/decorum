@@ -30,7 +30,7 @@ provided by Decorum.
 
 Proxy types should work as a drop-in replacement for primitive types in most
 applications, with the most common exception being initialization (because it
-may require a conversion).
+requires a conversion).
 
 ## Ordering
 
@@ -43,7 +43,7 @@ and ordering functions:
 ```
 
 Note that `NaN` is canonicalized to `CNaN`, which has a single representation
-and supports the relations `CNaN = CNaN` and `CNaN > x ∋ x ≠ CNaN`. `+0` and
+and supports the relations `CNaN = CNaN` and `CNaN > x | x ≠ CNaN`. `+0` and
 `-0` are also canonicalized to `C0`, which is equivalent to `+0`.
 
 ## Constraints
@@ -61,10 +61,10 @@ by some proxy types prevent them from implementing the ubiquitous `Float`
 trait, because it implies the presence of `-INF`, `INF`, and `NaN`.
 
 Decorum provides more granular traits that separate these APIs: `Real`,
-`Infinite`, `Nan`, and `Encoding`. These traits are monkey-patched using
-blanket implementations so that the trait bounds `T: Float` and `T: Encoding +
-Infinite + Nan + Real` are equivalent, and for all primitive and proxy types `T: Float ⇒ T:
-Encoding + Infinite + Nan + Real`.
+`Infinite`, `Nan`, and `Encoding`. These traits are monkey-patched using blanket
+implementations so that the trait bounds `T: Float` and `T: Encoding + Infinite
++ Nan + Real` are largely equivalent, and for all primitive and proxy types
+`T: Float ⇒ T: Encoding + Infinite + Nan + Real`.
 
 For example, code that wishes to be generic over floating-point types
 representing real numbers can use a bound on the `Real` trait:

@@ -30,8 +30,7 @@ pub use canonical::{
     hash_float, hash_float_array, hash_float_slice,
 };
 
-/// An ordered and canonicalized floating-point value that does not constraint
-/// its values.
+/// An ordered and canonicalized floating-point value.
 pub type Ordered<T> = ConstrainedFloat<T, ()>;
 
 /// An ordered and canonicalized floating-point value that cannot be `NaN`.
