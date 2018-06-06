@@ -62,9 +62,9 @@ trait, because it implies the presence of `-INF`, `INF`, and `NaN`.
 
 Decorum provides more granular traits that separate these APIs: `Real`,
 `Infinite`, `Nan`, and `Encoding`. These traits are monkey-patched using blanket
-implementations so that the trait bounds `T: Float` and `T: Encoding + Infinite
-+ Nan + Real` are largely equivalent, and for all primitive and proxy types
-`T: Float ⇒ T: Encoding + Infinite + Nan + Real`.
+implementations so that the trait bounds `T: Float` and
+`T: Encoding + Infinite + Nan + Real` are largely equivalent, and for all
+primitive and proxy types `T: Float ⇒ T: Encoding + Infinite + Nan + Real`.
 
 For example, code that wishes to be generic over floating-point types
 representing real numbers can use a bound on the `Real` trait:
