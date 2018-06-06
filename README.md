@@ -133,10 +133,10 @@ wrapping the input values in the `Ordered` proxy and using `Eq`, `Hash`, or
 
 Each basic function has a variant for arrays and slices, such as
 `eq_float_slice` and `ord_float_array`. Arrays up to length 16 are supported.
-When comparing sequences, longer sequences are always greater than shorter
-sequences. For sequences of the same length, order is determined by the first
-corresponding elements that differ, and if no such elements exist then the
-sequences are equal.
+When comparing sequences, the first instance of differing corresponding elements
+determines the ordering. If no such element exists, then the ordering is
+determined by the lengths of the sequences, with longer sequences being greater
+than shorter sequences.
 
 For example, with the [derivative](https://crates.io/crates/derivative) crate,
 floating-point fields can be hashed easily using one of these functions when
