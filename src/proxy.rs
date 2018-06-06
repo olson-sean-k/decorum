@@ -41,7 +41,7 @@ where
     T: Float + Primitive,
     P: FloatConstraint<T>,
 {
-    // TODO: Avoid the overhead of `evaluate` and `expect` for the `()`
+    // TODO: Avoid the overhead of `filter` and `expect` for the `()`
     //       constraint (i.e., no constraints). When specialization lands, this
     //       may be easy to implement.
     pub fn from_inner(value: T) -> Self {
@@ -68,7 +68,7 @@ where
     }
 
     fn try_from_inner(value: T) -> Result<Self, ()> {
-        P::evaluate(value)
+        P::filter(value)
             .map(|value| ConstrainedFloat {
                 value,
                 phantom: PhantomData,

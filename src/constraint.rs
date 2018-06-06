@@ -106,14 +106,14 @@ where
     ///
     /// Returns `Some` for values that satisfy constraints and `None` for
     /// values that do not.
-    fn evaluate(value: T) -> Option<T>;
+    fn filter(value: T) -> Option<T>;
 }
 
 impl<T> FloatConstraint<T> for ()
 where
     T: Float + Primitive,
 {
-    fn evaluate(value: T) -> Option<T> {
+    fn filter(value: T) -> Option<T> {
         Some(value)
     }
 }
@@ -167,7 +167,7 @@ impl<T> FloatConstraint<T> for NotNanConstraint<T>
 where
     T: Float + Primitive,
 {
-    fn evaluate(value: T) -> Option<T> {
+    fn filter(value: T) -> Option<T> {
         if value.is_nan() {
             None
         }
@@ -224,7 +224,7 @@ impl<T> FloatConstraint<T> for FiniteConstraint<T>
 where
     T: Float + Primitive,
 {
-    fn evaluate(value: T) -> Option<T> {
+    fn filter(value: T) -> Option<T> {
         if value.is_nan() | value.is_infinite() {
             None
         }
