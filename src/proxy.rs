@@ -304,8 +304,7 @@ impl<T, P> Eq for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
     P: FloatConstraint<T> + ConstraintEq<T>,
-{
-}
+{}
 
 impl<T, P> Float for ConstrainedFloat<T, P>
 where

@@ -22,13 +22,13 @@ mod primitive;
 mod proxy;
 
 use constraint::{FiniteConstraint, NotNanConstraint};
-use primitive::Primitive;
 use proxy::ConstrainedFloat;
 
 pub use canonical::{
     cmp_float, cmp_float_array, cmp_float_slice, eq_float, eq_float_array, eq_float_slice,
     hash_float, hash_float_array, hash_float_slice,
 };
+pub use primitive::Primitive;
 
 /// An ordered and canonicalized floating-point value.
 pub type Ordered<T> = ConstrainedFloat<T, ()>;

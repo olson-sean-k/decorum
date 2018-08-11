@@ -91,11 +91,7 @@ pub trait SupersetOf<P> {}
 
 pub trait SubsetOf<P> {}
 
-impl<P, Q> SubsetOf<Q> for P
-where
-    Q: SupersetOf<P>,
-{
-}
+impl<P, Q> SubsetOf<Q> for P where Q: SupersetOf<P> {}
 
 /// Constraint on floating-point values.
 pub trait FloatConstraint<T>: Copy + PartialEq + PartialOrd + Sized
@@ -118,41 +114,17 @@ where
     }
 }
 
-impl<T> ConstraintEq<T> for ()
-where
-    T: Float + Primitive,
-{
-}
+impl<T> ConstraintEq<T> for () where T: Float + Primitive {}
 
-impl<T> ConstraintOrd<T> for ()
-where
-    T: Float + Primitive,
-{
-}
+impl<T> ConstraintOrd<T> for () where T: Float + Primitive {}
 
-impl<T> ConstraintInfinity<T> for ()
-where
-    T: Float + Primitive,
-{
-}
+impl<T> ConstraintInfinity<T> for () where T: Float + Primitive {}
 
-impl<T> ConstraintNan<T> for ()
-where
-    T: Float + Primitive,
-{
-}
+impl<T> ConstraintNan<T> for () where T: Float + Primitive {}
 
-impl<T> SupersetOf<NotNanConstraint<T>> for ()
-where
-    T: Float + Primitive,
-{
-}
+impl<T> SupersetOf<NotNanConstraint<T>> for () where T: Float + Primitive {}
 
-impl<T> SupersetOf<FiniteConstraint<T>> for ()
-where
-    T: Float + Primitive,
-{
-}
+impl<T> SupersetOf<FiniteConstraint<T>> for () where T: Float + Primitive {}
 
 /// Disallows `NaN` floating-point values.
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
@@ -199,17 +171,9 @@ where
     }
 }
 
-impl<T> ConstraintInfinity<T> for NotNanConstraint<T>
-where
-    T: Float + Primitive,
-{
-}
+impl<T> ConstraintInfinity<T> for NotNanConstraint<T> where T: Float + Primitive {}
 
-impl<T> SupersetOf<FiniteConstraint<T>> for NotNanConstraint<T>
-where
-    T: Float + Primitive,
-{
-}
+impl<T> SupersetOf<FiniteConstraint<T>> for NotNanConstraint<T> where T: Float + Primitive {}
 
 /// Disallows `NaN`, `INF`, and `-INF` floating-point values.
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
