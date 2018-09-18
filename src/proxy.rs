@@ -15,8 +15,7 @@ use constraint::{
     ConstraintEq, ConstraintInfinity, ConstraintNan, ConstraintOrd, ConstraintPartialOrd,
     FloatConstraint, SubsetOf, SupersetOf,
 };
-use primitive::Primitive;
-use {Encoding, Finite, Infinite, Nan, NotNan, Ordered, Real};
+use {Encoding, Finite, Infinite, Nan, NotNan, Ordered, Primitive, Real};
 
 /// Constrained, ordered, hashable floating-point proxy.
 ///

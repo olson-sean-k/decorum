@@ -18,7 +18,6 @@ use std::ops::Neg;
 
 mod canonical;
 mod constraint;
-mod primitive;
 mod proxy;
 
 use constraint::{FiniteConstraint, NotNanConstraint};
@@ -28,7 +27,6 @@ pub use canonical::{
     cmp_float, cmp_float_array, cmp_float_slice, eq_float, eq_float_array, eq_float_slice,
     hash_float, hash_float_array, hash_float_slice,
 };
-pub use primitive::Primitive;
 
 /// An ordered and canonicalized floating-point value.
 pub type Ordered<T> = ConstrainedFloat<T, ()>;
@@ -63,6 +61,15 @@ pub type R32 = Finite<f32>;
 /// "F" were used, then this name would be very similar to `f64`,
 /// differentiated only by capitalization.
 pub type R64 = Finite<f64>;
+
+/// A primitive floating-point value.
+///
+/// This trait differentiates types that implement floating-point traits but
+/// may not be primitive types.
+pub trait Primitive: Copy + Sized {}
+
+impl Primitive for f32 {}
+impl Primitive for f64 {}
 
 /// A floating-point value that can be infinite (`-INF` or `INF`).
 pub trait Infinite: Copy + NumCast {
