@@ -72,8 +72,7 @@ where
             .map(|value| ConstrainedFloat {
                 value,
                 phantom: PhantomData,
-            })
-            .ok_or(())
+            }).ok_or(())
     }
 
     fn from_inner_unchecked(value: T) -> Self {
@@ -1228,7 +1227,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {Finite, N32, NotNan, Ordered, R32};
+    use {Finite, NotNan, Ordered, N32, R32};
 
     #[test]
     fn ordered_no_panic_on_inf() {
