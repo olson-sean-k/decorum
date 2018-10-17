@@ -9,7 +9,6 @@ description = "Ordering, equality, hashing, and constraints for floating-point t
 keywords = ["finite", "float", "hash", "nan", "ord"]
 
 [badges]
-appveyor = { repository = "olson-sean-k/decorum" }
 travis-ci = { repository = "olson-sean-k/decorum" }
 
 [features]
