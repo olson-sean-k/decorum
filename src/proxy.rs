@@ -23,15 +23,13 @@ use {Encoding, Finite, Infinite, Nan, NotNan, Ordered, Primitive, Real};
 /// and numerical traits, including `Hash`, `Ord`, and `Eq`. May apply
 /// constraints that prevent certain values from occurring (by panicing).
 #[cfg_attr(feature = "serialize-serde", derive(Deserialize, Serialize))]
-#[derivative(Clone, Copy, Debug, Default)]
-#[derive(Derivative)]
+#[derive(Clone, Copy, Debug)]
 pub struct ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
     P: FloatConstraint<T>,
 {
     value: T,
-    #[derivative(Debug = "ignore")]
     phantom: PhantomData<P>,
 }
 
@@ -90,6 +88,16 @@ where
 {
     fn as_ref(&self) -> &T {
         &self.value
+    }
+}
+
+impl<T, P> Default for ConstrainedFloat<T, P>
+where
+    T: Default + Float + Primitive,
+    P: FloatConstraint<T>,
+{
+    fn default() -> Self {
+        ConstrainedFloat::from_inner_unchecked(Default::default())
     }
 }
 

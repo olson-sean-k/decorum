@@ -16,7 +16,6 @@ default = ["serialize-serde"]
 serialize-serde = ["serde", "serde_derive"]
 
 [dependencies]
-derivative = "1.0.*"
 num-traits = "0.2.*"
 
 serde = { version = "1.0", optional = true }

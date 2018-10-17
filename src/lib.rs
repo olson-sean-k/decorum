@@ -1,8 +1,6 @@
 //! Making floating-point values behave: traits, ordering, equality, hashing,
 //! and constraints for floating-point types.
 
-#[macro_use]
-extern crate derivative;
 extern crate num_traits;
 #[cfg(feature = "serialize-serde")]
 extern crate serde;
