@@ -1,6 +1,6 @@
 [package]
 name = "decorum"
-version = "0.0.11"
+version = "0.1.0"
 license = "MIT"
 readme = "README.md"
 authors = ["Sean Olson <olson.sean.k@gmail.com>"]
