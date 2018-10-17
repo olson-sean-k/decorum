@@ -91,16 +91,6 @@ where
     }
 }
 
-impl<T, P> Default for ConstrainedFloat<T, P>
-where
-    T: Default + Float + Primitive,
-    P: FloatConstraint<T>,
-{
-    fn default() -> Self {
-        ConstrainedFloat::from_inner_unchecked(Default::default())
-    }
-}
-
 // It is not possible to implement `From` for proxies in a generic way, because
 // the `FloatConstraint` types `T` and `U` may be the same and conflict with
 // the reflexive implementation in core. A similar problem prevents
@@ -216,6 +206,16 @@ where
 
     fn max_value() -> Self {
         ConstrainedFloat::from_inner_unchecked(T::max_value())
+    }
+}
+
+impl<T, P> Default for ConstrainedFloat<T, P>
+where
+    T: Default + Float + Primitive,
+    P: FloatConstraint<T>,
+{
+    fn default() -> Self {
+        ConstrainedFloat::from_inner_unchecked(Default::default())
     }
 }
 
@@ -1355,5 +1355,15 @@ mod tests {
         as_infinite(ordered);
         as_nan(ordered);
         as_real(ordered);
+    }
+
+    #[test]
+    fn fmt() {
+        let x: Ordered<f32> = 1.0.into();
+        println!("{0} {0:?}", x);
+        let y: NotNan<f32> = 1.0.into();
+        println!("{0} {0:?}", y);
+        let z: Finite<f32> = 1.0.into();
+        println!("{0} {0:?}", z);
     }
 }

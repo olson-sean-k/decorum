@@ -127,7 +127,7 @@ impl<T> SupersetOf<NotNanConstraint<T>> for () where T: Float + Primitive {}
 impl<T> SupersetOf<FiniteConstraint<T>> for () where T: Float + Primitive {}
 
 /// Disallows `NaN` floating-point values.
-#[derive(Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub struct NotNanConstraint<T>
 where
     T: Float + Primitive,
@@ -176,7 +176,7 @@ impl<T> ConstraintInfinity<T> for NotNanConstraint<T> where T: Float + Primitive
 impl<T> SupersetOf<FiniteConstraint<T>> for NotNanConstraint<T> where T: Float + Primitive {}
 
 /// Disallows `NaN`, `INF`, and `-INF` floating-point values.
-#[derive(Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub struct FiniteConstraint<T>
 where
     T: Float + Primitive,
