@@ -71,7 +71,8 @@ where
             .map(|value| ConstrainedFloat {
                 value,
                 phantom: PhantomData,
-            }).ok_or(())
+            })
+            .ok_or(())
     }
 
     fn from_inner_unchecked(value: T) -> Self {

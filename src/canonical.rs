@@ -93,17 +93,19 @@ where
     // already compare as equal, so only `NaN`s must be handled explicitly.
     match lhs.partial_cmp(&rhs) {
         Some(ordering) => ordering,
-        None => if lhs.is_nan() {
-            if rhs.is_nan() {
-                Ordering::Equal
+        None => {
+            if lhs.is_nan() {
+                if rhs.is_nan() {
+                    Ordering::Equal
+                }
+                else {
+                    Ordering::Greater
+                }
             }
             else {
-                Ordering::Greater
+                Ordering::Less
             }
         }
-        else {
-            Ordering::Less
-        },
     }
 }
 
