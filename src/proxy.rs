@@ -24,6 +24,7 @@ use {Encoding, Finite, Infinite, Nan, NotNan, Ordered, Primitive, Real};
 /// constraints that prevent certain values from occurring (by panicing).
 #[cfg_attr(feature = "serialize-serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Copy, Debug)]
+#[repr(transparent)]
 pub struct ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
