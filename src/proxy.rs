@@ -9,6 +9,7 @@ use std::num::FpCategory;
 use std::ops::{
     Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
 };
+use std::str::FromStr;
 
 use canonical;
 use constraint::{
@@ -312,7 +313,8 @@ impl<T, P> Eq for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
     P: FloatConstraint<T> + ConstraintEq<T>,
-{}
+{
+}
 
 impl<T, P> Float for ConstrainedFloat<T, P>
 where
@@ -665,6 +667,18 @@ where
 
     fn from_f64(value: f64) -> Option<Self> {
         T::from_f64(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
+    }
+}
+
+impl<T, P> FromStr for ConstrainedFloat<T, P>
+where
+    T: Float + FromStr + Primitive,
+    P: FloatConstraint<T>,
+{
+    type Err = <T as FromStr>::Err;
+
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
+        T::from_str(string).map(|value| Self::from_inner(value))
     }
 }
 
