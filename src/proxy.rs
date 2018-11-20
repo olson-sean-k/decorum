@@ -2,7 +2,7 @@ use num_traits::{
     Bounded, Float, FloatConst, FromPrimitive, Num, NumCast, One, Signed, ToPrimitive, Zero,
 };
 use std::cmp::Ordering;
-use std::fmt::{self, Display, Formatter};
+use std::fmt::{self, Display, Formatter, LowerExp};
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::num::FpCategory;
@@ -714,6 +714,16 @@ where
 
     fn is_finite(self) -> bool {
         P::is_finite(self.into_inner())
+    }
+}
+
+impl<T, P> LowerExp for ConstrainedFloat<T, P>
+where
+    T: Float + LowerExp + Primitive,
+    P: FloatConstraint<T>,
+{
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        self.as_ref().fmt(f)
     }
 }
 
