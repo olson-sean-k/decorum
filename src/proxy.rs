@@ -1,15 +1,15 @@
+use core::cmp::Ordering;
+use core::fmt::{self, Display, Formatter, LowerExp};
+use core::hash::{Hash, Hasher};
+use core::marker::PhantomData;
+use core::num::FpCategory;
+use core::ops::{
+    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
+};
+use core::str::FromStr;
 use num_traits::{
     Bounded, Float, FloatConst, FromPrimitive, Num, NumCast, One, Signed, ToPrimitive, Zero,
 };
-use std::cmp::Ordering;
-use std::fmt::{self, Display, Formatter, LowerExp};
-use std::hash::{Hash, Hasher};
-use std::marker::PhantomData;
-use std::num::FpCategory;
-use std::ops::{
-    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
-};
-use std::str::FromStr;
 
 use canonical;
 use constraint::{

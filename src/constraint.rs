@@ -9,9 +9,9 @@
 //! The unit type `()` is used to implement an empty constraint that has no
 //! illegal values.
 
+use core::cmp::Ordering;
+use core::marker::PhantomData;
 use num_traits::Float;
-use std::cmp::Ordering;
-use std::marker::PhantomData;
 
 use canonical;
 use Primitive;

@@ -31,6 +31,10 @@ Proxy types should work as a drop-in replacement for primitive types in most
 applications, with the most common exception being initialization (because it
 requires a conversion).
 
+Proxy types support serialization via [serde](https://crates.io/crates/serde) by
+default (see the `serialize-serde` feature). Decorum does not require `std` and
+can be used in `#[no_std]` environments (see the `std` feature).
+
 ## Ordering
 
 `NaN` and zero are canonicalized to a single representation (called `CNaN` and

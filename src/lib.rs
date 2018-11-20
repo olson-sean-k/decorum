@@ -1,16 +1,21 @@
 //! Making floating-point values behave: traits, ordering, equality, hashing,
 //! and constraints for floating-point types.
 
+#![no_std]
+
 extern crate num_traits;
 #[cfg(feature = "serialize-serde")]
 extern crate serde;
 #[cfg(feature = "serialize-serde")]
 #[macro_use]
 extern crate serde_derive;
+#[cfg(feature = "std")]
+#[macro_use]
+extern crate std;
 
+use core::num::FpCategory;
+use core::ops::Neg;
 use num_traits::{real, Float, Num, NumCast};
-use std::num::FpCategory;
-use std::ops::Neg;
 
 // TODO: Support `f128`.
 

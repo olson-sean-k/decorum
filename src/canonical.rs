@@ -8,9 +8,9 @@
 //! operate on primitive floating-point values which can be used by user code
 //! and are also used internally by Decorum.
 
+use core::cmp::Ordering;
+use core::hash::{Hash, Hasher};
 use num_traits::Float;
-use std::cmp::Ordering;
-use std::hash::{Hash, Hasher};
 
 use {Encoding, Primitive};
 
@@ -240,7 +240,7 @@ fn canonicalize_not_nan<T>(value: T) -> u64
 where
     T: Encoding + Primitive,
 {
-    use std::mem;
+    use core::mem;
 
     let (mantissa, exponent, sign) = value.integer_decode();
     if mantissa == 0 {
