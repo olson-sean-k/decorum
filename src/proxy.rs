@@ -11,12 +11,12 @@ use num_traits::{
     Bounded, Float, FloatConst, FromPrimitive, Num, NumCast, One, Signed, ToPrimitive, Zero,
 };
 
-use canonical;
-use constraint::{
+use crate::canonical;
+use crate::constraint::{
     ConstraintEq, ConstraintInfinity, ConstraintNan, ConstraintOrd, ConstraintPartialOrd,
     FloatConstraint, SubsetOf, SupersetOf,
 };
-use {Encoding, Finite, Infinite, Nan, NotNan, Ordered, Primitive, Real};
+use crate::{Encoding, Finite, Infinite, Nan, NotNan, Ordered, Primitive, Real};
 
 /// Constrained, ordered, hashable floating-point proxy.
 ///
@@ -1260,7 +1260,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {Finite, NotNan, Ordered, N32, R32};
+    use crate::{Finite, NotNan, Ordered, N32, R32};
 
     #[test]
     fn ordered_no_panic_on_inf() {

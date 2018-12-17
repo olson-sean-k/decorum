@@ -13,8 +13,8 @@ use core::cmp::Ordering;
 use core::marker::PhantomData;
 use num_traits::Float;
 
-use canonical;
-use Primitive;
+use crate::canonical;
+use crate::Primitive;
 
 pub trait ConstraintEq<T>
 where

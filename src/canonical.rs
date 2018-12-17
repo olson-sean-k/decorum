@@ -12,7 +12,7 @@ use core::cmp::Ordering;
 use core::hash::{Hash, Hasher};
 use num_traits::Float;
 
-use {Encoding, Primitive};
+use crate::{Encoding, Primitive};
 
 const SIGN_MASK: u64 = 0x8000_0000_0000_0000u64;
 const EXPONENT_MASK: u64 = 0x7ff0_0000_0000_0000u64;

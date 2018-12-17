@@ -23,10 +23,10 @@ mod canonical;
 mod constraint;
 mod proxy;
 
-use constraint::{FiniteConstraint, NotNanConstraint};
-use proxy::ConstrainedFloat;
+use crate::constraint::{FiniteConstraint, NotNanConstraint};
+use crate::proxy::ConstrainedFloat;
 
-pub use canonical::{
+pub use crate::canonical::{
     cmp_float, cmp_float_array, cmp_float_slice, eq_float, eq_float_array, eq_float_slice,
     hash_float, hash_float_array, hash_float_slice,
 };
