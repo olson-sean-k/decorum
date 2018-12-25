@@ -24,12 +24,12 @@ mod constraint;
 mod proxy;
 
 use crate::constraint::{FiniteConstraint, NotNanConstraint};
-use crate::proxy::ConstrainedFloat;
 
 pub use crate::canonical::{
     cmp_float, cmp_float_array, cmp_float_slice, eq_float, eq_float_array, eq_float_slice,
     hash_float, hash_float_array, hash_float_slice,
 };
+pub use crate::proxy::ConstrainedFloat;
 
 /// An ordered and canonicalized floating-point value.
 pub type Ordered<T> = ConstrainedFloat<T, ()>;
