@@ -1,6 +1,7 @@
 use core::cmp::Ordering;
 use core::fmt::{self, Display, Formatter, LowerExp};
 use core::hash::{Hash, Hasher};
+use core::iter::{Product, Sum};
 use core::marker::PhantomData;
 use core::num::FpCategory;
 use core::ops::{
@@ -892,6 +893,19 @@ where
     }
 }
 
+impl<T, P> Product for ConstrainedFloat<T, P>
+where
+    T: Float + Primitive,
+    P: FloatConstraint<T>,
+{
+    fn product<I>(input: I) -> Self
+    where
+        I: Iterator<Item = Self>,
+    {
+        input.fold(One::one(), |a, b| a * b)
+    }
+}
+
 // This implementation uses unchecked conversions for some operations, but
 // applies to general proxy types and so must support the most constrained types
 // exposed by Decorum. Operations that use unchecked conversions must be chosen
@@ -1189,6 +1203,19 @@ where
     }
 }
 
+impl<T, P> Sum for ConstrainedFloat<T, P>
+where
+    T: Float + Primitive,
+    P: FloatConstraint<T>,
+{
+    fn sum<I>(input: I) -> Self
+    where
+        I: Iterator<Item = Self>,
+    {
+        input.fold(Zero::zero(), |a, b| a + b)
+    }
+}
+
 impl<T, P> ToPrimitive for ConstrainedFloat<T, P>
 where
     T: Float + Primitive + ToPrimitive,
@@ -1339,6 +1366,18 @@ mod tests {
         // Compare a proxy that disallows `INF` to a primitive `INF`.
         let z: R32 = 0.0.into();
         assert_eq!(z.partial_cmp(&(1.0 / 0.0)), None);
+    }
+
+    #[test]
+    fn sum() {
+        let xs = [1.0.into(), 2.0.into(), 3.0.into()];
+        assert_eq!(xs.iter().cloned().sum::<R32>(), R32::from_inner(6.0));
+    }
+
+    #[test]
+    fn product() {
+        let xs = [1.0.into(), 2.0.into(), 3.0.into()];
+        assert_eq!(xs.iter().cloned().product::<R32>(), R32::from_inner(6.0));
     }
 
     // TODO: This test is questionable.
