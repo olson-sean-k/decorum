@@ -10,6 +10,7 @@
 
 use core::cmp::Ordering;
 use core::hash::{Hash, Hasher};
+use core::mem;
 use num_traits::Float;
 
 use crate::{Encoding, Primitive};
@@ -240,8 +241,6 @@ fn canonicalize_not_nan<T>(value: T) -> u64
 where
     T: Encoding + Primitive,
 {
-    use core::mem;
-
     let (mantissa, exponent, sign) = value.integer_decode();
     if mantissa == 0 {
         CANONICAL_ZERO
