@@ -11,6 +11,7 @@ use core::str::FromStr;
 use num_traits::{
     Bounded, Float, FloatConst, FromPrimitive, Num, NumCast, One, Signed, ToPrimitive, Zero,
 };
+#[cfg(feature = "serialize-serde")]
 use serde_derive::{Deserialize, Serialize};
 
 use crate::canonical;
