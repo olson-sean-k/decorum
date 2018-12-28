@@ -3,14 +3,7 @@
 
 #![no_std]
 
-extern crate num_traits;
-#[cfg(feature = "serialize-serde")]
-extern crate serde;
-#[cfg(feature = "serialize-serde")]
-#[macro_use]
-extern crate serde_derive;
 #[cfg(feature = "std")]
-#[macro_use]
 extern crate std;
 
 use core::num::FpCategory;

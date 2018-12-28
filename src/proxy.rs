@@ -11,6 +11,7 @@ use core::str::FromStr;
 use num_traits::{
     Bounded, Float, FloatConst, FromPrimitive, Num, NumCast, One, Signed, ToPrimitive, Zero,
 };
+use serde_derive::{Deserialize, Serialize};
 
 use crate::canonical;
 use crate::constraint::{
@@ -1434,10 +1435,10 @@ mod tests {
     #[test]
     fn fmt() {
         let x: Ordered<f32> = 1.0.into();
-        println!("{0} {0:e} {0:E} {0:?}", x);
+        format_args!("{0} {0:e} {0:E} {0:?}", x);
         let y: NotNan<f32> = 1.0.into();
-        println!("{0} {0:e} {0:E} {0:?}", y);
+        format_args!("{0} {0:e} {0:E} {0:?}", y);
         let z: Finite<f32> = 1.0.into();
-        println!("{0} {0:e} {0:E} {0:?}", z);
+        format_args!("{0} {0:e} {0:E} {0:?}", z);
     }
 }
