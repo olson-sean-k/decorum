@@ -1,5 +1,5 @@
 use core::cmp::Ordering;
-use core::fmt::{self, Display, Formatter, LowerExp};
+use core::fmt::{self, Display, Formatter, LowerExp, UpperExp};
 use core::hash::{Hash, Hasher};
 use core::iter::{Product, Sum};
 use core::marker::PhantomData;
@@ -1270,6 +1270,16 @@ where
     }
 }
 
+impl<T, P> UpperExp for ConstrainedFloat<T, P>
+where
+    T: Float + UpperExp + Primitive,
+    P: FloatConstraint<T>,
+{
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        self.as_ref().fmt(f)
+    }
+}
+
 impl<T, P> Zero for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
@@ -1424,10 +1434,10 @@ mod tests {
     #[test]
     fn fmt() {
         let x: Ordered<f32> = 1.0.into();
-        println!("{0} {0:?}", x);
+        println!("{0} {0:e} {0:E} {0:?}", x);
         let y: NotNan<f32> = 1.0.into();
-        println!("{0} {0:?}", y);
+        println!("{0} {0:e} {0:E} {0:?}", y);
         let z: Finite<f32> = 1.0.into();
-        println!("{0} {0:?}", z);
+        println!("{0} {0:e} {0:E} {0:?}", z);
     }
 }
