@@ -189,7 +189,7 @@ where
     T: Float + Primitive,
 {
     fn filter(value: T) -> Option<T> {
-        if value.is_nan() | value.is_infinite() {
+        if value.is_nan() || value.is_infinite() {
             None
         }
         else {
