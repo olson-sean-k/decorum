@@ -5,9 +5,6 @@
 //! also provided in this module. These analogous traits determine if and how
 //! constrained values support these operations and in turn whether or not a
 //! proxy using a constraint does too.
-//!
-//! The unit type `()` is used to implement an empty constraint that has no
-//! illegal values.
 
 use core::cmp::Ordering;
 use core::marker::PhantomData;
@@ -105,7 +102,15 @@ where
     fn filter(value: T) -> Option<T>;
 }
 
-impl<T> FloatConstraint<T> for ()
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+pub struct UnitConstraint<T>
+where
+    T: Float + Primitive,
+{
+    phantom: PhantomData<T>,
+}
+
+impl<T> FloatConstraint<T> for UnitConstraint<T>
 where
     T: Float + Primitive,
 {
@@ -114,17 +119,17 @@ where
     }
 }
 
-impl<T> ConstraintEq<T> for () where T: Float + Primitive {}
+impl<T> ConstraintEq<T> for UnitConstraint<T> where T: Float + Primitive {}
 
-impl<T> ConstraintOrd<T> for () where T: Float + Primitive {}
+impl<T> ConstraintOrd<T> for UnitConstraint<T> where T: Float + Primitive {}
 
-impl<T> ConstraintInfinity<T> for () where T: Float + Primitive {}
+impl<T> ConstraintInfinity<T> for UnitConstraint<T> where T: Float + Primitive {}
 
-impl<T> ConstraintNan<T> for () where T: Float + Primitive {}
+impl<T> ConstraintNan<T> for UnitConstraint<T> where T: Float + Primitive {}
 
-impl<T> SupersetOf<NotNanConstraint<T>> for () where T: Float + Primitive {}
+impl<T> SupersetOf<NotNanConstraint<T>> for UnitConstraint<T> where T: Float + Primitive {}
 
-impl<T> SupersetOf<FiniteConstraint<T>> for () where T: Float + Primitive {}
+impl<T> SupersetOf<FiniteConstraint<T>> for UnitConstraint<T> where T: Float + Primitive {}
 
 /// Disallows `NaN` floating-point values.
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]

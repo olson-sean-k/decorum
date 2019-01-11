@@ -16,7 +16,7 @@ mod canonical;
 mod constraint;
 mod proxy;
 
-use crate::constraint::{FiniteConstraint, NotNanConstraint};
+use crate::constraint::{FiniteConstraint, NotNanConstraint, UnitConstraint};
 
 pub use crate::canonical::{
     cmp_float, cmp_float_array, cmp_float_slice, eq_float, eq_float_array, eq_float_slice,
@@ -25,7 +25,7 @@ pub use crate::canonical::{
 pub use crate::proxy::ConstrainedFloat;
 
 /// An ordered and canonicalized floating-point value.
-pub type Ordered<T> = ConstrainedFloat<T, ()>;
+pub type Ordered<T> = ConstrainedFloat<T, UnitConstraint<T>>;
 
 /// An ordered and canonicalized floating-point value that cannot be `NaN`.
 ///
