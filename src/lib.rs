@@ -1,5 +1,31 @@
 //! Making floating-point values behave: traits, ordering, equality, hashing,
 //! and constraints for floating-point types.
+//!
+//! Decorum provides proxy (wrapper) types and functions that canonicalize
+//! floating-point values and provide a total ordering. This allows
+//! floating-point values to be hashed and compared. Proxy types also provide
+//! contraints on the values that may be represented and will panic if those
+//! constraints are violated. See the [README](https://docs.rs/crate/decorum/).
+//!
+//! # Ordering
+//!
+//! `NaN` and zero are canonicalized to a single representation (called `CNaN`
+//! and `C0` respectively) to provide the following total ordering for all
+//! proxy types and ordering functions: `[ -INF | ... | C0 | ... | +INF | CNaN
+//! ]`
+//!
+//! Note that `NaN` is canonicalized to `CNaN`, which has a single
+//! representation and supports the relations `CNaN = CNaN` and `CNaN > x | x ≠
+//! CNaN`. `+0` and `-0` are also canonicalized to `C0`, which is equivalent to
+//! `+0`.
+//!
+//! # Constraints
+//!
+//! The `NotNan` and `Finite` types wrap raw floating-point values and disallow
+//! certain values like `NaN`, `INF`, and `-INF`. They will panic if an
+//! operation or conversion invalidates these constraints. The `Ordered` type
+//! allows any valid IEEE-754 value (there are no constraints). For most use
+//! cases, either `Ordered` or `NotNan` are appropriate.
 
 #![no_std]
 

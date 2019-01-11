@@ -21,11 +21,18 @@ use crate::constraint::{
 };
 use crate::{Encoding, Finite, Infinite, Nan, NotNan, Ordered, Primitive, Real};
 
-/// Constrained, ordered, hashable floating-point proxy.
+/// Floating-point proxy that provides ordering, hashing, and value
+/// constraints.
 ///
 /// Wraps floating-point values and provides a proxy that implements operation
 /// and numerical traits, including `Hash`, `Ord`, and `Eq`. May apply
 /// constraints that prevent certain values from occurring (by panicing).
+///
+/// Proxies canonicalize `NaN` and zero to the forms `CNaN` and `C0` for the
+/// following total ordering: `[-INF | ... | C0 | ... | INF | CNaN ]`.
+///
+/// This type is re-exported but should not (and cannot) be used directly. Use
+/// the exported type aliases instead (`Ordered`, `NotNan`, and `Finite`).
 #[cfg_attr(feature = "serialize-serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
@@ -46,15 +53,85 @@ where
     // TODO: Avoid the overhead of `filter` and `expect` for the `()`
     //       constraint (i.e., no constraints). When specialization lands, this
     //       may be easy to implement.
+    /// Converts a primitive floating-point value into a proxy.
+    ///
+    /// This kind of conversion is the primary way to obtain a proxy. The same
+    /// behavior is provided by an implemention of the `From` trait.
+    ///
+    /// # Panics
+    ///
+    /// This conversion and the implementation of the `From` trait will panic
+    /// if the primitive floating-point value violates the constraints of the
+    /// proxy.
+    ///
+    /// # Examples
+    ///
+    /// Converting primitive floating-point values into proxies:
+    ///
+    /// ```rust
+    /// use decorum::R64;
+    ///
+    /// fn f(x: R64) -> R64 {
+    ///     x * 2.0
+    /// }
+    ///
+    /// // Conversion using `from_inner`.
+    /// let y = f(R64::from_inner(2.0));
+    /// // Conversion using `From`/`Into`.
+    /// let z = f(2.0.into());
+    /// ```
+    ///
+    /// Performing a conversion that panics:
+    ///
+    /// ```rust,should_panic
+    /// use decorum::R64;
+    ///
+    /// // `R64` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
+    /// let x = R64::from_inner(0.0 / 0.0); // Panics.
+    /// ```
     pub fn from_inner(value: T) -> Self {
         Self::try_from_inner(value).expect("floating-point constraint violated")
     }
 
+    /// Converts a proxy into a primitive floating-point value.
+    ///
+    /// # Examples
+    ///
+    /// Converting a proxy into a primitive floating-point value:
+    ///
+    /// ```rust
+    /// use decorum::R64;
+    ///
+    /// fn f() -> R64 {
+    /// #    0.0.into()
+    ///     // ...
+    /// }
+    ///
+    /// let x: f64 = f().into_inner();
+    /// ```
     pub fn into_inner(self) -> T {
         let ConstrainedFloat { value, .. } = self;
         value
     }
 
+    /// Converts a proxy into another proxy that is capable of representing a
+    /// superset of values.
+    ///
+    /// # Examples
+    ///
+    /// Converting between compatible proxy types:
+    ///
+    /// ```rust
+    /// # extern crate decorum;
+    /// # extern crate num;
+    /// use decorum::{N64, R64};
+    /// use num::Zero;
+    ///
+    /// # fn main() {
+    /// let x = R64::zero();
+    /// let y = N64::from_subset(x);
+    /// # }
+    /// ```
     pub fn from_subset<Q>(other: ConstrainedFloat<T, Q>) -> Self
     where
         Q: FloatConstraint<T> + SubsetOf<P>,
@@ -62,6 +139,24 @@ where
         Self::from_inner_unchecked(other.into_inner())
     }
 
+    /// Converts a proxy into another proxy that is capable of representing a
+    /// superset of values.
+    ///
+    /// # Examples
+    ///
+    /// Converting between compatible proxy types:
+    ///
+    /// ```rust
+    /// # extern crate decorum;
+    /// # extern crate num;
+    /// use decorum::{N64, R64};
+    /// use num::Zero;
+    ///
+    /// # fn main() {
+    /// let x = R64::zero();
+    /// let y: N64 = x.into_superset();
+    /// # }
+    /// ```
     pub fn into_superset<Q>(self) -> ConstrainedFloat<T, Q>
     where
         Q: FloatConstraint<T> + SupersetOf<P>,
