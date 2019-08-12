@@ -34,7 +34,13 @@ extern crate std;
 
 use core::num::FpCategory;
 use core::ops::Neg;
-use num_traits::{real, Float, Num, NumCast};
+#[allow(unused_imports)]
+use num_traits::{real, Num, NumCast};
+
+#[cfg(not(feature = "std"))]
+use num_traits::float::FloatCore as Float;
+#[cfg(feature = "std")]
+use num_traits::Float;
 
 // TODO: Support `f128`.
 
@@ -141,36 +147,65 @@ pub trait Real: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd {
     fn fract(self) -> Self;
     fn recip(self) -> Self;
 
+    #[cfg(feature = "std")]
     fn mul_add(self, a: Self, b: Self) -> Self;
+    #[cfg(feature = "std")]
     fn abs_sub(self, other: Self) -> Self;
 
+    #[cfg(feature = "std")]
     fn powi(self, n: i32) -> Self;
+    #[cfg(feature = "std")]
     fn powf(self, n: Self) -> Self;
+    #[cfg(feature = "std")]
     fn sqrt(self) -> Self;
+    #[cfg(feature = "std")]
     fn cbrt(self) -> Self;
+    #[cfg(feature = "std")]
     fn exp(self) -> Self;
+    #[cfg(feature = "std")]
     fn exp2(self) -> Self;
+    #[cfg(feature = "std")]
     fn exp_m1(self) -> Self;
+    #[cfg(feature = "std")]
     fn log(self, base: Self) -> Self;
+    #[cfg(feature = "std")]
     fn ln(self) -> Self;
+    #[cfg(feature = "std")]
     fn log2(self) -> Self;
+    #[cfg(feature = "std")]
     fn log10(self) -> Self;
+    #[cfg(feature = "std")]
     fn ln_1p(self) -> Self;
 
+    #[cfg(feature = "std")]
     fn hypot(self, other: Self) -> Self;
+    #[cfg(feature = "std")]
     fn sin(self) -> Self;
+    #[cfg(feature = "std")]
     fn cos(self) -> Self;
+    #[cfg(feature = "std")]
     fn tan(self) -> Self;
+    #[cfg(feature = "std")]
     fn asin(self) -> Self;
+    #[cfg(feature = "std")]
     fn acos(self) -> Self;
+    #[cfg(feature = "std")]
     fn atan(self) -> Self;
+    #[cfg(feature = "std")]
     fn atan2(self, other: Self) -> Self;
+    #[cfg(feature = "std")]
     fn sin_cos(self) -> (Self, Self);
+    #[cfg(feature = "std")]
     fn sinh(self) -> Self;
+    #[cfg(feature = "std")]
     fn cosh(self) -> Self;
+    #[cfg(feature = "std")]
     fn tanh(self) -> Self;
+    #[cfg(feature = "std")]
     fn asinh(self) -> Self;
+    #[cfg(feature = "std")]
     fn acosh(self) -> Self;
+    #[cfg(feature = "std")]
     fn atanh(self) -> Self;
 }
 
@@ -293,118 +328,147 @@ where
         Float::recip(self)
     }
 
+    #[cfg(feature = "std")]
     fn mul_add(self, a: Self, b: Self) -> Self {
         Float::mul_add(self, a, b)
     }
 
+    #[cfg(feature = "std")]
     fn abs_sub(self, other: Self) -> Self {
         Float::abs_sub(self, other)
     }
 
+    #[cfg(feature = "std")]
     fn powi(self, n: i32) -> Self {
         Float::powi(self, n)
     }
 
+    #[cfg(feature = "std")]
     fn powf(self, n: Self) -> Self {
         Float::powf(self, n)
     }
 
+    #[cfg(feature = "std")]
     fn sqrt(self) -> Self {
         Float::sqrt(self)
     }
 
+    #[cfg(feature = "std")]
     fn cbrt(self) -> Self {
         Float::cbrt(self)
     }
 
+    #[cfg(feature = "std")]
     fn exp(self) -> Self {
         Float::exp(self)
     }
 
+    #[cfg(feature = "std")]
     fn exp2(self) -> Self {
         Float::exp2(self)
     }
 
+    #[cfg(feature = "std")]
     fn exp_m1(self) -> Self {
         Float::exp_m1(self)
     }
 
+    #[cfg(feature = "std")]
     fn log(self, base: Self) -> Self {
         Float::log(self, base)
     }
 
+    #[cfg(feature = "std")]
     fn ln(self) -> Self {
         Float::ln(self)
     }
 
+    #[cfg(feature = "std")]
     fn log2(self) -> Self {
         Float::log2(self)
     }
 
+    #[cfg(feature = "std")]
     fn log10(self) -> Self {
         Float::log10(self)
     }
 
+    #[cfg(feature = "std")]
     fn ln_1p(self) -> Self {
         Float::ln_1p(self)
     }
 
+    #[cfg(feature = "std")]
     fn hypot(self, other: Self) -> Self {
         Float::hypot(self, other)
     }
 
+    #[cfg(feature = "std")]
     fn sin(self) -> Self {
         Float::sin(self)
     }
 
+    #[cfg(feature = "std")]
     fn cos(self) -> Self {
         Float::cos(self)
     }
 
+    #[cfg(feature = "std")]
     fn tan(self) -> Self {
         Float::tan(self)
     }
 
+    #[cfg(feature = "std")]
     fn asin(self) -> Self {
         Float::asin(self)
     }
 
+    #[cfg(feature = "std")]
     fn acos(self) -> Self {
         Float::acos(self)
     }
 
+    #[cfg(feature = "std")]
     fn atan(self) -> Self {
         Float::atan(self)
     }
 
+    #[cfg(feature = "std")]
     fn atan2(self, other: Self) -> Self {
         Float::atan2(self, other)
     }
 
+    #[cfg(feature = "std")]
     fn sin_cos(self) -> (Self, Self) {
         Float::sin_cos(self)
     }
 
+    #[cfg(feature = "std")]
     fn sinh(self) -> Self {
         Float::sinh(self)
     }
 
+    #[cfg(feature = "std")]
     fn cosh(self) -> Self {
         Float::cosh(self)
     }
 
+    #[cfg(feature = "std")]
     fn tanh(self) -> Self {
         Float::tanh(self)
     }
 
+    #[cfg(feature = "std")]
     fn asinh(self) -> Self {
         Float::asinh(self)
     }
 
+    #[cfg(feature = "std")]
     fn acosh(self) -> Self {
         Float::acosh(self)
     }
 
+    #[cfg(feature = "std")]
     fn atanh(self) -> Self {
         Float::atanh(self)
     }
@@ -412,7 +476,7 @@ where
 
 /// Implements the `Real` trait from
 /// [num-traits](https://crates.io/crates/num-traits) in terms of Decorum's
-/// numeric traits.
+/// numeric traits. Does nothing if the `std` feature is disabled.
 ///
 /// This is not generic, because the blanket implementation provided by
 /// num-traits prevents a constraint-based implementation. Instead, this macro
@@ -421,10 +485,12 @@ where
 ///
 /// See the following issues:
 ///
-/// - https://github.com/olson-sean-k/decorum/issues/10
-/// - https://github.com/rust-num/num-traits/issues/49
+///   https://github.com/olson-sean-k/decorum/issues/10
+///   https://github.com/rust-num/num-traits/issues/49
+///
 macro_rules! real {
     (proxy => $T:ty) => {
+        #[cfg(feature = "std")]
         impl real::Real for $T {
             fn max_value() -> Self {
                 Encoding::max_value()

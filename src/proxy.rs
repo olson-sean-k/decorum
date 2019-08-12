@@ -9,10 +9,15 @@ use core::ops::{
 };
 use core::str::FromStr;
 use num_traits::{
-    Bounded, Float, FloatConst, FromPrimitive, Num, NumCast, One, Signed, ToPrimitive, Zero,
+    Bounded, FloatConst, FromPrimitive, Num, NumCast, One, Signed, ToPrimitive, Zero,
 };
 #[cfg(feature = "serialize-serde")]
 use serde_derive::{Deserialize, Serialize};
+
+#[cfg(not(feature = "std"))]
+use num_traits::float::FloatCore as Float;
+#[cfg(feature = "std")]
+use num_traits::Float;
 
 use crate::canonical;
 use crate::constraint::{
@@ -178,6 +183,20 @@ where
             value,
             phantom: PhantomData,
         }
+    }
+
+    fn map_inner<F>(self, f: F) -> Self
+    where
+        F: Fn(T) -> T,
+    {
+        ConstrainedFloat::from_inner(f(self.into_inner()))
+    }
+
+    fn map_inner_unchecked<F>(self, f: F) -> Self
+    where
+        F: Fn(T) -> T,
+    {
+        ConstrainedFloat::from_inner_unchecked(f(self.into_inner()))
     }
 }
 
@@ -464,11 +483,11 @@ where
     }
 
     fn min(self, other: Self) -> Self {
-        Real::min(self, other)
+        self.map_inner_unchecked(move |inner| inner.min(other.into_inner()))
     }
 
     fn max(self, other: Self) -> Self {
-        Real::max(self, other)
+        self.map_inner_unchecked(move |inner| inner.max(other.into_inner()))
     }
 
     fn neg_zero() -> Self {
@@ -476,19 +495,19 @@ where
     }
 
     fn is_sign_positive(self) -> bool {
-        Real::is_sign_positive(self)
+        self.into_inner().is_sign_positive()
     }
 
     fn is_sign_negative(self) -> bool {
-        Real::is_sign_negative(self)
+        self.into_inner().is_sign_negative()
     }
 
     fn signum(self) -> Self {
-        Real::signum(self)
+        self.map_inner(|inner| inner.signum())
     }
 
     fn abs(self) -> Self {
-        Real::abs(self)
+        self.map_inner(|inner| inner.abs())
     }
 
     fn classify(self) -> FpCategory {
@@ -504,143 +523,182 @@ where
     }
 
     fn floor(self) -> Self {
-        Real::floor(self)
+        self.map_inner(|inner| inner.floor())
     }
 
     fn ceil(self) -> Self {
-        Real::ceil(self)
+        self.map_inner(|inner| inner.ceil())
     }
 
     fn round(self) -> Self {
-        Real::round(self)
+        self.map_inner(|inner| inner.round())
     }
 
     fn trunc(self) -> Self {
-        Real::trunc(self)
+        self.map_inner(|inner| inner.trunc())
     }
 
     fn fract(self) -> Self {
-        Real::fract(self)
+        self.map_inner(|inner| inner.fract())
     }
 
     fn recip(self) -> Self {
-        Real::recip(self)
+        self.map_inner(|inner| inner.recip())
     }
 
+    #[cfg(feature = "std")]
     fn mul_add(self, a: Self, b: Self) -> Self {
         Real::mul_add(self, a, b)
     }
 
+    #[cfg(feature = "std")]
     fn abs_sub(self, other: Self) -> Self {
         Real::abs_sub(self, other)
     }
 
+    #[cfg(feature = "std")]
     fn powi(self, n: i32) -> Self {
         Real::powi(self, n)
     }
 
+    #[cfg(feature = "std")]
     fn powf(self, n: Self) -> Self {
         Real::powf(self, n)
     }
 
+    #[cfg(feature = "std")]
     fn sqrt(self) -> Self {
         Real::sqrt(self)
     }
 
+    #[cfg(feature = "std")]
     fn cbrt(self) -> Self {
         Real::cbrt(self)
     }
 
+    #[cfg(feature = "std")]
     fn exp(self) -> Self {
         Real::exp(self)
     }
 
+    #[cfg(feature = "std")]
     fn exp2(self) -> Self {
         Real::exp2(self)
     }
 
+    #[cfg(feature = "std")]
     fn exp_m1(self) -> Self {
         Real::exp_m1(self)
     }
 
+    #[cfg(feature = "std")]
     fn log(self, base: Self) -> Self {
         Real::log(self, base)
     }
 
+    #[cfg(feature = "std")]
     fn ln(self) -> Self {
         Real::ln(self)
     }
 
+    #[cfg(feature = "std")]
     fn log2(self) -> Self {
         Real::log2(self)
     }
 
+    #[cfg(feature = "std")]
     fn log10(self) -> Self {
         Real::log10(self)
     }
 
+    #[cfg(feature = "std")]
     fn ln_1p(self) -> Self {
         Real::ln_1p(self)
     }
 
+    #[cfg(feature = "std")]
     fn hypot(self, other: Self) -> Self {
         Real::hypot(self, other)
     }
 
+    #[cfg(feature = "std")]
     fn sin(self) -> Self {
         Real::sin(self)
     }
 
+    #[cfg(feature = "std")]
     fn cos(self) -> Self {
         Real::cos(self)
     }
 
+    #[cfg(feature = "std")]
     fn tan(self) -> Self {
         Real::tan(self)
     }
 
+    #[cfg(feature = "std")]
     fn asin(self) -> Self {
         Real::asin(self)
     }
 
+    #[cfg(feature = "std")]
     fn acos(self) -> Self {
         Real::acos(self)
     }
 
+    #[cfg(feature = "std")]
     fn atan(self) -> Self {
         Real::atan(self)
     }
 
+    #[cfg(feature = "std")]
     fn atan2(self, other: Self) -> Self {
         Real::atan2(self, other)
     }
 
+    #[cfg(feature = "std")]
     fn sin_cos(self) -> (Self, Self) {
         Real::sin_cos(self)
     }
 
+    #[cfg(feature = "std")]
     fn sinh(self) -> Self {
         Real::sinh(self)
     }
 
+    #[cfg(feature = "std")]
     fn cosh(self) -> Self {
         Real::cosh(self)
     }
 
+    #[cfg(feature = "std")]
     fn tanh(self) -> Self {
         Real::tanh(self)
     }
 
+    #[cfg(feature = "std")]
     fn asinh(self) -> Self {
         Real::asinh(self)
     }
 
+    #[cfg(feature = "std")]
     fn acosh(self) -> Self {
         Real::acosh(self)
     }
 
+    #[cfg(feature = "std")]
     fn atanh(self) -> Self {
         Real::atanh(self)
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn to_degrees(self) -> Self {
+        self.map_inner(|inner| inner.to_degrees())
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn to_radians(self) -> Self {
+        self.map_inner(|inner| inner.to_radians())
     }
 }
 
@@ -1061,6 +1119,7 @@ where
         ConstrainedFloat::from_inner(T::recip(self.into_inner()))
     }
 
+    #[cfg(feature = "std")]
     fn mul_add(self, a: Self, b: Self) -> Self {
         ConstrainedFloat::from_inner(T::mul_add(
             self.into_inner(),
@@ -1069,90 +1128,112 @@ where
         ))
     }
 
+    #[cfg(feature = "std")]
     fn abs_sub(self, other: Self) -> Self {
         ConstrainedFloat::from_inner(T::abs_sub(self.into_inner(), other.into_inner()))
     }
 
+    #[cfg(feature = "std")]
     fn powi(self, n: i32) -> Self {
         ConstrainedFloat::from_inner(T::powi(self.into_inner(), n))
     }
 
+    #[cfg(feature = "std")]
     fn powf(self, n: Self) -> Self {
         ConstrainedFloat::from_inner(T::powf(self.into_inner(), n.into_inner()))
     }
 
+    #[cfg(feature = "std")]
     fn sqrt(self) -> Self {
         ConstrainedFloat::from_inner(T::sqrt(self.into_inner()))
     }
 
+    #[cfg(feature = "std")]
     fn cbrt(self) -> Self {
         ConstrainedFloat::from_inner(T::cbrt(self.into_inner()))
     }
 
+    #[cfg(feature = "std")]
     fn exp(self) -> Self {
         ConstrainedFloat::from_inner(T::exp(self.into_inner()))
     }
 
+    #[cfg(feature = "std")]
     fn exp2(self) -> Self {
         ConstrainedFloat::from_inner(T::exp2(self.into_inner()))
     }
 
+    #[cfg(feature = "std")]
     fn exp_m1(self) -> Self {
         ConstrainedFloat::from_inner(T::exp_m1(self.into_inner()))
     }
 
+    #[cfg(feature = "std")]
     fn log(self, base: Self) -> Self {
         ConstrainedFloat::from_inner(T::log(self.into_inner(), base.into_inner()))
     }
 
+    #[cfg(feature = "std")]
     fn ln(self) -> Self {
         ConstrainedFloat::from_inner(T::ln(self.into_inner()))
     }
 
+    #[cfg(feature = "std")]
     fn log2(self) -> Self {
         ConstrainedFloat::from_inner(T::log2(self.into_inner()))
     }
 
+    #[cfg(feature = "std")]
     fn log10(self) -> Self {
         ConstrainedFloat::from_inner(T::log10(self.into_inner()))
     }
 
+    #[cfg(feature = "std")]
     fn ln_1p(self) -> Self {
         ConstrainedFloat::from_inner(T::ln_1p(self.into_inner()))
     }
 
+    #[cfg(feature = "std")]
     fn hypot(self, other: Self) -> Self {
         ConstrainedFloat::from_inner(self.into_inner().hypot(other.into_inner()))
     }
 
+    #[cfg(feature = "std")]
     fn sin(self) -> Self {
         ConstrainedFloat::from_inner_unchecked(self.into_inner().sin())
     }
 
+    #[cfg(feature = "std")]
     fn cos(self) -> Self {
         ConstrainedFloat::from_inner_unchecked(self.into_inner().cos())
     }
 
+    #[cfg(feature = "std")]
     fn tan(self) -> Self {
         ConstrainedFloat::from_inner_unchecked(self.into_inner().tan())
     }
 
+    #[cfg(feature = "std")]
     fn asin(self) -> Self {
         ConstrainedFloat::from_inner(self.into_inner().asin())
     }
 
+    #[cfg(feature = "std")]
     fn acos(self) -> Self {
         ConstrainedFloat::from_inner(self.into_inner().acos())
     }
 
+    #[cfg(feature = "std")]
     fn atan(self) -> Self {
         ConstrainedFloat::from_inner(self.into_inner().atan())
     }
 
+    #[cfg(feature = "std")]
     fn atan2(self, other: Self) -> Self {
         ConstrainedFloat::from_inner(self.into_inner().atan2(other.into_inner()))
     }
 
+    #[cfg(feature = "std")]
     fn sin_cos(self) -> (Self, Self) {
         let (sin, cos) = self.into_inner().sin_cos();
         (
@@ -1161,26 +1242,32 @@ where
         )
     }
 
+    #[cfg(feature = "std")]
     fn sinh(self) -> Self {
         ConstrainedFloat::from_inner(self.into_inner().sinh())
     }
 
+    #[cfg(feature = "std")]
     fn cosh(self) -> Self {
         ConstrainedFloat::from_inner(self.into_inner().cosh())
     }
 
+    #[cfg(feature = "std")]
     fn tanh(self) -> Self {
         ConstrainedFloat::from_inner(self.into_inner().tanh())
     }
 
+    #[cfg(feature = "std")]
     fn asinh(self) -> Self {
         ConstrainedFloat::from_inner(self.into_inner().asinh())
     }
 
+    #[cfg(feature = "std")]
     fn acosh(self) -> Self {
         ConstrainedFloat::from_inner(self.into_inner().acosh())
     }
 
+    #[cfg(feature = "std")]
     fn atanh(self) -> Self {
         ConstrainedFloat::from_inner(self.into_inner().atanh())
     }
@@ -1236,15 +1323,29 @@ where
     P: FloatConstraint<T> + ConstraintEq<T>,
 {
     fn abs(&self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(self.into_inner().abs())
+        self.map_inner_unchecked(|inner| inner.abs())
     }
 
+    #[cfg(feature = "std")]
     fn abs_sub(&self, other: &Self) -> Self {
         ConstrainedFloat::from_inner(self.into_inner().abs_sub(other.into_inner()))
     }
 
+    #[cfg(not(feature = "std"))]
+    fn abs_sub(&self, other: &Self) -> Self {
+        self.map_inner(move |inner| {
+            let other = other.into_inner();
+            if inner <= other {
+                Zero::zero()
+            }
+            else {
+                inner - other
+            }
+        })
+    }
+
     fn signum(&self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(self.into_inner().signum())
+        self.map_inner(|inner| inner.signum())
     }
 
     fn is_positive(&self) -> bool {

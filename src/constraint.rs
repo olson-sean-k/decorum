@@ -8,6 +8,10 @@
 
 use core::cmp::Ordering;
 use core::marker::PhantomData;
+
+#[cfg(not(feature = "std"))]
+use num_traits::float::FloatCore as Float;
+#[cfg(feature = "std")]
 use num_traits::Float;
 
 use crate::canonical;

@@ -11,6 +11,10 @@
 use core::cmp::Ordering;
 use core::hash::{Hash, Hasher};
 use core::mem;
+
+#[cfg(not(feature = "std"))]
+use num_traits::float::FloatCore as Float;
+#[cfg(feature = "std")]
 use num_traits::Float;
 
 use crate::{Encoding, Primitive};
