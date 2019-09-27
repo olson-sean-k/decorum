@@ -852,7 +852,7 @@ where
     type Err = <T as FromStr>::Err;
 
     fn from_str(string: &str) -> Result<Self, Self::Err> {
-        T::from_str(string).map(|value| Self::from_inner(value))
+        T::from_str(string).map(Self::from_inner)
     }
 }
 
@@ -1603,6 +1603,9 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::eq_op)]
+    #[allow(clippy::float_cmp)]
+    #[allow(clippy::zero_divided_by_zero)]
     fn ordered_nan_eq() {
         let x: Ordered<f32> = (0.0 / 0.0).into();
         let y: Ordered<f32> = (0.0 / 0.0).into();
@@ -1617,6 +1620,9 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::eq_op)]
+    #[allow(clippy::float_cmp)]
+    #[allow(clippy::zero_divided_by_zero)]
     fn cmp_proxy_to_primitive() {
         // Compare a canonicalized `NaN` with a primitive `NaN` with a
         // different representation.

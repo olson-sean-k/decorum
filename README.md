@@ -3,7 +3,7 @@
 **Decorum** is a Rust library that provides ordering, equality, hashing, and
 constraints for floating-point types.
 
-[![Build Status](https://travis-ci.org/olson-sean-k/decorum.svg?branch=master)](https://travis-ci.org/olson-sean-k/decorum)
+[![CI](https://github.com/olson-sean-k/decorum/workflows/CI/badge.svg)](https://github.com/olson-sean-k/decorum/actions)
 [![Documentation](https://docs.rs/decorum/badge.svg)](https://docs.rs/decorum)
 [![Crate](https://img.shields.io/crates/v/decorum.svg)](https://crates.io/crates/decorum)
 

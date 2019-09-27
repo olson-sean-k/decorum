@@ -487,7 +487,6 @@ where
 ///
 ///   https://github.com/olson-sean-k/decorum/issues/10
 ///   https://github.com/rust-num/num-traits/issues/49
-///
 macro_rules! real {
     (proxy => $T:ty) => {
         #[cfg(feature = "std")]

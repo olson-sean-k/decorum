@@ -1,0 +1,45 @@
+name: CI
+on: [pull_request, push]
+jobs:
+  rustfmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: hecrj/setup-rust-action@master
+        with:
+          rust-version: nightly
+      - run: rustup component add rustfmt
+      - uses: actions/checkout@master
+        with:
+          fetch-depth: 1
+      - run: ./rustfmt.sh --all -- --check
+  clippy:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: hecrj/setup-rust-action@master
+        with:
+          rust-version: stable
+      - run: rustup component add clippy
+      - uses: actions/checkout@master
+        with:
+          fetch-depth: 1
+      - run: ./clippy.sh -- -D clippy::all
+  test:
+    name: Test
+    needs: [clippy, rustfmt]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macOS-latest, ubuntu-latest, windows-latest]
+        rust: [stable, beta]
+    steps:
+      - uses: hecrj/setup-rust-action@master
+        with:
+          rust-version: ${{ matrix.rust }}
+      - uses: actions/checkout@master
+        with:
+          fetch-depth: 1
+      - run: cargo test --no-default-features --verbose
+      - run: cargo test --all-features --verbose
