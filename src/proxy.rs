@@ -1,3 +1,4 @@
+#[cfg(feature = "approx")]
 use approx::{AbsDiffEq, RelativeEq, UlpsEq};
 use core::cmp::Ordering;
 use core::fmt::{self, Display, Formatter, LowerExp, UpperExp};
@@ -271,6 +272,7 @@ where
     }
 }
 
+#[cfg(feature = "approx")]
 impl<T, P> AbsDiffEq for ConstrainedFloat<T, P>
 where
     T: AbsDiffEq<Epsilon = T> + Float + Primitive,
@@ -1291,6 +1293,7 @@ where
     }
 }
 
+#[cfg(feature = "approx")]
 impl<T, P> RelativeEq for ConstrainedFloat<T, P>
 where
     T: Float + Primitive + RelativeEq<Epsilon = T>,
@@ -1509,6 +1512,7 @@ where
     }
 }
 
+#[cfg(feature = "approx")]
 impl<T, P> UlpsEq for ConstrainedFloat<T, P>
 where
     T: Float + Primitive + UlpsEq<Epsilon = T>,
@@ -1615,8 +1619,11 @@ mod tests {
             (<f32 as Infinite>::infinity() + <f32 as Infinite>::neg_infinity()).into();
         assert_eq!(x, z);
 
-        let w: Ordered<f32> = (Real::sqrt(-1.0)).into();
-        assert_eq!(x, w);
+        #[cfg(feature = "std")]
+        {
+            let w: Ordered<f32> = (Real::sqrt(-1.0)).into();
+            assert_eq!(x, w);
+        }
     }
 
     #[test]
