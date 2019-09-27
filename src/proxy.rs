@@ -1,3 +1,8 @@
+// Required for `serde_derive` when using `-D clippy::all`. This attribute
+// cannot be used on the item to stop this error, so it is applied to the
+// module.
+#![allow(clippy::type_repetition_in_bounds)]
+
 #[cfg(feature = "approx")]
 use approx::{AbsDiffEq, RelativeEq, UlpsEq};
 use core::cmp::Ordering;
