@@ -1,3 +1,4 @@
+use approx::{AbsDiffEq, RelativeEq, UlpsEq};
 use core::cmp::Ordering;
 use core::fmt::{self, Display, Formatter, LowerExp, UpperExp};
 use core::hash::{Hash, Hasher};
@@ -212,7 +213,7 @@ where
 
 // It is not possible to implement `From` for proxies in a generic way, because
 // the `FloatConstraint` types `T` and `U` may be the same and conflict with
-// the reflexive implementation in core. A similar problem prevents
+// the reflexive implementation in `core`. A similar problem prevents
 // implementing `From` over a type `T: Float`.
 
 impl<T> From<NotNan<T>> for Ordered<T>
@@ -267,6 +268,23 @@ where
 {
     fn from(value: ConstrainedFloat<f64, P>) -> Self {
         value.into_inner()
+    }
+}
+
+impl<T, P> AbsDiffEq for ConstrainedFloat<T, P>
+where
+    T: AbsDiffEq<Epsilon = T> + Float + Primitive,
+    P: FloatConstraint<T> + ConstraintEq<T>,
+{
+    type Epsilon = Self;
+
+    fn default_epsilon() -> Self::Epsilon {
+        Self::from_inner(T::default_epsilon())
+    }
+
+    fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+        self.into_inner()
+            .abs_diff_eq(&other.into_inner(), epsilon.into_inner())
     }
 }
 
@@ -1273,6 +1291,29 @@ where
     }
 }
 
+impl<T, P> RelativeEq for ConstrainedFloat<T, P>
+where
+    T: Float + Primitive + RelativeEq<Epsilon = T>,
+    P: FloatConstraint<T> + ConstraintEq<T>,
+{
+    fn default_max_relative() -> Self::Epsilon {
+        Self::from_inner(T::default_max_relative())
+    }
+
+    fn relative_eq(
+        &self,
+        other: &Self,
+        epsilon: Self::Epsilon,
+        max_relative: Self::Epsilon,
+    ) -> bool {
+        self.into_inner().relative_eq(
+            &other.into_inner(),
+            epsilon.into_inner(),
+            max_relative.into_inner(),
+        )
+    }
+}
+
 impl<T, P> Rem for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
@@ -1465,6 +1506,21 @@ where
 
     fn to_f64(&self) -> Option<f64> {
         self.into_inner().to_f64()
+    }
+}
+
+impl<T, P> UlpsEq for ConstrainedFloat<T, P>
+where
+    T: Float + Primitive + UlpsEq<Epsilon = T>,
+    P: FloatConstraint<T> + ConstraintEq<T>,
+{
+    fn default_max_ulps() -> u32 {
+        T::default_max_ulps()
+    }
+
+    fn ulps_eq(&self, other: &Self, epsilon: Self::Epsilon, max_ulps: u32) -> bool {
+        self.into_inner()
+            .ulps_eq(&other.into_inner(), epsilon.into_inner(), max_ulps)
     }
 }
 

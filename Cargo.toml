@@ -13,9 +13,20 @@ keywords = ["finite", "float", "hash", "nan", "ord"]
 travis-ci = { repository = "olson-sean-k/decorum" }
 
 [features]
-default = ["serialize-serde", "std"]
+default = ["approx", "serialize-serde", "std"]
 serialize-serde = ["serde", "serde_derive"]
-std = ["num-traits/std"]
+std = ["approx/std", "num-traits/std"]
+
+[dependencies.approx]
+version = "^0.3.0"
+default-features = false
+features = []
+optional = true
+
+[dependencies.num-traits]
+version = "^0.2.4"
+default-features = false
+features = []
 
 [dependencies.serde]
 version = "1.0"
@@ -26,11 +37,6 @@ optional = true
 version = "1.0"
 default-features = false
 optional = true
-
-[dependencies.num-traits]
-version = "^0.2.4"
-default-features = false
-features = []
 
 [dev-dependencies]
 num = "^0.2.0"
