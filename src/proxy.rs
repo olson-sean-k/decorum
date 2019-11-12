@@ -6,7 +6,7 @@
 #[cfg(feature = "approx")]
 use approx::{AbsDiffEq, RelativeEq, UlpsEq};
 use core::cmp::Ordering;
-use core::fmt::{self, Display, Formatter, LowerExp, UpperExp};
+use core::fmt::{self, Debug, Display, Formatter, LowerExp, UpperExp};
 use core::hash::{Hash, Hasher};
 use core::iter::{Product, Sum};
 use core::marker::PhantomData;
@@ -46,7 +46,7 @@ use crate::{Encoding, Finite, Infinite, Nan, NotNan, Ordered, Primitive, Real};
 /// This type is re-exported but should not (and cannot) be used directly. Use
 /// the exported type aliases instead (`Ordered`, `NotNan`, and `Finite`).
 #[cfg_attr(feature = "serialize-serde", derive(Deserialize, Serialize))]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct ConstrainedFloat<T, P>
 where
@@ -370,6 +370,16 @@ where
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.as_ref().fmt(f)
+    }
+}
+
+impl<T, P> Debug for ConstrainedFloat<T, P>
+where
+    T: Debug + Float + Primitive,
+    P: FloatConstraint<T>,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "ConstrainedFloat({:?})", self.into_inner())
     }
 }
 
@@ -1706,10 +1716,10 @@ mod tests {
     #[test]
     fn fmt() {
         let x: Ordered<f32> = 1.0.into();
-        format_args!("{0} {0:e} {0:E} {0:?}", x);
+        format_args!("{0} {0:e} {0:E} {0:?} {0:#?}", x);
         let y: NotNan<f32> = 1.0.into();
-        format_args!("{0} {0:e} {0:E} {0:?}", y);
+        format_args!("{0} {0:e} {0:E} {0:?} {0:#?}", y);
         let z: Finite<f32> = 1.0.into();
-        format_args!("{0} {0:e} {0:E} {0:?}", z);
+        format_args!("{0} {0:e} {0:E} {0:?} {0:#?}", z);
     }
 }
