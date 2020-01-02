@@ -133,6 +133,23 @@ pub trait Encoding: Copy + NumCast {
 ///
 /// Provides values and operations that generally apply to real numbers.
 pub trait Real: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd {
+    const E: Self;
+    const PI: Self;
+    const FRAC_1_PI: Self;
+    const FRAC_2_PI: Self;
+    const FRAC_2_SQRT_PI: Self;
+    const FRAC_PI_2: Self;
+    const FRAC_PI_3: Self;
+    const FRAC_PI_4: Self;
+    const FRAC_PI_6: Self;
+    const FRAC_PI_8: Self;
+    const SQRT_2: Self;
+    const FRAC_1_SQRT_2: Self;
+    const LN_2: Self;
+    const LN_10: Self;
+    const LOG2_E: Self;
+    const LOG10_E: Self;
+
     fn min(self, other: Self) -> Self;
     fn max(self, other: Self) -> Self;
 
@@ -277,203 +294,223 @@ where
     }
 }
 
-impl<T> Real for T
-where
-    T: Float + Primitive,
-{
-    fn min(self, other: Self) -> Self {
-        Float::min(self, other)
-    }
+macro_rules! impl_real {
+    (primitive => $T:ident) => {
+        impl Real for $T {
+            const E: Self = core::$T::consts::E;
+            const PI: Self = core::$T::consts::PI;
+            const FRAC_1_PI: Self = core::$T::consts::FRAC_1_PI;
+            const FRAC_2_PI: Self = core::$T::consts::FRAC_2_PI;
+            const FRAC_2_SQRT_PI: Self = core::$T::consts::FRAC_2_SQRT_PI;
+            const FRAC_PI_2: Self = core::$T::consts::FRAC_PI_2;
+            const FRAC_PI_3: Self = core::$T::consts::FRAC_PI_3;
+            const FRAC_PI_4: Self = core::$T::consts::FRAC_PI_4;
+            const FRAC_PI_6: Self = core::$T::consts::FRAC_PI_6;
+            const FRAC_PI_8: Self = core::$T::consts::FRAC_PI_8;
+            const SQRT_2: Self = core::$T::consts::SQRT_2;
+            const FRAC_1_SQRT_2: Self = core::$T::consts::FRAC_1_SQRT_2;
+            const LN_2: Self = core::$T::consts::LN_2;
+            const LN_10: Self = core::$T::consts::LN_10;
+            const LOG2_E: Self = core::$T::consts::LOG2_E;
+            const LOG10_E: Self = core::$T::consts::LOG10_E;
 
-    fn max(self, other: Self) -> Self {
-        Float::max(self, other)
-    }
+            fn min(self, other: Self) -> Self {
+                Float::min(self, other)
+            }
 
-    fn is_sign_positive(self) -> bool {
-        Float::is_sign_positive(self)
-    }
+            fn max(self, other: Self) -> Self {
+                Float::max(self, other)
+            }
 
-    fn is_sign_negative(self) -> bool {
-        Float::is_sign_negative(self)
-    }
+            fn is_sign_positive(self) -> bool {
+                Float::is_sign_positive(self)
+            }
 
-    fn signum(self) -> Self {
-        Float::signum(self)
-    }
+            fn is_sign_negative(self) -> bool {
+                Float::is_sign_negative(self)
+            }
 
-    fn abs(self) -> Self {
-        Float::abs(self)
-    }
+            fn signum(self) -> Self {
+                Float::signum(self)
+            }
 
-    fn floor(self) -> Self {
-        Float::floor(self)
-    }
+            fn abs(self) -> Self {
+                Float::abs(self)
+            }
 
-    fn ceil(self) -> Self {
-        Float::ceil(self)
-    }
+            fn floor(self) -> Self {
+                Float::floor(self)
+            }
 
-    fn round(self) -> Self {
-        Float::round(self)
-    }
+            fn ceil(self) -> Self {
+                Float::ceil(self)
+            }
 
-    fn trunc(self) -> Self {
-        Float::trunc(self)
-    }
+            fn round(self) -> Self {
+                Float::round(self)
+            }
 
-    fn fract(self) -> Self {
-        Float::fract(self)
-    }
+            fn trunc(self) -> Self {
+                Float::trunc(self)
+            }
 
-    fn recip(self) -> Self {
-        Float::recip(self)
-    }
+            fn fract(self) -> Self {
+                Float::fract(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn mul_add(self, a: Self, b: Self) -> Self {
-        Float::mul_add(self, a, b)
-    }
+            fn recip(self) -> Self {
+                Float::recip(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn abs_sub(self, other: Self) -> Self {
-        Float::abs_sub(self, other)
-    }
+            #[cfg(feature = "std")]
+            fn mul_add(self, a: Self, b: Self) -> Self {
+                Float::mul_add(self, a, b)
+            }
 
-    #[cfg(feature = "std")]
-    fn powi(self, n: i32) -> Self {
-        Float::powi(self, n)
-    }
+            #[cfg(feature = "std")]
+            fn abs_sub(self, other: Self) -> Self {
+                Float::abs_sub(self, other)
+            }
 
-    #[cfg(feature = "std")]
-    fn powf(self, n: Self) -> Self {
-        Float::powf(self, n)
-    }
+            #[cfg(feature = "std")]
+            fn powi(self, n: i32) -> Self {
+                Float::powi(self, n)
+            }
 
-    #[cfg(feature = "std")]
-    fn sqrt(self) -> Self {
-        Float::sqrt(self)
-    }
+            #[cfg(feature = "std")]
+            fn powf(self, n: Self) -> Self {
+                Float::powf(self, n)
+            }
 
-    #[cfg(feature = "std")]
-    fn cbrt(self) -> Self {
-        Float::cbrt(self)
-    }
+            #[cfg(feature = "std")]
+            fn sqrt(self) -> Self {
+                Float::sqrt(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn exp(self) -> Self {
-        Float::exp(self)
-    }
+            #[cfg(feature = "std")]
+            fn cbrt(self) -> Self {
+                Float::cbrt(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn exp2(self) -> Self {
-        Float::exp2(self)
-    }
+            #[cfg(feature = "std")]
+            fn exp(self) -> Self {
+                Float::exp(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn exp_m1(self) -> Self {
-        Float::exp_m1(self)
-    }
+            #[cfg(feature = "std")]
+            fn exp2(self) -> Self {
+                Float::exp2(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn log(self, base: Self) -> Self {
-        Float::log(self, base)
-    }
+            #[cfg(feature = "std")]
+            fn exp_m1(self) -> Self {
+                Float::exp_m1(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn ln(self) -> Self {
-        Float::ln(self)
-    }
+            #[cfg(feature = "std")]
+            fn log(self, base: Self) -> Self {
+                Float::log(self, base)
+            }
 
-    #[cfg(feature = "std")]
-    fn log2(self) -> Self {
-        Float::log2(self)
-    }
+            #[cfg(feature = "std")]
+            fn ln(self) -> Self {
+                Float::ln(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn log10(self) -> Self {
-        Float::log10(self)
-    }
+            #[cfg(feature = "std")]
+            fn log2(self) -> Self {
+                Float::log2(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn ln_1p(self) -> Self {
-        Float::ln_1p(self)
-    }
+            #[cfg(feature = "std")]
+            fn log10(self) -> Self {
+                Float::log10(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn hypot(self, other: Self) -> Self {
-        Float::hypot(self, other)
-    }
+            #[cfg(feature = "std")]
+            fn ln_1p(self) -> Self {
+                Float::ln_1p(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn sin(self) -> Self {
-        Float::sin(self)
-    }
+            #[cfg(feature = "std")]
+            fn hypot(self, other: Self) -> Self {
+                Float::hypot(self, other)
+            }
 
-    #[cfg(feature = "std")]
-    fn cos(self) -> Self {
-        Float::cos(self)
-    }
+            #[cfg(feature = "std")]
+            fn sin(self) -> Self {
+                Float::sin(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn tan(self) -> Self {
-        Float::tan(self)
-    }
+            #[cfg(feature = "std")]
+            fn cos(self) -> Self {
+                Float::cos(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn asin(self) -> Self {
-        Float::asin(self)
-    }
+            #[cfg(feature = "std")]
+            fn tan(self) -> Self {
+                Float::tan(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn acos(self) -> Self {
-        Float::acos(self)
-    }
+            #[cfg(feature = "std")]
+            fn asin(self) -> Self {
+                Float::asin(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn atan(self) -> Self {
-        Float::atan(self)
-    }
+            #[cfg(feature = "std")]
+            fn acos(self) -> Self {
+                Float::acos(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn atan2(self, other: Self) -> Self {
-        Float::atan2(self, other)
-    }
+            #[cfg(feature = "std")]
+            fn atan(self) -> Self {
+                Float::atan(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn sin_cos(self) -> (Self, Self) {
-        Float::sin_cos(self)
-    }
+            #[cfg(feature = "std")]
+            fn atan2(self, other: Self) -> Self {
+                Float::atan2(self, other)
+            }
 
-    #[cfg(feature = "std")]
-    fn sinh(self) -> Self {
-        Float::sinh(self)
-    }
+            #[cfg(feature = "std")]
+            fn sin_cos(self) -> (Self, Self) {
+                Float::sin_cos(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn cosh(self) -> Self {
-        Float::cosh(self)
-    }
+            #[cfg(feature = "std")]
+            fn sinh(self) -> Self {
+                Float::sinh(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn tanh(self) -> Self {
-        Float::tanh(self)
-    }
+            #[cfg(feature = "std")]
+            fn cosh(self) -> Self {
+                Float::cosh(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn asinh(self) -> Self {
-        Float::asinh(self)
-    }
+            #[cfg(feature = "std")]
+            fn tanh(self) -> Self {
+                Float::tanh(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn acosh(self) -> Self {
-        Float::acosh(self)
-    }
+            #[cfg(feature = "std")]
+            fn asinh(self) -> Self {
+                Float::asinh(self)
+            }
 
-    #[cfg(feature = "std")]
-    fn atanh(self) -> Self {
-        Float::atanh(self)
-    }
+            #[cfg(feature = "std")]
+            fn acosh(self) -> Self {
+                Float::acosh(self)
+            }
+
+            #[cfg(feature = "std")]
+            fn atanh(self) -> Self {
+                Float::atanh(self)
+            }
+        }
+    };
 }
+impl_real!(primitive => f32);
+impl_real!(primitive => f64);
 
 /// Implements the `Real` trait from
 /// [num-traits](https://crates.io/crates/num-traits) in terms of Decorum's
@@ -488,7 +525,7 @@ where
 ///
 ///   https://github.com/olson-sean-k/decorum/issues/10
 ///   https://github.com/rust-num/num-traits/issues/49
-macro_rules! real {
+macro_rules! impl_foreign_real {
     (proxy => $T:ty) => {
         #[cfg(feature = "std")]
         impl real::Real for $T {
@@ -682,7 +719,7 @@ macro_rules! real {
         }
     };
 }
-real!(proxy => N32);
-real!(proxy => N64);
-real!(proxy => R32);
-real!(proxy => R64);
+impl_foreign_real!(proxy => N32);
+impl_foreign_real!(proxy => N64);
+impl_foreign_real!(proxy => R32);
+impl_foreign_real!(proxy => R64);
