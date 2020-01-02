@@ -9,6 +9,14 @@ repository = "https://github.com/olson-sean-k/decorum"
 description = "Ordering, equality, hashing, and constraints for floating-point types."
 keywords = ["finite", "float", "hash", "nan", "ord"]
 
+[package.metadata.docs.rs]
+all-features = true
+# Enable KaTex support.
+rustdoc-args = [
+    "--html-in-header",
+    "doc/katex-header.html"
+]
+
 [features]
 default = ["approx", "serialize-serde", "std"]
 serialize-serde = ["serde", "serde_derive"]

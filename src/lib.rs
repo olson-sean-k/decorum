@@ -11,8 +11,9 @@
 //!
 //! `NaN` and zero are canonicalized to a single representation (called `CNaN`
 //! and `C0` respectively) to provide the following total ordering for all
-//! proxy types and ordering functions: `[ -INF | ... | C0 | ... | +INF | CNaN
-//! ]`
+//! proxy types and ordering functions:
+//!
+//! `[ -INF | ... | C0 | ... | +INF | CNaN ]`
 //!
 //! Note that `NaN` is canonicalized to `CNaN`, which has a single
 //! representation and supports the relations `CNaN = CNaN` and `CNaN > x | x ≠
