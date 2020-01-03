@@ -45,7 +45,7 @@ pub trait FloatArray: Sized {
 }
 
 // TODO: Is there a better way to implement this macro? See `hash_float_array`.
-macro_rules! float_array {
+macro_rules! impl_float_array {
     (lengths => $($N:expr),*) => {$(
         impl<T> FloatArray for [T; $N]
         where
@@ -80,7 +80,7 @@ macro_rules! float_array {
         }
     )*};
 }
-float_array!(lengths => 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
+impl_float_array!(lengths => 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
 
 /// Compares primitive floating-point values.
 ///
