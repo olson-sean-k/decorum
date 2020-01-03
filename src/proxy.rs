@@ -532,11 +532,11 @@ where
     }
 
     fn signum(self) -> Self {
-        self.map_inner(|inner| Float::signum(inner))
+        self.map_inner(Float::signum)
     }
 
     fn abs(self) -> Self {
-        self.map_inner(|inner| Float::abs(inner))
+        self.map_inner(Float::abs)
     }
 
     fn classify(self) -> FpCategory {
@@ -552,27 +552,27 @@ where
     }
 
     fn floor(self) -> Self {
-        self.map_inner(|inner| Float::floor(inner))
+        self.map_inner(Float::floor)
     }
 
     fn ceil(self) -> Self {
-        self.map_inner(|inner| Float::ceil(inner))
+        self.map_inner(Float::ceil)
     }
 
     fn round(self) -> Self {
-        self.map_inner(|inner| Float::round(inner))
+        self.map_inner(Float::round)
     }
 
     fn trunc(self) -> Self {
-        self.map_inner(|inner| Float::trunc(inner))
+        self.map_inner(Float::trunc)
     }
 
     fn fract(self) -> Self {
-        self.map_inner(|inner| Float::fract(inner))
+        self.map_inner(Float::fract)
     }
 
     fn recip(self) -> Self {
-        self.map_inner(|inner| Float::recip(inner))
+        self.map_inner(Float::recip)
     }
 
     #[cfg(feature = "std")]
