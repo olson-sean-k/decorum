@@ -139,10 +139,8 @@ where
     /// use decorum::{N64, R64};
     /// use num::Zero;
     ///
-    /// # fn main() {
     /// let x = R64::zero();
     /// let y = N64::from_subset(x);
-    /// # }
     /// ```
     pub fn from_subset<Q>(other: ConstrainedFloat<T, Q>) -> Self
     where
@@ -164,10 +162,8 @@ where
     /// use decorum::{N64, R64};
     /// use num::Zero;
     ///
-    /// # fn main() {
     /// let x = R64::zero();
     /// let y: N64 = x.into_superset();
-    /// # }
     /// ```
     pub fn into_superset<Q>(self) -> ConstrainedFloat<T, Q>
     where
