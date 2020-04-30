@@ -36,9 +36,10 @@ macro_rules! impl_primitive {
         impl Primitive for $t {}
 
         impl Real for $t {
-            // TODO: The propagation from a constant in a module requires that this macro accept an
-            //       `ident` token rather than a `ty` token. Use `ty` if these constants become
-            //       associated constants of the primitive types.
+            // TODO: The propagation from a constant in a module requires that
+            //       this macro accept an `ident` token rather than a `ty`
+            //       token. Use `ty` if these constants become associated
+            //       constants of the primitive types.
             const E: Self = core::$t::consts::E;
             const PI: Self = core::$t::consts::PI;
             const FRAC_1_PI: Self = core::$t::consts::FRAC_1_PI;

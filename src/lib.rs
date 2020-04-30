@@ -47,6 +47,8 @@ mod proxy;
 
 use crate::constraint::{FiniteConstraint, NotNanConstraint, UnitConstraint};
 
+pub use crate::canonical::ToCanonicalBits;
+pub use crate::primitive::Primitive;
 pub use crate::proxy::ConstrainedFloat;
 
 /// An ordered and canonicalized floating-point value.
