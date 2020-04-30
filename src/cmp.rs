@@ -11,7 +11,9 @@
 use core::cmp::Ordering;
 
 use crate::canonical::ToCanonicalBits;
+use crate::constraint::Constraint;
 use crate::primitive::Primitive;
+use crate::proxy::ConstrainedFloat;
 use crate::{Encoding, Nan};
 
 pub trait FloatEq {
@@ -88,8 +90,6 @@ where
     }
 }
 
-// TODO: Implement for as many types as possible, including types behind
-//       feature flags.
 pub trait NanOrd: Copy + PartialOrd + Sized {
     fn min_max_or_nan(&self, other: &Self) -> (Self, Self);
 
@@ -129,7 +129,6 @@ macro_rules! impl_nan_ord {
         }
     };
 }
-
 impl_nan_ord!(total => isize);
 impl_nan_ord!(total => i8);
 impl_nan_ord!(total => i16);
@@ -144,6 +143,29 @@ impl_nan_ord!(total => u64);
 impl_nan_ord!(total => u128);
 impl_nan_ord!(nan => f32);
 impl_nan_ord!(nan => f64);
+
+// Note that it is not necessary for the constraint to support `NaN`; all proxy
+// types should implement this trait even if it results in panics.
+impl<T, P> NanOrd for ConstrainedFloat<T, P>
+where
+    T: Encoding + Nan + Primitive,
+    P: Constraint<T>,
+{
+    fn min_max_or_nan(&self, other: &Self) -> (Self, Self) {
+        let a = self.into_inner();
+        let b = other.into_inner();
+        match a.partial_cmp(&b) {
+            Some(ordering) => match ordering {
+                Ordering::Less | Ordering::Equal => (a.into(), b.into()),
+                _ => (b.into(), a.into()),
+            },
+            None => {
+                let nan = T::nan().into();
+                (nan, nan)
+            }
+        }
+    }
+}
 
 pub fn max_or_nan<T>(a: T, b: T) -> T
 where
