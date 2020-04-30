@@ -216,11 +216,6 @@ where
     }
 }
 
-// It is not possible to implement `From` for proxies in a generic way, because
-// the `FloatConstraint` types `T` and `U` may be the same and conflict with
-// the reflexive implementation in `core`. A similar problem prevents
-// implementing `From` over a type `T: Float`.
-
 impl<T> From<NotNan<T>> for Total<T>
 where
     T: Nan + Primitive,
@@ -285,7 +280,7 @@ where
     type Epsilon = Self;
 
     fn default_epsilon() -> Self::Epsilon {
-        Self::from_inner(T::default_epsilon())
+        T::default_epsilon().into()
     }
 
     fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
@@ -302,7 +297,7 @@ where
     type Output = Self;
 
     fn add(self, other: Self) -> Self::Output {
-        ConstrainedFloat::from_inner(self.into_inner() + other.into_inner())
+        self.zip_map(other, Add::add)
     }
 }
 
@@ -314,7 +309,7 @@ where
     type Output = Self;
 
     fn add(self, other: T) -> Self::Output {
-        ConstrainedFloat::from_inner(self.into_inner() + other)
+        self.map(|inner| inner + other)
     }
 }
 
@@ -324,7 +319,7 @@ where
     P: Constraint<T>,
 {
     fn add_assign(&mut self, other: Self) {
-        *self = ConstrainedFloat::from_inner(self.into_inner() + other.into_inner())
+        *self = *self + other;
     }
 }
 
@@ -334,7 +329,7 @@ where
     P: Constraint<T>,
 {
     fn add_assign(&mut self, other: T) {
-        *self = ConstrainedFloat::from_inner(self.into_inner() + other)
+        *self = self.map(|inner| inner + other);
     }
 }
 
@@ -358,7 +353,7 @@ where
     P: Constraint<T>,
 {
     fn default() -> Self {
-        ConstrainedFloat::from_inner_unchecked(Default::default())
+        T::default().into()
     }
 }
 
@@ -390,7 +385,7 @@ where
     type Output = Self;
 
     fn div(self, other: Self) -> Self::Output {
-        ConstrainedFloat::from_inner(self.into_inner() / other.into_inner())
+        self.zip_map(other, Div::div)
     }
 }
 
@@ -402,7 +397,7 @@ where
     type Output = Self;
 
     fn div(self, other: T) -> Self::Output {
-        ConstrainedFloat::from_inner(self.into_inner() / other)
+        self.map(|inner| inner / other)
     }
 }
 
@@ -412,7 +407,7 @@ where
     P: Constraint<T>,
 {
     fn div_assign(&mut self, other: Self) {
-        *self = ConstrainedFloat::from_inner(self.into_inner() / other.into_inner())
+        *self = *self / other
     }
 }
 
@@ -422,7 +417,7 @@ where
     P: Constraint<T>,
 {
     fn div_assign(&mut self, other: T) {
-        *self = ConstrainedFloat::from_inner(self.into_inner() / other)
+        *self = self.map(|inner| inner / other);
     }
 }
 
@@ -909,7 +904,7 @@ where
     type Output = Self;
 
     fn mul(self, other: Self) -> Self::Output {
-        self.zip_map(other, |a, b| a * b)
+        self.zip_map(other, Mul::mul)
     }
 }
 
@@ -1077,11 +1072,6 @@ where
     }
 }
 
-// This implementation uses unchecked conversions for some operations, but
-// applies to general proxy types and so must support the most constrained types
-// exposed by Decorum. Operations that use unchecked conversions must be chosen
-// carefully to avoid exposing `NaN`, `INF`, and other potentially disallowed
-// values from going unchecked.
 impl<T, P> Real for ConstrainedFloat<T, P>
 where
     T: Encoding + Nan + Primitive + Real,
@@ -1105,43 +1095,43 @@ where
     const LOG10_E: Self = ConstrainedFloat::from_inner_unchecked(T::LOG10_E);
 
     fn is_sign_positive(self) -> bool {
-        <T as Real>::is_sign_positive(self.into_inner())
+        self.into_inner().is_sign_positive()
     }
 
     fn is_sign_negative(self) -> bool {
-        <T as Real>::is_sign_negative(self.into_inner())
+        self.into_inner().is_sign_negative()
     }
 
     fn signum(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(<T as Real>::signum(self.into_inner()))
+        self.map(Real::signum)
     }
 
     fn abs(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(<T as Real>::abs(self.into_inner()))
+        self.map(Real::abs)
     }
 
     fn floor(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(<T as Real>::floor(self.into_inner()))
+        self.map(Real::floor)
     }
 
     fn ceil(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(<T as Real>::ceil(self.into_inner()))
+        self.map(Real::ceil)
     }
 
     fn round(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(<T as Real>::round(self.into_inner()))
+        self.map(Real::round)
     }
 
     fn trunc(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(<T as Real>::trunc(self.into_inner()))
+        self.map(Real::trunc)
     }
 
     fn fract(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(<T as Real>::fract(self.into_inner()))
+        self.map(Real::fract)
     }
 
     fn recip(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::recip(self.into_inner()))
+        self.map(Real::recip)
     }
 
     #[cfg(feature = "std")]
@@ -1155,107 +1145,107 @@ where
 
     #[cfg(feature = "std")]
     fn powi(self, n: i32) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::powi(self.into_inner(), n))
+        self.map(|inner| Real::powi(inner, n))
     }
 
     #[cfg(feature = "std")]
     fn powf(self, n: Self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::powf(self.into_inner(), n.into_inner()))
+        self.zip_map(n, Real::powf)
     }
 
     #[cfg(feature = "std")]
     fn sqrt(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::sqrt(self.into_inner()))
+        self.map(Real::sqrt)
     }
 
     #[cfg(feature = "std")]
     fn cbrt(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::cbrt(self.into_inner()))
+        self.map(Real::cbrt)
     }
 
     #[cfg(feature = "std")]
     fn exp(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::exp(self.into_inner()))
+        self.map(Real::exp)
     }
 
     #[cfg(feature = "std")]
     fn exp2(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::exp2(self.into_inner()))
+        self.map(Real::exp2)
     }
 
     #[cfg(feature = "std")]
     fn exp_m1(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::exp_m1(self.into_inner()))
+        self.map(Real::exp_m1)
     }
 
     #[cfg(feature = "std")]
     fn log(self, base: Self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::log(self.into_inner(), base.into_inner()))
+        self.zip_map(base, Real::log)
     }
 
     #[cfg(feature = "std")]
     fn ln(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::ln(self.into_inner()))
+        self.map(Real::ln)
     }
 
     #[cfg(feature = "std")]
     fn log2(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::log2(self.into_inner()))
+        self.map(Real::log2)
     }
 
     #[cfg(feature = "std")]
     fn log10(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::log10(self.into_inner()))
+        self.map(Real::log10)
     }
 
     #[cfg(feature = "std")]
     fn ln_1p(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::ln_1p(self.into_inner()))
+        self.map(Real::ln_1p)
     }
 
     #[cfg(feature = "std")]
     fn hypot(self, other: Self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::hypot(self.into_inner(), other.into_inner()))
+        self.zip_map(other, Real::hypot)
     }
 
     #[cfg(feature = "std")]
     fn sin(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(<T as Real>::sin(self.into_inner()))
+        self.map(Real::sin)
     }
 
     #[cfg(feature = "std")]
     fn cos(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(<T as Real>::cos(self.into_inner()))
+        self.map(Real::cos)
     }
 
     #[cfg(feature = "std")]
     fn tan(self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(<T as Real>::tan(self.into_inner()))
+        self.map(Real::tan)
     }
 
     #[cfg(feature = "std")]
     fn asin(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::asin(self.into_inner()))
+        self.map(Real::asin)
     }
 
     #[cfg(feature = "std")]
     fn acos(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::acos(self.into_inner()))
+        self.map(Real::acos)
     }
 
     #[cfg(feature = "std")]
     fn atan(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::atan(self.into_inner()))
+        self.map(Real::atan)
     }
 
     #[cfg(feature = "std")]
     fn atan2(self, other: Self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::atan2(self.into_inner(), other.into_inner()))
+        self.zip_map(other, Real::atan2)
     }
 
     #[cfg(feature = "std")]
     fn sin_cos(self) -> (Self, Self) {
-        let (sin, cos) = <T as Real>::sin_cos(self.into_inner());
+        let (sin, cos) = self.into_inner().sin_cos();
         (
             ConstrainedFloat::from_inner_unchecked(sin),
             ConstrainedFloat::from_inner_unchecked(cos),
@@ -1264,32 +1254,32 @@ where
 
     #[cfg(feature = "std")]
     fn sinh(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::sinh(self.into_inner()))
+        self.map(Real::sinh)
     }
 
     #[cfg(feature = "std")]
     fn cosh(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::cosh(self.into_inner()))
+        self.map(Real::cosh)
     }
 
     #[cfg(feature = "std")]
     fn tanh(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::tanh(self.into_inner()))
+        self.map(Real::tanh)
     }
 
     #[cfg(feature = "std")]
     fn asinh(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::asinh(self.into_inner()))
+        self.map(Real::asinh)
     }
 
     #[cfg(feature = "std")]
     fn acosh(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::acosh(self.into_inner()))
+        self.map(Real::acosh)
     }
 
     #[cfg(feature = "std")]
     fn atanh(self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::atanh(self.into_inner()))
+        self.map(Real::atanh)
     }
 }
 
@@ -1300,7 +1290,7 @@ where
     P: Constraint<T>,
 {
     fn default_max_relative() -> Self::Epsilon {
-        Self::from_inner(T::default_max_relative())
+        T::default_max_relative().into()
     }
 
     fn relative_eq(
@@ -1325,7 +1315,7 @@ where
     type Output = Self;
 
     fn rem(self, other: Self) -> Self::Output {
-        ConstrainedFloat::from_inner(self.into_inner() % other.into_inner())
+        self.zip_map(other, Rem::rem)
     }
 }
 
@@ -1337,7 +1327,7 @@ where
     type Output = Self;
 
     fn rem(self, other: T) -> Self::Output {
-        ConstrainedFloat::from_inner(self.into_inner() % other)
+        self.map(|inner| inner % other)
     }
 }
 
@@ -1347,7 +1337,7 @@ where
     P: Constraint<T>,
 {
     fn rem_assign(&mut self, other: Self) {
-        *self = ConstrainedFloat::from_inner(self.into_inner() % other.into_inner())
+        *self = *self % other;
     }
 }
 
@@ -1357,7 +1347,7 @@ where
     P: Constraint<T>,
 {
     fn rem_assign(&mut self, other: T) {
-        *self = ConstrainedFloat::from_inner(self.into_inner() % other)
+        *self = self.map(|inner| inner % other);
     }
 }
 
@@ -1367,23 +1357,22 @@ where
     P: Constraint<T>,
 {
     fn abs(&self) -> Self {
-        self.map_unchecked(|inner| inner.abs())
+        self.map_unchecked(Real::abs)
     }
 
     #[cfg(feature = "std")]
     fn abs_sub(&self, other: &Self) -> Self {
-        ConstrainedFloat::from_inner(self.into_inner().abs_sub(&other.into_inner()))
+        self.zip_map(*other, |a, b| Signed::abs_sub(&a, &b))
     }
 
     #[cfg(not(feature = "std"))]
     fn abs_sub(&self, other: &Self) -> Self {
-        self.map(move |inner| {
-            let other = other.into_inner();
-            if inner <= other {
+        self.zip_map(*other, |a, b| {
+            if a <= b {
                 Zero::zero()
             }
             else {
-                inner - other
+                a - b
             }
         })
     }
@@ -1409,7 +1398,7 @@ where
     type Output = Self;
 
     fn sub(self, other: Self) -> Self::Output {
-        ConstrainedFloat::from_inner(self.into_inner() - other.into_inner())
+        self.zip_map(other, Sub::sub)
     }
 }
 
@@ -1421,7 +1410,7 @@ where
     type Output = Self;
 
     fn sub(self, other: T) -> Self::Output {
-        ConstrainedFloat::from_inner(self.into_inner() - other)
+        self.map(|inner| inner - other)
     }
 }
 
@@ -1431,7 +1420,7 @@ where
     P: Constraint<T>,
 {
     fn sub_assign(&mut self, other: Self) {
-        *self = ConstrainedFloat::from_inner(self.into_inner() - other.into_inner())
+        *self = *self - other
     }
 }
 
@@ -1441,7 +1430,7 @@ where
     P: Constraint<T>,
 {
     fn sub_assign(&mut self, other: T) {
-        *self = ConstrainedFloat::from_inner(self.into_inner() - other)
+        *self = self.map(|inner| inner - other)
     }
 }
 
@@ -1548,7 +1537,7 @@ where
     }
 
     fn is_zero(&self) -> bool {
-        T::is_zero(&self.into_inner())
+        self.into_inner().is_zero()
     }
 }
 
