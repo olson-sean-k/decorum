@@ -26,13 +26,13 @@ use num_traits::float::FloatCore as Float;
 #[cfg(feature = "std")]
 use num_traits::Float;
 
-use crate::canonical;
+use crate::cmp::{FloatEq, FloatOrd};
 use crate::constraint::{
-    ConstraintEq, ConstraintInfinity, ConstraintNan, ConstraintOrd, ConstraintPartialOrd,
-    FloatConstraint, SubsetOf, SupersetOf,
+    Class, Constraint, InfiniteClass, NanClass, RealClass, SubsetOf, SupersetOf,
 };
+use crate::hash::FloatHash;
 use crate::primitive::Primitive;
-use crate::{Encoding, Finite, Infinite, Nan, NotNan, Ordered, Real};
+use crate::{Encoding, Finite, Infinite, Nan, NotNan, Real, Total};
 
 /// Floating-point proxy that provides ordering, hashing, and value
 /// constraints.
@@ -66,7 +66,7 @@ impl<T, P> ConstrainedFloat<T, P> {
 impl<T, P> ConstrainedFloat<T, P>
 where
     T: Primitive,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     /// Converts a primitive floating-point value into a proxy.
     ///
@@ -147,7 +147,7 @@ where
     /// ```
     pub fn from_subset<Q>(other: ConstrainedFloat<T, Q>) -> Self
     where
-        Q: FloatConstraint<T> + SubsetOf<P>,
+        Q: Constraint<T> + SubsetOf<P>,
     {
         Self::from_inner_unchecked(other.into_inner())
     }
@@ -170,7 +170,7 @@ where
     /// ```
     pub fn into_superset<Q>(self) -> ConstrainedFloat<T, Q>
     where
-        Q: FloatConstraint<T> + SupersetOf<P>,
+        Q: Constraint<T> + SupersetOf<P>,
     {
         ConstrainedFloat::from_inner_unchecked(self.into_inner())
     }
@@ -184,25 +184,39 @@ where
             .ok_or(())
     }
 
-    fn map_inner<F>(self, f: F) -> Self
+    fn map<F>(self, f: F) -> Self
     where
         F: Fn(T) -> T,
     {
         ConstrainedFloat::from_inner(f(self.into_inner()))
     }
 
-    fn map_inner_unchecked<F>(self, f: F) -> Self
+    fn map_unchecked<F>(self, f: F) -> Self
     where
         F: Fn(T) -> T,
     {
         ConstrainedFloat::from_inner_unchecked(f(self.into_inner()))
+    }
+
+    fn zip_map<F>(self, other: Self, f: F) -> Self
+    where
+        F: Fn(T, T) -> T,
+    {
+        ConstrainedFloat::from_inner(f(self.into_inner(), other.into_inner()))
+    }
+
+    fn zip_map_unchecked<F>(self, other: Self, f: F) -> Self
+    where
+        F: Fn(T, T) -> T,
+    {
+        ConstrainedFloat::from_inner_unchecked(f(self.into_inner(), other.into_inner()))
     }
 }
 
 impl<T, P> AsRef<T> for ConstrainedFloat<T, P>
 where
     T: Primitive,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn as_ref(&self) -> &T {
         &self.value
@@ -214,7 +228,7 @@ where
 // the reflexive implementation in `core`. A similar problem prevents
 // implementing `From` over a type `T: Float`.
 
-impl<T> From<NotNan<T>> for Ordered<T>
+impl<T> From<NotNan<T>> for Total<T>
 where
     T: Nan + Primitive,
 {
@@ -223,7 +237,7 @@ where
     }
 }
 
-impl<T> From<Finite<T>> for Ordered<T>
+impl<T> From<Finite<T>> for Total<T>
 where
     T: Infinite + Nan + Primitive,
 {
@@ -244,7 +258,7 @@ where
 impl<T, P> From<T> for ConstrainedFloat<T, P>
 where
     T: Primitive,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn from(value: T) -> Self {
         Self::from_inner(value)
@@ -253,7 +267,7 @@ where
 
 impl<P> From<ConstrainedFloat<f32, P>> for f32
 where
-    P: FloatConstraint<f32>,
+    P: Constraint<f32>,
 {
     fn from(value: ConstrainedFloat<f32, P>) -> Self {
         value.into_inner()
@@ -262,7 +276,7 @@ where
 
 impl<P> From<ConstrainedFloat<f64, P>> for f64
 where
-    P: FloatConstraint<f64>,
+    P: Constraint<f64>,
 {
     fn from(value: ConstrainedFloat<f64, P>) -> Self {
         value.into_inner()
@@ -273,7 +287,7 @@ where
 impl<T, P> AbsDiffEq for ConstrainedFloat<T, P>
 where
     T: AbsDiffEq<Epsilon = T> + Encoding + Nan + Primitive,
-    P: FloatConstraint<T> + ConstraintEq<T>,
+    P: Constraint<T>,
 {
     type Epsilon = Self;
 
@@ -290,7 +304,7 @@ where
 impl<T, P> Add for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -302,7 +316,7 @@ where
 impl<T, P> Add<T> for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -314,7 +328,7 @@ where
 impl<T, P> AddAssign for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn add_assign(&mut self, other: Self) {
         *self = ConstrainedFloat::from_inner(self.into_inner() + other.into_inner())
@@ -324,7 +338,7 @@ where
 impl<T, P> AddAssign<T> for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn add_assign(&mut self, other: T) {
         *self = ConstrainedFloat::from_inner(self.into_inner() + other)
@@ -334,7 +348,7 @@ where
 impl<T, P> Bounded for ConstrainedFloat<T, P>
 where
     T: Encoding + Primitive,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn min_value() -> Self {
         ConstrainedFloat::from_inner_unchecked(T::min_value())
@@ -348,7 +362,7 @@ where
 impl<T, P> Default for ConstrainedFloat<T, P>
 where
     T: Default + Primitive,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn default() -> Self {
         ConstrainedFloat::from_inner_unchecked(Default::default())
@@ -358,7 +372,7 @@ where
 impl<T, P> Display for ConstrainedFloat<T, P>
 where
     T: Display + Primitive,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.as_ref().fmt(f)
@@ -368,7 +382,7 @@ where
 impl<T, P> Debug for ConstrainedFloat<T, P>
 where
     T: Debug + Primitive,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "ConstrainedFloat({:?})", self.into_inner())
@@ -378,7 +392,7 @@ where
 impl<T, P> Div for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -390,7 +404,7 @@ where
 impl<T, P> Div<T> for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -402,7 +416,7 @@ where
 impl<T, P> DivAssign for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn div_assign(&mut self, other: Self) {
         *self = ConstrainedFloat::from_inner(self.into_inner() / other.into_inner())
@@ -412,7 +426,7 @@ where
 impl<T, P> DivAssign<T> for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn div_assign(&mut self, other: T) {
         *self = ConstrainedFloat::from_inner(self.into_inner() / other)
@@ -422,7 +436,7 @@ where
 impl<T, P> Encoding for ConstrainedFloat<T, P>
 where
     T: Encoding + Primitive,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn max_value() -> Self {
         <Self as Bounded>::max_value()
@@ -456,18 +470,15 @@ where
 impl<T, P> Eq for ConstrainedFloat<T, P>
 where
     T: Encoding + Nan + Primitive,
-    P: FloatConstraint<T> + ConstraintEq<T>,
+    P: Constraint<T>,
 {
 }
 
 impl<T, P> Float for ConstrainedFloat<T, P>
 where
+    // TODO: Can these requirements be simplified or reduced?
     T: Encoding + Float + Infinite + Nan + Primitive + Real,
-    P: FloatConstraint<T>
-        + ConstraintEq<T>
-        + ConstraintInfinity<T>
-        + ConstraintNan<T>
-        + ConstraintPartialOrd<T>,
+    P: Class<InfiniteClass> + Class<NanClass> + Class<RealClass> + Constraint<T>,
 {
     fn infinity() -> Self {
         Infinite::infinity()
@@ -510,11 +521,11 @@ where
     }
 
     fn min(self, other: Self) -> Self {
-        self.map_inner_unchecked(move |inner| Real::min(inner, other.into_inner()))
+        self.zip_map_unchecked(other, Real::min)
     }
 
     fn max(self, other: Self) -> Self {
-        self.map_inner_unchecked(move |inner| Real::max(inner, other.into_inner()))
+        self.zip_map_unchecked(other, Real::max)
     }
 
     fn neg_zero() -> Self {
@@ -530,11 +541,11 @@ where
     }
 
     fn signum(self) -> Self {
-        self.map_inner(Real::signum)
+        self.map(Real::signum)
     }
 
     fn abs(self) -> Self {
-        self.map_inner(Real::abs)
+        self.map(Real::abs)
     }
 
     fn classify(self) -> FpCategory {
@@ -550,27 +561,27 @@ where
     }
 
     fn floor(self) -> Self {
-        self.map_inner(Real::floor)
+        self.map(Real::floor)
     }
 
     fn ceil(self) -> Self {
-        self.map_inner(Real::ceil)
+        self.map(Real::ceil)
     }
 
     fn round(self) -> Self {
-        self.map_inner(Real::round)
+        self.map(Real::round)
     }
 
     fn trunc(self) -> Self {
-        self.map_inner(Real::trunc)
+        self.map(Real::trunc)
     }
 
     fn fract(self) -> Self {
-        self.map_inner(Real::fract)
+        self.map(Real::fract)
     }
 
     fn recip(self) -> Self {
-        self.map_inner(Real::recip)
+        self.map(Real::recip)
     }
 
     #[cfg(feature = "std")]
@@ -580,8 +591,7 @@ where
 
     #[cfg(feature = "std")]
     fn abs_sub(self, other: Self) -> Self {
-        // TODO: Provide a `zip_map_inner` function for pair-wise operations.
-        self.map_inner(|a| Float::abs_sub(a, other.into_inner()))
+        self.zip_map(other, Float::abs_sub)
     }
 
     #[cfg(feature = "std")]
@@ -721,89 +731,90 @@ where
 
     #[cfg(not(feature = "std"))]
     fn to_degrees(self) -> Self {
-        self.map_inner(|inner| inner.to_degrees())
+        self.map(Float::to_degrees)
     }
 
     #[cfg(not(feature = "std"))]
     fn to_radians(self) -> Self {
-        self.map_inner(|inner| inner.to_radians())
+        self.map(Float::to_radians)
     }
 }
 
 impl<T, P> FloatConst for ConstrainedFloat<T, P>
 where
-    T: FloatConst + Primitive,
-    P: FloatConstraint<T>,
+    T: Encoding + Nan + Primitive + Real,
+    P: Constraint<T>,
 {
     fn E() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::E())
+        <Self as Real>::E
     }
 
     fn PI() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::PI())
+        <Self as Real>::PI
     }
 
     fn SQRT_2() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::SQRT_2())
+        <Self as Real>::SQRT_2
     }
 
     fn FRAC_1_PI() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::FRAC_1_PI())
+        <Self as Real>::FRAC_1_PI
     }
 
     fn FRAC_2_PI() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::FRAC_2_PI())
+        <Self as Real>::FRAC_2_PI
     }
 
     fn FRAC_1_SQRT_2() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::FRAC_1_SQRT_2())
+        <Self as Real>::FRAC_1_SQRT_2
     }
 
     fn FRAC_2_SQRT_PI() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::FRAC_2_SQRT_PI())
+        <Self as Real>::FRAC_2_SQRT_PI
     }
 
     fn FRAC_PI_2() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::FRAC_PI_2())
+        <Self as Real>::FRAC_PI_2
     }
 
     fn FRAC_PI_3() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::FRAC_PI_3())
+        <Self as Real>::FRAC_PI_3
     }
 
     fn FRAC_PI_4() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::FRAC_PI_4())
+        <Self as Real>::FRAC_PI_4
     }
 
     fn FRAC_PI_6() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::FRAC_PI_6())
+        <Self as Real>::FRAC_PI_6
     }
 
     fn FRAC_PI_8() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::FRAC_PI_8())
+        <Self as Real>::FRAC_PI_8
     }
 
     fn LN_10() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::LN_10())
+        <Self as Real>::LN_10
     }
 
     fn LN_2() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::LN_2())
+        <Self as Real>::LN_2
     }
 
     fn LOG10_E() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::LOG10_E())
+        <Self as Real>::LOG10_E
     }
 
     fn LOG2_E() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::LOG2_E())
+        <Self as Real>::LOG2_E
     }
 }
 
+// TODO: Should constraint violations panic here?
 impl<T, P> FromPrimitive for ConstrainedFloat<T, P>
 where
     T: FromPrimitive + Primitive,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn from_i8(value: i8) -> Option<Self> {
         T::from_i8(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
@@ -857,7 +868,7 @@ where
 impl<T, P> FromStr for ConstrainedFloat<T, P>
 where
     T: FromStr + Primitive,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     type Err = <T as FromStr>::Err;
 
@@ -869,42 +880,42 @@ where
 impl<T, P> Hash for ConstrainedFloat<T, P>
 where
     T: Encoding + Nan + Primitive,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn hash<H>(&self, state: &mut H)
     where
         H: Hasher,
     {
-        canonical::hash_float(self.into_inner(), state);
+        FloatHash::hash(self.as_ref(), state);
     }
 }
 
 impl<T, P> Infinite for ConstrainedFloat<T, P>
 where
     T: Infinite + Primitive,
-    P: FloatConstraint<T> + ConstraintInfinity<T>,
+    P: Class<InfiniteClass> + Constraint<T>,
 {
     fn infinity() -> Self {
-        ConstrainedFloat::from_inner_unchecked(P::infinity())
+        ConstrainedFloat::from_inner_unchecked(T::infinity())
     }
 
     fn neg_infinity() -> Self {
-        ConstrainedFloat::from_inner_unchecked(P::neg_infinity())
+        ConstrainedFloat::from_inner_unchecked(T::neg_infinity())
     }
 
     fn is_infinite(self) -> bool {
-        P::is_infinite(self.into_inner())
+        self.into_inner().is_infinite()
     }
 
     fn is_finite(self) -> bool {
-        P::is_finite(self.into_inner())
+        self.into_inner().is_finite()
     }
 }
 
 impl<T, P> LowerExp for ConstrainedFloat<T, P>
 where
     T: LowerExp + Primitive,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.as_ref().fmt(f)
@@ -914,65 +925,65 @@ where
 impl<T, P> Mul for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self::Output {
-        ConstrainedFloat::from_inner(self.into_inner() * other.into_inner())
+        self.zip_map(other, |a, b| a * b)
     }
 }
 
 impl<T, P> Mul<T> for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
     fn mul(self, other: T) -> Self::Output {
-        ConstrainedFloat::from_inner(self.into_inner() * other)
+        self.map(|a| a * other)
     }
 }
 
 impl<T, P> MulAssign for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn mul_assign(&mut self, other: Self) {
-        *self = ConstrainedFloat::from_inner(self.into_inner() * other.into_inner())
+        *self = *self * other;
     }
 }
 
 impl<T, P> MulAssign<T> for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Class<RealClass> + Constraint<T>,
 {
     fn mul_assign(&mut self, other: T) {
-        *self = ConstrainedFloat::from_inner(self.into_inner() * other)
+        *self = *self * other;
     }
 }
 
 impl<T, P> Nan for ConstrainedFloat<T, P>
 where
     T: Nan + Primitive,
-    P: FloatConstraint<T> + ConstraintNan<T>,
+    P: Class<NanClass> + Constraint<T>,
 {
     fn nan() -> Self {
-        Self::from_inner_unchecked(P::nan())
+        Self::from_inner_unchecked(T::nan())
     }
 
     fn is_nan(self) -> bool {
-        P::is_nan(self.into_inner())
+        self.into_inner().is_nan()
     }
 }
 
 impl<T, P> Neg for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -985,21 +996,21 @@ impl<T, P> Num for ConstrainedFloat<T, P>
 where
     Self: PartialEq,
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     type FromStrRadixErr = ();
 
     fn from_str_radix(source: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
         T::from_str_radix(source, radix)
             .map_err(|_| ())
-            .and_then(|value| ConstrainedFloat::try_from_inner(value).map_err(|_| ()))
+            .and_then(ConstrainedFloat::try_from_inner)
     }
 }
 
 impl<T, P> NumCast for ConstrainedFloat<T, P>
 where
     T: NumCast + Primitive + ToPrimitive,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn from<U>(value: U) -> Option<Self>
     where
@@ -1012,7 +1023,7 @@ where
 impl<T, P> One for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn one() -> Self {
         ConstrainedFloat::from_inner_unchecked(T::one())
@@ -1021,28 +1032,28 @@ where
 
 impl<T, P> Ord for ConstrainedFloat<T, P>
 where
-    T: Encoding + Nan + PartialOrd + Primitive,
-    P: FloatConstraint<T> + ConstraintEq<T> + ConstraintOrd<T>,
+    T: Encoding + Nan + Primitive,
+    P: Constraint<T>,
 {
     fn cmp(&self, other: &Self) -> Ordering {
-        <P as ConstraintOrd<T>>::cmp(self.into_inner(), other.into_inner())
+        FloatOrd::cmp(self.as_ref(), other.as_ref())
     }
 }
 
 impl<T, P> PartialEq for ConstrainedFloat<T, P>
 where
     T: Encoding + Nan + Primitive,
-    P: FloatConstraint<T> + ConstraintEq<T>,
+    P: Constraint<T>,
 {
     fn eq(&self, other: &Self) -> bool {
-        <P as ConstraintEq<T>>::eq(self.into_inner(), other.into_inner())
+        FloatEq::eq(self.as_ref(), other.as_ref())
     }
 }
 
 impl<T, P> PartialEq<T> for ConstrainedFloat<T, P>
 where
     T: Encoding + Nan + Primitive,
-    P: FloatConstraint<T> + ConstraintEq<T>,
+    P: Constraint<T>,
 {
     fn eq(&self, other: &T) -> bool {
         if let Ok(other) = Self::try_from_inner(*other) {
@@ -1056,18 +1067,18 @@ where
 
 impl<T, P> PartialOrd for ConstrainedFloat<T, P>
 where
-    T: Encoding + Nan + PartialOrd + Primitive,
-    P: FloatConstraint<T> + ConstraintEq<T> + ConstraintPartialOrd<T>,
+    T: Encoding + Nan + Primitive,
+    P: Constraint<T>,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        <P as ConstraintPartialOrd<T>>::partial_cmp(self.into_inner(), other.into_inner())
+        Some(FloatOrd::cmp(self.as_ref(), other.as_ref()))
     }
 }
 
 impl<T, P> PartialOrd<T> for ConstrainedFloat<T, P>
 where
     T: Encoding + Nan + PartialOrd + Primitive,
-    P: FloatConstraint<T> + ConstraintEq<T> + ConstraintPartialOrd<T>,
+    P: Constraint<T>,
 {
     fn partial_cmp(&self, other: &T) -> Option<Ordering> {
         Self::try_from_inner(*other)
@@ -1079,7 +1090,7 @@ where
 impl<T, P> Product for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn product<I>(input: I) -> Self
     where
@@ -1097,7 +1108,7 @@ where
 impl<T, P> Real for ConstrainedFloat<T, P>
 where
     T: Encoding + Nan + Primitive + Real,
-    P: FloatConstraint<T> + ConstraintEq<T> + ConstraintPartialOrd<T>,
+    P: Constraint<T>,
 {
     const E: Self = ConstrainedFloat::from_inner_unchecked(T::E);
     const PI: Self = ConstrainedFloat::from_inner_unchecked(T::PI);
@@ -1323,7 +1334,7 @@ where
 impl<T, P> RelativeEq for ConstrainedFloat<T, P>
 where
     T: Encoding + Nan + Primitive + RelativeEq<Epsilon = T>,
-    P: FloatConstraint<T> + ConstraintEq<T>,
+    P: Constraint<T>,
 {
     fn default_max_relative() -> Self::Epsilon {
         Self::from_inner(T::default_max_relative())
@@ -1346,7 +1357,7 @@ where
 impl<T, P> Rem for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -1358,7 +1369,7 @@ where
 impl<T, P> Rem<T> for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -1370,7 +1381,7 @@ where
 impl<T, P> RemAssign for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn rem_assign(&mut self, other: Self) {
         *self = ConstrainedFloat::from_inner(self.into_inner() % other.into_inner())
@@ -1380,7 +1391,7 @@ where
 impl<T, P> RemAssign<T> for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn rem_assign(&mut self, other: T) {
         *self = ConstrainedFloat::from_inner(self.into_inner() % other)
@@ -1390,10 +1401,10 @@ where
 impl<T, P> Signed for ConstrainedFloat<T, P>
 where
     T: Encoding + Nan + Primitive + Real + Signed,
-    P: FloatConstraint<T> + ConstraintEq<T>,
+    P: Constraint<T>,
 {
     fn abs(&self) -> Self {
-        self.map_inner_unchecked(|inner| inner.abs())
+        self.map_unchecked(|inner| inner.abs())
     }
 
     #[cfg(feature = "std")]
@@ -1403,7 +1414,7 @@ where
 
     #[cfg(not(feature = "std"))]
     fn abs_sub(&self, other: &Self) -> Self {
-        self.map_inner(move |inner| {
+        self.map(move |inner| {
             let other = other.into_inner();
             if inner <= other {
                 Zero::zero()
@@ -1415,7 +1426,7 @@ where
     }
 
     fn signum(&self) -> Self {
-        self.map_inner(|inner| inner.signum())
+        self.map(|inner| inner.signum())
     }
 
     fn is_positive(&self) -> bool {
@@ -1430,7 +1441,7 @@ where
 impl<T, P> Sub for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -1442,7 +1453,7 @@ where
 impl<T, P> Sub<T> for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -1454,7 +1465,7 @@ where
 impl<T, P> SubAssign for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn sub_assign(&mut self, other: Self) {
         *self = ConstrainedFloat::from_inner(self.into_inner() - other.into_inner())
@@ -1464,7 +1475,7 @@ where
 impl<T, P> SubAssign<T> for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn sub_assign(&mut self, other: T) {
         *self = ConstrainedFloat::from_inner(self.into_inner() - other)
@@ -1474,7 +1485,7 @@ where
 impl<T, P> Sum for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn sum<I>(input: I) -> Self
     where
@@ -1487,7 +1498,7 @@ where
 impl<T, P> ToPrimitive for ConstrainedFloat<T, P>
 where
     T: Primitive + ToPrimitive,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn to_i8(&self) -> Option<i8> {
         self.into_inner().to_i8()
@@ -1542,7 +1553,7 @@ where
 impl<T, P> UlpsEq for ConstrainedFloat<T, P>
 where
     T: Encoding + Nan + Primitive + UlpsEq<Epsilon = T>,
-    P: FloatConstraint<T> + ConstraintEq<T>,
+    P: Constraint<T>,
 {
     fn default_max_ulps() -> u32 {
         T::default_max_ulps()
@@ -1557,7 +1568,7 @@ where
 impl<T, P> UpperExp for ConstrainedFloat<T, P>
 where
     T: UpperExp + Primitive,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.as_ref().fmt(f)
@@ -1567,7 +1578,7 @@ where
 impl<T, P> Zero for ConstrainedFloat<T, P>
 where
     T: Primitive + Real,
-    P: FloatConstraint<T>,
+    P: Constraint<T>,
 {
     fn zero() -> Self {
         ConstrainedFloat::from_inner_unchecked(T::zero())
@@ -1581,18 +1592,18 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Finite, NotNan, Ordered, N32, R32};
+    use crate::{Finite, NotNan, Total, N32, R32};
 
     #[test]
     fn ordered_no_panic_on_inf() {
-        let x: Ordered<f32> = 1.0.into();
+        let x: Total<f32> = 1.0.into();
         let y = x / 0.0;
         assert!(Infinite::is_infinite(y));
     }
 
     #[test]
     fn ordered_no_panic_on_nan() {
-        let x: Ordered<f32> = 0.0.into();
+        let x: Total<f32> = 0.0.into();
         let y = x / 0.0;
         assert!(Nan::is_nan(y));
     }
@@ -1637,17 +1648,17 @@ mod tests {
     #[allow(clippy::float_cmp)]
     #[allow(clippy::zero_divided_by_zero)]
     fn ordered_nan_eq() {
-        let x: Ordered<f32> = (0.0 / 0.0).into();
-        let y: Ordered<f32> = (0.0 / 0.0).into();
+        let x: Total<f32> = (0.0 / 0.0).into();
+        let y: Total<f32> = (0.0 / 0.0).into();
         assert_eq!(x, y);
 
-        let z: Ordered<f32> =
+        let z: Total<f32> =
             (<f32 as Infinite>::infinity() + <f32 as Infinite>::neg_infinity()).into();
         assert_eq!(x, z);
 
         #[cfg(feature = "std")]
         {
-            let w: Ordered<f32> = (Real::sqrt(-1.0)).into();
+            let w: Total<f32> = (Real::sqrt(-1.0)).into();
             assert_eq!(x, w);
         }
     }
@@ -1659,11 +1670,11 @@ mod tests {
     fn cmp_proxy_to_primitive() {
         // Compare a canonicalized `NaN` with a primitive `NaN` with a
         // different representation.
-        let x: Ordered<f32> = (0.0 / 0.0).into();
+        let x: Total<f32> = (0.0 / 0.0).into();
         assert_eq!(x, f32::sqrt(-1.0));
 
         // Compare a canonicalized `INF` with a primitive `NaN`.
-        let y: Ordered<f32> = (1.0 / 0.0).into();
+        let y: Total<f32> = (1.0 / 0.0).into();
         assert!(y < (0.0 / 0.0));
 
         // Compare a proxy that disallows `INF` to a primitive `INF`.
@@ -1717,7 +1728,7 @@ mod tests {
         as_infinite(notnan);
         as_real(notnan);
 
-        let ordered = Ordered::<f32>::default();
+        let ordered = Total::<f32>::default();
         as_float(ordered);
         as_infinite(ordered);
         as_nan(ordered);
@@ -1726,7 +1737,7 @@ mod tests {
 
     #[test]
     fn fmt() {
-        let x: Ordered<f32> = 1.0.into();
+        let x: Total<f32> = 1.0.into();
         format_args!("{0} {0:e} {0:E} {0:?} {0:#?}", x);
         let y: NotNan<f32> = 1.0.into();
         format_args!("{0} {0:e} {0:E} {0:?} {0:#?}", y);

@@ -6,86 +6,19 @@
 //! constrained values support these operations and in turn whether or not a
 //! proxy using a constraint does too.
 
-// TODO: Relax the bounds on `T` for traits. This requires removing default
-//       implementations, but these traits use blanket implementations and rely
-//       on non-primitive type implementations (e.g., `NotNanConstraint`).
-
-use core::cmp::Ordering;
 use core::marker::PhantomData;
 
 use crate::primitive::Primitive;
-use crate::{canonical, Encoding, Infinite, Nan};
+use crate::{Infinite, Nan};
 
-pub trait ConstraintEq<T>
-where
-    T: Encoding + Nan + Primitive,
-{
-    fn eq(lhs: T, rhs: T) -> bool {
-        canonical::eq_float(lhs, rhs)
-    }
-}
+// TODO: `RealClass` should likely apply to virtually all constraint type
+//       bounds (see `ConstrainedFloat`). Is it necessary at all?
+pub enum RealClass {}
+pub enum InfiniteClass {}
+pub enum NanClass {}
 
-pub trait ConstraintPartialOrd<T>
-where
-    T: Encoding + Nan + PartialOrd + Primitive,
-{
-    fn partial_cmp(lhs: T, rhs: T) -> Option<Ordering> {
-        lhs.partial_cmp(&rhs)
-    }
-}
-
-impl<T, U> ConstraintPartialOrd<T> for U
-where
-    T: Encoding + Nan + PartialOrd + Primitive,
-    U: ConstraintOrd<T>,
-{
-    fn partial_cmp(lhs: T, rhs: T) -> Option<Ordering> {
-        Some(U::cmp(lhs, rhs))
-    }
-}
-
-pub trait ConstraintOrd<T>
-where
-    T: Encoding + Nan + PartialOrd + Primitive,
-{
-    fn cmp(lhs: T, rhs: T) -> Ordering {
-        canonical::cmp_float(lhs, rhs)
-    }
-}
-
-pub trait ConstraintInfinity<T>
-where
-    T: Infinite + Primitive,
-{
-    fn infinity() -> T {
-        T::infinity()
-    }
-
-    fn neg_infinity() -> T {
-        T::neg_infinity()
-    }
-
-    fn is_infinite(value: T) -> bool {
-        value.is_infinite()
-    }
-
-    fn is_finite(value: T) -> bool {
-        value.is_finite()
-    }
-}
-
-pub trait ConstraintNan<T>
-where
-    T: Nan + Primitive,
-{
-    fn nan() -> T {
-        T::nan()
-    }
-
-    fn is_nan(value: T) -> bool {
-        value.is_nan()
-    }
-}
+// TODO: Can this be used to provide blanket implementations for `SupersetOf`?
+pub trait Class<T> {}
 
 pub trait SupersetOf<P> {}
 
@@ -94,7 +27,7 @@ pub trait SubsetOf<P> {}
 impl<P, Q> SubsetOf<Q> for P where Q: SupersetOf<P> {}
 
 /// Constraint on floating-point values.
-pub trait FloatConstraint<T>: Copy + Sized
+pub trait Constraint<T>: Copy + Sized
 where
     T: Primitive,
 {
@@ -113,7 +46,15 @@ where
     phantom: PhantomData<T>,
 }
 
-impl<T> FloatConstraint<T> for UnitConstraint<T>
+impl<T> Class<RealClass> for UnitConstraint<T> where T: Primitive {}
+
+impl<T> Class<InfiniteClass> for UnitConstraint<T> where T: Primitive {}
+
+impl<T> Class<NanClass> for UnitConstraint<T> where T: Primitive {}
+
+// TODO: Should implementations map values like zero and `NaN` to canonical
+//       forms?
+impl<T> Constraint<T> for UnitConstraint<T>
 where
     T: Primitive,
 {
@@ -121,14 +62,6 @@ where
         Some(value)
     }
 }
-
-impl<T> ConstraintEq<T> for UnitConstraint<T> where T: Encoding + Nan + Primitive {}
-
-impl<T> ConstraintOrd<T> for UnitConstraint<T> where T: Encoding + Nan + PartialOrd + Primitive {}
-
-impl<T> ConstraintInfinity<T> for UnitConstraint<T> where T: Infinite + Primitive {}
-
-impl<T> ConstraintNan<T> for UnitConstraint<T> where T: Nan + Primitive {}
 
 impl<T> SupersetOf<NotNanConstraint<T>> for UnitConstraint<T> where T: Primitive {}
 
@@ -143,7 +76,11 @@ where
     phantom: PhantomData<T>,
 }
 
-impl<T> FloatConstraint<T> for NotNanConstraint<T>
+impl<T> Class<RealClass> for NotNanConstraint<T> where T: Primitive {}
+
+impl<T> Class<InfiniteClass> for NotNanConstraint<T> where T: Primitive {}
+
+impl<T> Constraint<T> for NotNanConstraint<T>
 where
     T: Nan + Primitive,
 {
@@ -157,30 +94,6 @@ where
     }
 }
 
-impl<T> ConstraintEq<T> for NotNanConstraint<T>
-where
-    T: Encoding + Nan + PartialEq + Primitive,
-{
-    fn eq(lhs: T, rhs: T) -> bool {
-        // The input values should never be `NaN`, so just compare the raw
-        // floating-point values.
-        lhs == rhs
-    }
-}
-
-impl<T> ConstraintOrd<T> for NotNanConstraint<T>
-where
-    T: Encoding + Nan + PartialOrd + Primitive,
-{
-    fn cmp(lhs: T, rhs: T) -> Ordering {
-        // The input values should never be `NaN`, so just compare the raw
-        // floating-point values.
-        lhs.partial_cmp(&rhs).unwrap()
-    }
-}
-
-impl<T> ConstraintInfinity<T> for NotNanConstraint<T> where T: Infinite + Primitive {}
-
 impl<T> SupersetOf<FiniteConstraint<T>> for NotNanConstraint<T> where T: Primitive {}
 
 /// Disallows `NaN`, `INF`, and `-INF` floating-point values.
@@ -192,7 +105,9 @@ where
     phantom: PhantomData<T>,
 }
 
-impl<T> FloatConstraint<T> for FiniteConstraint<T>
+impl<T> Class<RealClass> for FiniteConstraint<T> where T: Primitive {}
+
+impl<T> Constraint<T> for FiniteConstraint<T>
 where
     T: Infinite + Nan + Primitive,
 {
@@ -203,27 +118,5 @@ where
         else {
             Some(value)
         }
-    }
-}
-
-impl<T> ConstraintEq<T> for FiniteConstraint<T>
-where
-    T: Encoding + Nan + PartialEq + Primitive,
-{
-    fn eq(lhs: T, rhs: T) -> bool {
-        // The input values should never be `NaN`, so just compare the raw
-        // floating-point values.
-        lhs == rhs
-    }
-}
-
-impl<T> ConstraintOrd<T> for FiniteConstraint<T>
-where
-    T: Encoding + Nan + PartialOrd + Primitive,
-{
-    fn cmp(lhs: T, rhs: T) -> Ordering {
-        // The input values should never be `NaN`, so just compare the raw
-        // floating-point values.
-        lhs.partial_cmp(&rhs).unwrap()
     }
 }

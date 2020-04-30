@@ -39,20 +39,18 @@ use core::ops::Neg;
 use num_traits::{Num, NumCast};
 
 mod canonical;
+pub mod cmp;
 mod constraint;
+pub mod hash;
 mod primitive;
 mod proxy;
 
 use crate::constraint::{FiniteConstraint, NotNanConstraint, UnitConstraint};
 
-pub use crate::canonical::{
-    cmp_float, cmp_float_array, cmp_float_slice, eq_float, eq_float_array, eq_float_slice,
-    hash_float, hash_float_array, hash_float_slice,
-};
 pub use crate::proxy::ConstrainedFloat;
 
 /// An ordered and canonicalized floating-point value.
-pub type Ordered<T> = ConstrainedFloat<T, UnitConstraint<T>>;
+pub type Total<T> = ConstrainedFloat<T, UnitConstraint<T>>;
 
 /// An ordered and canonicalized floating-point value that cannot be `NaN`.
 ///

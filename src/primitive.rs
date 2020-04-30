@@ -1,4 +1,6 @@
 use core::num::FpCategory;
+use core::ops::Neg;
+use num_traits::{Num, NumCast};
 
 use crate::{Encoding, Infinite, Nan, Real};
 
@@ -9,17 +11,17 @@ use crate::{Encoding, Infinite, Nan, Real};
 ///
 /// This trait differentiates types that implement floating-point traits but
 /// may not be primitive types.
-pub trait Primitive: Copy + Sized {}
+pub trait Primitive: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd {}
 
 macro_rules! impl_primitive {
-    (primitive => $T:ident) => {
-        impl Infinite for $T {
+    (primitive => $t:ident) => {
+        impl Infinite for $t {
             fn infinity() -> Self {
-                $T::INFINITY
+                <$t>::INFINITY
             }
 
             fn neg_infinity() -> Self {
-                $T::NEG_INFINITY
+                <$t>::NEG_INFINITY
             }
 
             fn is_infinite(self) -> bool {
@@ -31,9 +33,9 @@ macro_rules! impl_primitive {
             }
         }
 
-        impl Nan for $T {
+        impl Nan for $t {
             fn nan() -> Self {
-                $T::NAN
+                <$t>::NAN
             }
 
             fn is_nan(self) -> bool {
@@ -41,212 +43,215 @@ macro_rules! impl_primitive {
             }
         }
 
-        impl Primitive for $T {}
+        impl Primitive for $t {}
 
-        impl Real for $T {
-            const E: Self = core::$T::consts::E;
-            const PI: Self = core::$T::consts::PI;
-            const FRAC_1_PI: Self = core::$T::consts::FRAC_1_PI;
-            const FRAC_2_PI: Self = core::$T::consts::FRAC_2_PI;
-            const FRAC_2_SQRT_PI: Self = core::$T::consts::FRAC_2_SQRT_PI;
-            const FRAC_PI_2: Self = core::$T::consts::FRAC_PI_2;
-            const FRAC_PI_3: Self = core::$T::consts::FRAC_PI_3;
-            const FRAC_PI_4: Self = core::$T::consts::FRAC_PI_4;
-            const FRAC_PI_6: Self = core::$T::consts::FRAC_PI_6;
-            const FRAC_PI_8: Self = core::$T::consts::FRAC_PI_8;
-            const SQRT_2: Self = core::$T::consts::SQRT_2;
-            const FRAC_1_SQRT_2: Self = core::$T::consts::FRAC_1_SQRT_2;
-            const LN_2: Self = core::$T::consts::LN_2;
-            const LN_10: Self = core::$T::consts::LN_10;
-            const LOG2_E: Self = core::$T::consts::LOG2_E;
-            const LOG10_E: Self = core::$T::consts::LOG10_E;
+        impl Real for $t {
+            // TODO: The propagation from a constant in a module requires that this macro accept an
+            //       `ident` token rather than a `ty` token. Use `ty` if these constants become
+            //       associated constants of the primitive types.
+            const E: Self = core::$t::consts::E;
+            const PI: Self = core::$t::consts::PI;
+            const FRAC_1_PI: Self = core::$t::consts::FRAC_1_PI;
+            const FRAC_2_PI: Self = core::$t::consts::FRAC_2_PI;
+            const FRAC_2_SQRT_PI: Self = core::$t::consts::FRAC_2_SQRT_PI;
+            const FRAC_PI_2: Self = core::$t::consts::FRAC_PI_2;
+            const FRAC_PI_3: Self = core::$t::consts::FRAC_PI_3;
+            const FRAC_PI_4: Self = core::$t::consts::FRAC_PI_4;
+            const FRAC_PI_6: Self = core::$t::consts::FRAC_PI_6;
+            const FRAC_PI_8: Self = core::$t::consts::FRAC_PI_8;
+            const SQRT_2: Self = core::$t::consts::SQRT_2;
+            const FRAC_1_SQRT_2: Self = core::$t::consts::FRAC_1_SQRT_2;
+            const LN_2: Self = core::$t::consts::LN_2;
+            const LN_10: Self = core::$t::consts::LN_10;
+            const LOG2_E: Self = core::$t::consts::LOG2_E;
+            const LOG10_E: Self = core::$t::consts::LOG10_E;
 
             fn min(self, other: Self) -> Self {
-                $T::min(self, other)
+                <$t>::min(self, other)
             }
 
             fn max(self, other: Self) -> Self {
-                $T::max(self, other)
+                <$t>::max(self, other)
             }
 
             fn is_sign_positive(self) -> bool {
-                $T::is_sign_positive(self)
+                <$t>::is_sign_positive(self)
             }
 
             fn is_sign_negative(self) -> bool {
-                $T::is_sign_negative(self)
+                <$t>::is_sign_negative(self)
             }
 
             fn signum(self) -> Self {
-                $T::signum(self)
+                <$t>::signum(self)
             }
 
             fn abs(self) -> Self {
-                $T::abs(self)
+                <$t>::abs(self)
             }
 
             fn floor(self) -> Self {
-                $T::floor(self)
+                <$t>::floor(self)
             }
 
             fn ceil(self) -> Self {
-                $T::ceil(self)
+                <$t>::ceil(self)
             }
 
             fn round(self) -> Self {
-                $T::round(self)
+                <$t>::round(self)
             }
 
             fn trunc(self) -> Self {
-                $T::trunc(self)
+                <$t>::trunc(self)
             }
 
             fn fract(self) -> Self {
-                $T::fract(self)
+                <$t>::fract(self)
             }
 
             fn recip(self) -> Self {
-                $T::recip(self)
+                <$t>::recip(self)
             }
 
             #[cfg(feature = "std")]
             fn mul_add(self, a: Self, b: Self) -> Self {
-                $T::mul_add(self, a, b)
+                <$t>::mul_add(self, a, b)
             }
 
             #[cfg(feature = "std")]
             fn powi(self, n: i32) -> Self {
-                $T::powi(self, n)
+                <$t>::powi(self, n)
             }
 
             #[cfg(feature = "std")]
             fn powf(self, n: Self) -> Self {
-                $T::powf(self, n)
+                <$t>::powf(self, n)
             }
 
             #[cfg(feature = "std")]
             fn sqrt(self) -> Self {
-                $T::sqrt(self)
+                <$t>::sqrt(self)
             }
 
             #[cfg(feature = "std")]
             fn cbrt(self) -> Self {
-                $T::cbrt(self)
+                <$t>::cbrt(self)
             }
 
             #[cfg(feature = "std")]
             fn exp(self) -> Self {
-                $T::exp(self)
+                <$t>::exp(self)
             }
 
             #[cfg(feature = "std")]
             fn exp2(self) -> Self {
-                $T::exp2(self)
+                <$t>::exp2(self)
             }
 
             #[cfg(feature = "std")]
             fn exp_m1(self) -> Self {
-                $T::exp_m1(self)
+                <$t>::exp_m1(self)
             }
 
             #[cfg(feature = "std")]
             fn log(self, base: Self) -> Self {
-                $T::log(self, base)
+                <$t>::log(self, base)
             }
 
             #[cfg(feature = "std")]
             fn ln(self) -> Self {
-                $T::ln(self)
+                <$t>::ln(self)
             }
 
             #[cfg(feature = "std")]
             fn log2(self) -> Self {
-                $T::log2(self)
+                <$t>::log2(self)
             }
 
             #[cfg(feature = "std")]
             fn log10(self) -> Self {
-                $T::log10(self)
+                <$t>::log10(self)
             }
 
             #[cfg(feature = "std")]
             fn ln_1p(self) -> Self {
-                $T::ln_1p(self)
+                <$t>::ln_1p(self)
             }
 
             #[cfg(feature = "std")]
             fn hypot(self, other: Self) -> Self {
-                $T::hypot(self, other)
+                <$t>::hypot(self, other)
             }
 
             #[cfg(feature = "std")]
             fn sin(self) -> Self {
-                $T::sin(self)
+                <$t>::sin(self)
             }
 
             #[cfg(feature = "std")]
             fn cos(self) -> Self {
-                $T::cos(self)
+                <$t>::cos(self)
             }
 
             #[cfg(feature = "std")]
             fn tan(self) -> Self {
-                $T::tan(self)
+                <$t>::tan(self)
             }
 
             #[cfg(feature = "std")]
             fn asin(self) -> Self {
-                $T::asin(self)
+                <$t>::asin(self)
             }
 
             #[cfg(feature = "std")]
             fn acos(self) -> Self {
-                $T::acos(self)
+                <$t>::acos(self)
             }
 
             #[cfg(feature = "std")]
             fn atan(self) -> Self {
-                $T::atan(self)
+                <$t>::atan(self)
             }
 
             #[cfg(feature = "std")]
             fn atan2(self, other: Self) -> Self {
-                $T::atan2(self, other)
+                <$t>::atan2(self, other)
             }
 
             #[cfg(feature = "std")]
             fn sin_cos(self) -> (Self, Self) {
-                $T::sin_cos(self)
+                <$t>::sin_cos(self)
             }
 
             #[cfg(feature = "std")]
             fn sinh(self) -> Self {
-                $T::sinh(self)
+                <$t>::sinh(self)
             }
 
             #[cfg(feature = "std")]
             fn cosh(self) -> Self {
-                $T::cosh(self)
+                <$t>::cosh(self)
             }
 
             #[cfg(feature = "std")]
             fn tanh(self) -> Self {
-                $T::tanh(self)
+                <$t>::tanh(self)
             }
 
             #[cfg(feature = "std")]
             fn asinh(self) -> Self {
-                $T::asinh(self)
+                <$t>::asinh(self)
             }
 
             #[cfg(feature = "std")]
             fn acosh(self) -> Self {
-                $T::acosh(self)
+                <$t>::acosh(self)
             }
 
             #[cfg(feature = "std")]
             fn atanh(self) -> Self {
-                $T::atanh(self)
+                <$t>::atanh(self)
             }
         }
     };
