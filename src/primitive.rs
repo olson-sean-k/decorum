@@ -4,9 +4,6 @@ use num_traits::{Num, NumCast};
 
 use crate::{Encoding, Infinite, Nan, Real};
 
-// TODO: Be consistent with the use of associated constants (use them
-//       everywhere).
-
 /// A primitive floating-point value.
 ///
 /// This trait differentiates types that implement floating-point traits but
@@ -16,13 +13,8 @@ pub trait Primitive: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd {}
 macro_rules! impl_primitive {
     (primitive => $t:ident) => {
         impl Infinite for $t {
-            fn infinity() -> Self {
-                <$t>::INFINITY
-            }
-
-            fn neg_infinity() -> Self {
-                <$t>::NEG_INFINITY
-            }
+            const INFINITY: Self = <$t>::INFINITY;
+            const NEG_INFINITY: Self = <$t>::NEG_INFINITY;
 
             fn is_infinite(self) -> bool {
                 self.is_infinite()
@@ -34,9 +26,7 @@ macro_rules! impl_primitive {
         }
 
         impl Nan for $t {
-            fn nan() -> Self {
-                <$t>::NAN
-            }
+            const NAN: Self = <$t>::NAN;
 
             fn is_nan(self) -> bool {
                 self.is_nan()
@@ -260,21 +250,10 @@ impl_primitive!(primitive => f32);
 impl_primitive!(primitive => f64);
 
 impl Encoding for f32 {
-    fn max_value() -> Self {
-        f32::MAX
-    }
-
-    fn min_value() -> Self {
-        f32::MIN
-    }
-
-    fn min_positive_value() -> Self {
-        f32::MIN_POSITIVE
-    }
-
-    fn epsilon() -> Self {
-        f32::EPSILON
-    }
+    const MAX: Self = f32::MAX;
+    const MIN: Self = f32::MIN;
+    const MIN_POSITIVE: Self = f32::MIN_POSITIVE;
+    const EPSILON: Self = f32::EPSILON;
 
     fn classify(self) -> FpCategory {
         self.classify()
@@ -299,21 +278,10 @@ impl Encoding for f32 {
 }
 
 impl Encoding for f64 {
-    fn max_value() -> Self {
-        f64::MAX
-    }
-
-    fn min_value() -> Self {
-        f64::MIN
-    }
-
-    fn min_positive_value() -> Self {
-        f64::MIN_POSITIVE
-    }
-
-    fn epsilon() -> Self {
-        f64::EPSILON
-    }
+    const MAX: Self = f64::MAX;
+    const MIN: Self = f64::MIN;
+    const MIN_POSITIVE: Self = f64::MIN_POSITIVE;
+    const EPSILON: Self = f64::EPSILON;
 
     fn classify(self) -> FpCategory {
         self.classify()

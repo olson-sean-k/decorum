@@ -123,7 +123,7 @@ macro_rules! impl_nan_ord {
                         Ordering::Less | Ordering::Equal => (*self, *other),
                         _ => (*other, *self),
                     },
-                    None => (Nan::nan(), Nan::nan()),
+                    None => (Nan::NAN, Nan::NAN),
                 }
             }
         }
@@ -160,7 +160,7 @@ where
                 _ => (b.into(), a.into()),
             },
             None => {
-                let nan = T::nan().into();
+                let nan = T::NAN.into();
                 (nan, nan)
             }
         }

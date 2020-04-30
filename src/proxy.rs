@@ -351,11 +351,11 @@ where
     P: Constraint<T>,
 {
     fn min_value() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::min_value())
+        Encoding::MIN
     }
 
     fn max_value() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::max_value())
+        Encoding::MAX
     }
 }
 
@@ -438,21 +438,10 @@ where
     T: Encoding + Primitive,
     P: Constraint<T>,
 {
-    fn max_value() -> Self {
-        <Self as Bounded>::max_value()
-    }
-
-    fn min_value() -> Self {
-        <Self as Bounded>::min_value()
-    }
-
-    fn min_positive_value() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::min_positive_value())
-    }
-
-    fn epsilon() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::epsilon())
-    }
+    const MAX: Self = ConstrainedFloat::from_inner_unchecked(T::MAX);
+    const MIN: Self = ConstrainedFloat::from_inner_unchecked(T::MIN);
+    const MIN_POSITIVE: Self = ConstrainedFloat::from_inner_unchecked(T::MIN_POSITIVE);
+    const EPSILON: Self = ConstrainedFloat::from_inner_unchecked(T::EPSILON);
 
     fn classify(self) -> FpCategory {
         T::classify(self.into_inner())
@@ -481,11 +470,11 @@ where
     P: Class<InfiniteClass> + Class<NanClass> + Class<RealClass> + Constraint<T>,
 {
     fn infinity() -> Self {
-        Infinite::infinity()
+        Infinite::INFINITY
     }
 
     fn neg_infinity() -> Self {
-        Infinite::neg_infinity()
+        Infinite::NEG_INFINITY
     }
 
     fn is_infinite(self) -> bool {
@@ -497,7 +486,7 @@ where
     }
 
     fn nan() -> Self {
-        Nan::nan()
+        Nan::NAN
     }
 
     fn is_nan(self) -> bool {
@@ -505,19 +494,19 @@ where
     }
 
     fn max_value() -> Self {
-        Encoding::max_value()
+        Encoding::MAX
     }
 
     fn min_value() -> Self {
-        Encoding::min_value()
+        Encoding::MIN
     }
 
     fn min_positive_value() -> Self {
-        Encoding::min_positive_value()
+        Encoding::MIN_POSITIVE
     }
 
     fn epsilon() -> Self {
-        Encoding::epsilon()
+        Encoding::EPSILON
     }
 
     fn min(self, other: Self) -> Self {
@@ -895,13 +884,8 @@ where
     T: Infinite + Primitive,
     P: Class<InfiniteClass> + Constraint<T>,
 {
-    fn infinity() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::infinity())
-    }
-
-    fn neg_infinity() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::neg_infinity())
-    }
+    const INFINITY: Self = ConstrainedFloat::from_inner_unchecked(T::INFINITY);
+    const NEG_INFINITY: Self = ConstrainedFloat::from_inner_unchecked(T::NEG_INFINITY);
 
     fn is_infinite(self) -> bool {
         self.into_inner().is_infinite()
@@ -971,9 +955,7 @@ where
     T: Nan + Primitive,
     P: Class<NanClass> + Constraint<T>,
 {
-    fn nan() -> Self {
-        Self::from_inner_unchecked(T::nan())
-    }
+    const NAN: Self = ConstrainedFloat::from_inner_unchecked(T::NAN);
 
     fn is_nan(self) -> bool {
         self.into_inner().is_nan()
@@ -1652,8 +1634,7 @@ mod tests {
         let y: Total<f32> = (0.0 / 0.0).into();
         assert_eq!(x, y);
 
-        let z: Total<f32> =
-            (<f32 as Infinite>::infinity() + <f32 as Infinite>::neg_infinity()).into();
+        let z: Total<f32> = (<f32 as Infinite>::INFINITY + <f32 as Infinite>::NEG_INFINITY).into();
         assert_eq!(x, z);
 
         #[cfg(feature = "std")]
@@ -1764,19 +1745,19 @@ macro_rules! impl_foreign_real {
         #[cfg(feature = "std")]
         impl real::Real for $T {
             fn max_value() -> Self {
-                Encoding::max_value()
+                Encoding::MAX
             }
 
             fn min_value() -> Self {
-                Encoding::min_value()
+                Encoding::MIN
             }
 
             fn min_positive_value() -> Self {
-                Encoding::min_positive_value()
+                Encoding::MIN_POSITIVE
             }
 
             fn epsilon() -> Self {
-                Encoding::epsilon()
+                Encoding::EPSILON
             }
 
             fn min(self, other: Self) -> Self {
