@@ -86,7 +86,7 @@ pub type R32 = Finite<f32>;
 pub type R64 = Finite<f64>;
 
 /// A floating-point value that can be infinite (`-INF` or `INF`).
-pub trait Infinite: Copy + NumCast {
+pub trait Infinite: Copy {
     const INFINITY: Self;
     const NEG_INFINITY: Self;
 
@@ -95,7 +95,7 @@ pub trait Infinite: Copy + NumCast {
 }
 
 /// A floating-point value that can be `NaN`.
-pub trait Nan: Copy + NumCast {
+pub trait Nan: Copy {
     const NAN: Self;
 
     fn is_nan(self) -> bool;
@@ -106,7 +106,7 @@ pub trait Nan: Copy + NumCast {
 /// Provides values and operations that directly relate to the encoding of an
 /// IEEE-754 floating-point value with the exception of `-INF`, `INF`, and
 /// `NaN`. See the `Infinite` and `Nan` traits.
-pub trait Encoding: Copy + NumCast {
+pub trait Encoding: Copy {
     const MAX: Self;
     const MIN: Self;
     const MIN_POSITIVE: Self;
