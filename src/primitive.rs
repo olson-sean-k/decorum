@@ -56,14 +56,6 @@ macro_rules! impl_primitive {
             const LOG2_E: Self = core::$t::consts::LOG2_E;
             const LOG10_E: Self = core::$t::consts::LOG10_E;
 
-            fn min(self, other: Self) -> Self {
-                <$t>::min(self, other)
-            }
-
-            fn max(self, other: Self) -> Self {
-                <$t>::max(self, other)
-            }
-
             fn is_sign_positive(self) -> bool {
                 <$t>::is_sign_positive(self)
             }

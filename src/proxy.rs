@@ -26,13 +26,13 @@ use num_traits::float::FloatCore as Float;
 #[cfg(feature = "std")]
 use num_traits::Float;
 
-use crate::cmp::{FloatEq, FloatOrd};
+use crate::cmp::{self, FloatEq, FloatOrd, NanOrd};
 use crate::constraint::{
     Class, Constraint, InfiniteClass, NanClass, RealClass, SubsetOf, SupersetOf,
 };
 use crate::hash::FloatHash;
 use crate::primitive::Primitive;
-use crate::{Encoding, Finite, Infinite, Nan, NotNan, Real, Total};
+use crate::{Encoding, Finite, Infinite, Nan, NotNan, Real, Total, N32, N64, R32, R64};
 
 /// Floating-point proxy that provides ordering, hashing, and value
 /// constraints.
@@ -203,13 +203,6 @@ where
         F: Fn(T, T) -> T,
     {
         ConstrainedFloat::from_inner(f(self.into_inner(), other.into_inner()))
-    }
-
-    fn zip_map_unchecked<F>(self, other: Self, f: F) -> Self
-    where
-        F: Fn(T, T) -> T,
-    {
-        ConstrainedFloat::from_inner_unchecked(f(self.into_inner(), other.into_inner()))
     }
 }
 
@@ -466,7 +459,7 @@ where
 impl<T, P> Float for ConstrainedFloat<T, P>
 where
     // TODO: Can these requirements be simplified or reduced?
-    T: Encoding + Float + Infinite + Nan + Primitive + Real,
+    T: Encoding + Float + Infinite + Nan + NanOrd + Primitive + Real,
     P: Class<InfiniteClass> + Class<NanClass> + Class<RealClass> + Constraint<T>,
 {
     fn infinity() -> Self {
@@ -510,11 +503,13 @@ where
     }
 
     fn min(self, other: Self) -> Self {
-        self.zip_map_unchecked(other, Real::min)
+        // Avoid panics by propagating `NaN`s for incomparable values.
+        self.zip_map(other, cmp::min_or_nan)
     }
 
     fn max(self, other: Self) -> Self {
-        self.zip_map_unchecked(other, Real::max)
+        // Avoid panics by propagating `NaN`s for incomparable values.
+        self.zip_map(other, cmp::max_or_nan)
     }
 
     fn neg_zero() -> Self {
@@ -1108,20 +1103,6 @@ where
     const LN_10: Self = ConstrainedFloat::from_inner_unchecked(T::LN_10);
     const LOG2_E: Self = ConstrainedFloat::from_inner_unchecked(T::LOG2_E);
     const LOG10_E: Self = ConstrainedFloat::from_inner_unchecked(T::LOG10_E);
-
-    fn min(self, other: Self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(<T as Real>::min(
-            self.into_inner(),
-            other.into_inner(),
-        ))
-    }
-
-    fn max(self, other: Self) -> Self {
-        ConstrainedFloat::from_inner_unchecked(<T as Real>::max(
-            self.into_inner(),
-            other.into_inner(),
-        ))
-    }
 
     fn is_sign_positive(self) -> bool {
         <T as Real>::is_sign_positive(self.into_inner())
@@ -1741,9 +1722,9 @@ mod tests {
 ///   https://github.com/olson-sean-k/decorum/issues/10
 ///   https://github.com/rust-num/num-traits/issues/49
 macro_rules! impl_foreign_real {
-    (proxy => $T:ty) => {
+    (proxy => $t:ty) => {
         #[cfg(feature = "std")]
-        impl real::Real for $T {
+        impl real::Real for $t {
             fn max_value() -> Self {
                 Encoding::MAX
             }
@@ -1761,11 +1742,13 @@ macro_rules! impl_foreign_real {
             }
 
             fn min(self, other: Self) -> Self {
-                Real::min(self, other)
+                // Avoid panics by propagating `NaN`s for incomparable values.
+                self.zip_map(other, cmp::min_or_nan)
             }
 
             fn max(self, other: Self) -> Self {
-                Real::max(self, other)
+                // Avoid panics by propagating `NaN`s for incomparable values.
+                self.zip_map(other, cmp::max_or_nan)
             }
 
             fn is_sign_positive(self) -> bool {
@@ -1813,7 +1796,7 @@ macro_rules! impl_foreign_real {
             }
 
             fn abs_sub(self, other: Self) -> Self {
-                Self::from_inner(Float::abs_sub(self.into_inner(), other.into_inner()))
+                self.zip_map(other, Float::abs_sub)
             }
 
             fn powi(self, n: i32) -> Self {
@@ -1861,11 +1844,11 @@ macro_rules! impl_foreign_real {
             }
 
             fn to_degrees(self) -> Self {
-                Self::from_inner(self.into_inner().to_degrees())
+                self.map(Float::to_degrees)
             }
 
             fn to_radians(self) -> Self {
-                Self::from_inner(self.into_inner().to_radians())
+                self.map(Float::to_radians)
             }
 
             fn ln_1p(self) -> Self {
@@ -1934,7 +1917,7 @@ macro_rules! impl_foreign_real {
         }
     };
 }
-impl_foreign_real!(proxy => crate::N32);
-impl_foreign_real!(proxy => crate::N64);
-impl_foreign_real!(proxy => crate::R32);
-impl_foreign_real!(proxy => crate::R64);
+impl_foreign_real!(proxy => N32);
+impl_foreign_real!(proxy => N64);
+impl_foreign_real!(proxy => R32);
+impl_foreign_real!(proxy => R64);

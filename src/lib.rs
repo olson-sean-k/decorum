@@ -136,9 +136,6 @@ pub trait Real: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd {
     const LOG2_E: Self;
     const LOG10_E: Self;
 
-    fn min(self, other: Self) -> Self;
-    fn max(self, other: Self) -> Self;
-
     fn is_sign_positive(self) -> bool;
     fn is_sign_negative(self) -> bool;
     fn signum(self) -> Self;
