@@ -1615,6 +1615,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cmp_nan)]
     #[allow(clippy::eq_op)]
     #[allow(clippy::float_cmp)]
     #[allow(clippy::zero_divided_by_zero)]
