@@ -6,20 +6,19 @@
 //! constrained values support these operations and in turn whether or not a
 //! proxy using a constraint does too.
 
+// TODO: Relax the bounds on `T` for traits. This requires removing default
+//       implementations, but these traits use blanket implementations and rely
+//       on non-primitive type implementations (e.g., `NotNanConstraint`).
+
 use core::cmp::Ordering;
 use core::marker::PhantomData;
 
-#[cfg(not(feature = "std"))]
-use num_traits::float::FloatCore as Float;
-#[cfg(feature = "std")]
-use num_traits::Float;
-
-use crate::canonical;
-use crate::Primitive;
+use crate::primitive::Primitive;
+use crate::{canonical, Encoding, Infinite, Nan};
 
 pub trait ConstraintEq<T>
 where
-    T: Float + Primitive,
+    T: Encoding + Nan + Primitive,
 {
     fn eq(lhs: T, rhs: T) -> bool {
         canonical::eq_float(lhs, rhs)
@@ -28,7 +27,7 @@ where
 
 pub trait ConstraintPartialOrd<T>
 where
-    T: Float + Primitive,
+    T: Encoding + Nan + PartialOrd + Primitive,
 {
     fn partial_cmp(lhs: T, rhs: T) -> Option<Ordering> {
         lhs.partial_cmp(&rhs)
@@ -37,7 +36,7 @@ where
 
 impl<T, U> ConstraintPartialOrd<T> for U
 where
-    T: Float + Primitive,
+    T: Encoding + Nan + PartialOrd + Primitive,
     U: ConstraintOrd<T>,
 {
     fn partial_cmp(lhs: T, rhs: T) -> Option<Ordering> {
@@ -47,7 +46,7 @@ where
 
 pub trait ConstraintOrd<T>
 where
-    T: Float + Primitive,
+    T: Encoding + Nan + PartialOrd + Primitive,
 {
     fn cmp(lhs: T, rhs: T) -> Ordering {
         canonical::cmp_float(lhs, rhs)
@@ -56,7 +55,7 @@ where
 
 pub trait ConstraintInfinity<T>
 where
-    T: Float + Primitive,
+    T: Infinite + Primitive,
 {
     fn infinity() -> T {
         T::infinity()
@@ -77,7 +76,7 @@ where
 
 pub trait ConstraintNan<T>
 where
-    T: Float + Primitive,
+    T: Nan + Primitive,
 {
     fn nan() -> T {
         T::nan()
@@ -95,9 +94,9 @@ pub trait SubsetOf<P> {}
 impl<P, Q> SubsetOf<Q> for P where Q: SupersetOf<P> {}
 
 /// Constraint on floating-point values.
-pub trait FloatConstraint<T>: Copy + PartialEq + PartialOrd + Sized
+pub trait FloatConstraint<T>: Copy + Sized
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
     /// Filters a floating-point value based on some constraints.
     ///
@@ -106,47 +105,47 @@ where
     fn filter(value: T) -> Option<T>;
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug)]
 pub struct UnitConstraint<T>
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
     phantom: PhantomData<T>,
 }
 
 impl<T> FloatConstraint<T> for UnitConstraint<T>
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
     fn filter(value: T) -> Option<T> {
         Some(value)
     }
 }
 
-impl<T> ConstraintEq<T> for UnitConstraint<T> where T: Float + Primitive {}
+impl<T> ConstraintEq<T> for UnitConstraint<T> where T: Encoding + Nan + Primitive {}
 
-impl<T> ConstraintOrd<T> for UnitConstraint<T> where T: Float + Primitive {}
+impl<T> ConstraintOrd<T> for UnitConstraint<T> where T: Encoding + Nan + PartialOrd + Primitive {}
 
-impl<T> ConstraintInfinity<T> for UnitConstraint<T> where T: Float + Primitive {}
+impl<T> ConstraintInfinity<T> for UnitConstraint<T> where T: Infinite + Primitive {}
 
-impl<T> ConstraintNan<T> for UnitConstraint<T> where T: Float + Primitive {}
+impl<T> ConstraintNan<T> for UnitConstraint<T> where T: Nan + Primitive {}
 
-impl<T> SupersetOf<NotNanConstraint<T>> for UnitConstraint<T> where T: Float + Primitive {}
+impl<T> SupersetOf<NotNanConstraint<T>> for UnitConstraint<T> where T: Primitive {}
 
-impl<T> SupersetOf<FiniteConstraint<T>> for UnitConstraint<T> where T: Float + Primitive {}
+impl<T> SupersetOf<FiniteConstraint<T>> for UnitConstraint<T> where T: Primitive {}
 
 /// Disallows `NaN` floating-point values.
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug)]
 pub struct NotNanConstraint<T>
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
     phantom: PhantomData<T>,
 }
 
 impl<T> FloatConstraint<T> for NotNanConstraint<T>
 where
-    T: Float + Primitive,
+    T: Nan + Primitive,
 {
     fn filter(value: T) -> Option<T> {
         if value.is_nan() {
@@ -160,7 +159,7 @@ where
 
 impl<T> ConstraintEq<T> for NotNanConstraint<T>
 where
-    T: Float + Primitive,
+    T: Encoding + Nan + PartialEq + Primitive,
 {
     fn eq(lhs: T, rhs: T) -> bool {
         // The input values should never be `NaN`, so just compare the raw
@@ -171,7 +170,7 @@ where
 
 impl<T> ConstraintOrd<T> for NotNanConstraint<T>
 where
-    T: Float + Primitive,
+    T: Encoding + Nan + PartialOrd + Primitive,
 {
     fn cmp(lhs: T, rhs: T) -> Ordering {
         // The input values should never be `NaN`, so just compare the raw
@@ -180,22 +179,22 @@ where
     }
 }
 
-impl<T> ConstraintInfinity<T> for NotNanConstraint<T> where T: Float + Primitive {}
+impl<T> ConstraintInfinity<T> for NotNanConstraint<T> where T: Infinite + Primitive {}
 
-impl<T> SupersetOf<FiniteConstraint<T>> for NotNanConstraint<T> where T: Float + Primitive {}
+impl<T> SupersetOf<FiniteConstraint<T>> for NotNanConstraint<T> where T: Primitive {}
 
 /// Disallows `NaN`, `INF`, and `-INF` floating-point values.
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug)]
 pub struct FiniteConstraint<T>
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
     phantom: PhantomData<T>,
 }
 
 impl<T> FloatConstraint<T> for FiniteConstraint<T>
 where
-    T: Float + Primitive,
+    T: Infinite + Nan + Primitive,
 {
     fn filter(value: T) -> Option<T> {
         if value.is_nan() || value.is_infinite() {
@@ -209,7 +208,7 @@ where
 
 impl<T> ConstraintEq<T> for FiniteConstraint<T>
 where
-    T: Float + Primitive,
+    T: Encoding + Nan + PartialEq + Primitive,
 {
     fn eq(lhs: T, rhs: T) -> bool {
         // The input values should never be `NaN`, so just compare the raw
@@ -220,7 +219,7 @@ where
 
 impl<T> ConstraintOrd<T> for FiniteConstraint<T>
 where
-    T: Float + Primitive,
+    T: Encoding + Nan + PartialOrd + Primitive,
 {
     fn cmp(lhs: T, rhs: T) -> Ordering {
         // The input values should never be `NaN`, so just compare the raw

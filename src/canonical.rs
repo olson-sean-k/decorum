@@ -12,12 +12,8 @@ use core::cmp::Ordering;
 use core::hash::{Hash, Hasher};
 use core::mem;
 
-#[cfg(not(feature = "std"))]
-use num_traits::float::FloatCore as Float;
-#[cfg(feature = "std")]
-use num_traits::Float;
-
-use crate::{Encoding, Primitive};
+use crate::primitive::Primitive;
+use crate::{Encoding, Nan};
 
 const SIGN_MASK: u64 = 0x8000_0000_0000_0000u64;
 const EXPONENT_MASK: u64 = 0x7ff0_0000_0000_0000u64;
@@ -26,8 +22,8 @@ const MANTISSA_MASK: u64 = 0x000f_ffff_ffff_ffffu64;
 const CANONICAL_NAN: u64 = 0x7ff8_0000_0000_0000u64;
 const CANONICAL_ZERO: u64 = 0x0u64;
 
-pub trait FloatArray: Sized {
-    type Item: Float + Primitive;
+pub trait PrimitiveArray: Sized {
+    type Item: Primitive;
 
     fn hash<H>(&self, state: &mut H)
     where
@@ -35,21 +31,20 @@ pub trait FloatArray: Sized {
 
     fn cmp<T>(&self, other: &T) -> Ordering
     where
-        T: FloatArray<Item = Self::Item>;
+        T: PrimitiveArray<Item = Self::Item>;
 
     fn eq<T>(&self, other: &T) -> bool
     where
-        T: FloatArray<Item = Self::Item>;
+        T: PrimitiveArray<Item = Self::Item>;
 
     fn as_slice(&self) -> &[Self::Item];
 }
 
-// TODO: Is there a better way to implement this macro? See `hash_float_array`.
 macro_rules! impl_float_array {
     (lengths => $($N:expr),*) => {$(
-        impl<T> FloatArray for [T; $N]
+        impl<T> PrimitiveArray for [T; $N]
         where
-            T: Float + Primitive,
+            T: Encoding + Nan + PartialOrd + Primitive,
         {
             type Item = T;
 
@@ -62,14 +57,14 @@ macro_rules! impl_float_array {
 
             fn cmp<U>(&self, other: &U) -> Ordering
             where
-                U: FloatArray<Item = Self::Item>,
+                U: PrimitiveArray<Item = Self::Item>,
             {
                 cmp_float_slice(self, other.as_slice())
             }
 
             fn eq<U>(&self, other: &U) -> bool
             where
-                U: FloatArray<Item = Self::Item>,
+                U: PrimitiveArray<Item = Self::Item>,
             {
                 eq_float_slice(self, other.as_slice())
             }
@@ -91,7 +86,7 @@ impl_float_array!(lengths => 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 
 /// The total ordering is: `[-INF | ... | C0 | ... | INF | CNaN ]`.
 pub fn cmp_float<T>(lhs: T, rhs: T) -> Ordering
 where
-    T: Float + Primitive,
+    T: Nan + PartialOrd + Primitive,
 {
     // Using `canonicalize_float` here would be difficult, because comparing the
     // `u64` encoding would not always have the expected results. `+0` and `-0`
@@ -124,7 +119,7 @@ where
 /// equal.
 pub fn cmp_float_slice<T>(lhs: &[T], rhs: &[T]) -> Ordering
 where
-    T: Float + Primitive,
+    T: Nan + PartialOrd + Primitive,
 {
     match lhs
         .iter()
@@ -144,7 +139,7 @@ where
 /// no such instance exists, then the arrays are equal.
 pub fn cmp_float_array<T>(lhs: &T, rhs: &T) -> Ordering
 where
-    T: FloatArray,
+    T: PrimitiveArray,
 {
     lhs.cmp(rhs)
 }
@@ -156,7 +151,7 @@ where
 /// (positive and negative) are considered equal.
 pub fn eq_float<T>(lhs: T, rhs: T) -> bool
 where
-    T: Float + Primitive,
+    T: Encoding + Nan + Primitive,
 {
     canonicalize_float(lhs) == canonicalize_float(rhs)
 }
@@ -168,7 +163,7 @@ where
 /// never considered equal.
 pub fn eq_float_slice<T>(lhs: &[T], rhs: &[T]) -> bool
 where
-    T: Float + Primitive,
+    T: Encoding + Nan + Primitive,
 {
     if lhs.len() == rhs.len() {
         lhs.iter()
@@ -186,7 +181,7 @@ where
 /// of their corresponding elements are equal.
 pub fn eq_float_array<T>(lhs: &T, rhs: &T) -> bool
 where
-    T: FloatArray,
+    T: PrimitiveArray,
 {
     lhs.eq(rhs)
 }
@@ -198,7 +193,7 @@ where
 /// and all zeroes (positive and negative) result in the same hash.
 pub fn hash_float<T, H>(value: T, state: &mut H)
 where
-    T: Float + Primitive,
+    T: Encoding + Nan + Primitive,
     H: Hasher,
 {
     canonicalize_float(value).hash(state);
@@ -209,7 +204,7 @@ where
 /// See `hash_float` for details.
 pub fn hash_float_slice<T, H>(values: &[T], state: &mut H)
 where
-    T: Float + Primitive,
+    T: Encoding + Nan + Primitive,
     H: Hasher,
 {
     for value in values {
@@ -217,13 +212,12 @@ where
     }
 }
 
-// TODO: Use integer generics to implement hashing over arrays.
 /// Hashes an array of primitive floating-point values.
 ///
 /// Supports arrays up to length 16. See `hash_float` for details.
 pub fn hash_float_array<T, H>(array: &T, state: &mut H)
 where
-    T: FloatArray,
+    T: PrimitiveArray,
     H: Hasher,
 {
     array.hash(state);
@@ -231,28 +225,22 @@ where
 
 fn canonicalize_float<T>(value: T) -> u64
 where
-    T: Float + Primitive,
+    T: Encoding + Nan + Primitive,
 {
     if value.is_nan() {
         CANONICAL_NAN
     }
     else {
-        canonicalize_not_nan(value)
-    }
-}
-
-fn canonicalize_not_nan<T>(value: T) -> u64
-where
-    T: Encoding + Primitive,
-{
-    let (mantissa, exponent, sign) = value.integer_decode();
-    if mantissa == 0 {
-        CANONICAL_ZERO
-    }
-    else {
-        let exponent = u64::from(unsafe { mem::transmute::<i16, u16>(exponent) });
-        let sign = if sign > 0 { 1u64 } else { 0u64 };
-
-        (mantissa & MANTISSA_MASK) | ((exponent << 52) & EXPONENT_MASK) | ((sign << 63) & SIGN_MASK)
+        let (mantissa, exponent, sign) = value.integer_decode();
+        if mantissa == 0 {
+            CANONICAL_ZERO
+        }
+        else {
+            let exponent = u64::from(unsafe { mem::transmute::<i16, u16>(exponent) });
+            let sign = if sign > 0 { 1u64 } else { 0u64 };
+            (mantissa & MANTISSA_MASK)
+                | ((exponent << 52) & EXPONENT_MASK)
+                | ((sign << 63) & SIGN_MASK)
+        }
     }
 }
