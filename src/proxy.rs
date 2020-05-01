@@ -1711,7 +1711,7 @@ mod tests {
 ///
 ///   https://github.com/olson-sean-k/decorum/issues/10
 ///   https://github.com/rust-num/num-traits/issues/49
-macro_rules! impl_foreign_real {
+macro_rules! impl_num_traits_real {
     (proxy => $t:ty) => {
         #[cfg(feature = "std")]
         impl real::Real for $t {
@@ -1907,7 +1907,7 @@ macro_rules! impl_foreign_real {
         }
     };
 }
-impl_foreign_real!(proxy => N32);
-impl_foreign_real!(proxy => N64);
-impl_foreign_real!(proxy => R32);
-impl_foreign_real!(proxy => R64);
+impl_num_traits_real!(proxy => N32);
+impl_num_traits_real!(proxy => N64);
+impl_num_traits_real!(proxy => R32);
+impl_num_traits_real!(proxy => R64);
