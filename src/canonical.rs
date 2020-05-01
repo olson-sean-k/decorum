@@ -2,12 +2,12 @@ use core::mem;
 
 use crate::{Encoding, Nan};
 
-const SIGN_MASK: u64 = 0x8000_0000_0000_0000u64;
-const EXPONENT_MASK: u64 = 0x7ff0_0000_0000_0000u64;
-const MANTISSA_MASK: u64 = 0x000f_ffff_ffff_ffffu64;
+const SIGN_MASK: u64 = 0x8000_0000_0000_0000;
+const EXPONENT_MASK: u64 = 0x7ff0_0000_0000_0000;
+const MANTISSA_MASK: u64 = 0x000f_ffff_ffff_ffff;
 
-const CANONICAL_NAN_BITS: u64 = 0x7ff8_0000_0000_0000u64;
-const CANONICAL_ZERO_BITS: u64 = 0x0u64;
+const CANONICAL_NAN_BITS: u64 = 0x7ff8_0000_0000_0000;
+const CANONICAL_ZERO_BITS: u64 = 0x0;
 
 pub trait ToCanonicalBits: Copy + Sized {
     fn to_canonical_bits(self) -> u64;
