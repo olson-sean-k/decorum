@@ -171,6 +171,24 @@ where
     }
 }
 
+impl<T> NanOrd for Option<T>
+where
+    T: Copy + PartialOrd,
+{
+    fn min_max_or_nan(&self, other: &Self) -> (Self, Self) {
+        match (self.as_ref(), other.as_ref()) {
+            (Some(a), Some(b)) => match a.partial_cmp(b) {
+                Some(ordering) => match ordering {
+                    Ordering::Less | Ordering::Equal => (Some(*a), Some(*b)),
+                    _ => (Some(*b), Some(*a)),
+                },
+                _ => (None, None),
+            },
+            _ => (None, None),
+        }
+    }
+}
+
 pub fn max_or_nan<T>(a: T, b: T) -> T
 where
     T: NanOrd,
@@ -189,11 +207,28 @@ where
 mod tests {
     use num_traits::{One, Zero};
 
-    use crate::cmp::{self, NanOrd};
+    use crate::cmp::{self, FloatEq, NanOrd};
     use crate::{Nan, Total};
 
     #[test]
-    fn nan_ord() {
+    fn nan_ord_option() {
+        let zero = Some(0u64);
+        let one = Some(1u64);
+
+        assert_eq!(zero, cmp::min_or_nan(zero, one));
+        assert_eq!(one, cmp::max_or_nan(zero, one));
+        assert_eq!(None, cmp::min_or_nan(None, zero));
+    }
+
+    #[test]
+    fn nan_ord_primitive() {
+        assert_eq!(0.0f64, cmp::min_or_nan(0.0, 1.0));
+        assert_eq!(1.0f64, cmp::max_or_nan(0.0, 1.0));
+        assert!(FloatEq::eq(&f64::NAN, &cmp::min_or_nan(f64::NAN, 0.0)));
+    }
+
+    #[test]
+    fn nan_ord_proxy() {
         let nan = Total::<f64>::NAN;
         let zero = Total::zero();
         let one = Total::one();
