@@ -91,20 +91,26 @@ where
 }
 
 pub trait NanOrd: Copy + PartialOrd + Sized {
-    fn min_max_or_nan(&self, other: &Self) -> (Self, Self);
+    fn is_undefined(&self) -> bool;
 
-    fn min_or_nan(&self, other: &Self) -> Self {
-        self.min_max_or_nan(other).0
+    fn min_max_or_undefined(&self, other: &Self) -> (Self, Self);
+
+    fn min_or_undefined(&self, other: &Self) -> Self {
+        self.min_max_or_undefined(other).0
     }
 
-    fn max_or_nan(&self, other: &Self) -> Self {
-        self.min_max_or_nan(other).1
+    fn max_or_undefined(&self, other: &Self) -> Self {
+        self.min_max_or_undefined(other).1
     }
 }
 macro_rules! impl_nan_ord {
-    (total => $t:ty) => {
+    (no_nan_total => $t:ty) => {
         impl NanOrd for $t {
-            fn min_max_or_nan(&self, other: &Self) -> (Self, Self) {
+            fn is_undefined(&self) -> bool {
+                false
+            }
+
+            fn min_max_or_undefined(&self, other: &Self) -> (Self, Self) {
                 match self.partial_cmp(other) {
                     Some(ordering) => match ordering {
                         Ordering::Less | Ordering::Equal => (*self, *other),
@@ -117,7 +123,11 @@ macro_rules! impl_nan_ord {
     };
     (nan => $t:ty) => {
         impl NanOrd for $t {
-            fn min_max_or_nan(&self, other: &Self) -> (Self, Self) {
+            fn is_undefined(&self) -> bool {
+                self.is_nan()
+            }
+
+            fn min_max_or_undefined(&self, other: &Self) -> (Self, Self) {
                 match self.partial_cmp(other) {
                     Some(ordering) => match ordering {
                         Ordering::Less | Ordering::Equal => (*self, *other),
@@ -129,18 +139,18 @@ macro_rules! impl_nan_ord {
         }
     };
 }
-impl_nan_ord!(total => isize);
-impl_nan_ord!(total => i8);
-impl_nan_ord!(total => i16);
-impl_nan_ord!(total => i32);
-impl_nan_ord!(total => i64);
-impl_nan_ord!(total => i128);
-impl_nan_ord!(total => usize);
-impl_nan_ord!(total => u8);
-impl_nan_ord!(total => u16);
-impl_nan_ord!(total => u32);
-impl_nan_ord!(total => u64);
-impl_nan_ord!(total => u128);
+impl_nan_ord!(no_nan_total => isize);
+impl_nan_ord!(no_nan_total => i8);
+impl_nan_ord!(no_nan_total => i16);
+impl_nan_ord!(no_nan_total => i32);
+impl_nan_ord!(no_nan_total => i64);
+impl_nan_ord!(no_nan_total => i128);
+impl_nan_ord!(no_nan_total => usize);
+impl_nan_ord!(no_nan_total => u8);
+impl_nan_ord!(no_nan_total => u16);
+impl_nan_ord!(no_nan_total => u32);
+impl_nan_ord!(no_nan_total => u64);
+impl_nan_ord!(no_nan_total => u128);
 impl_nan_ord!(nan => f32);
 impl_nan_ord!(nan => f64);
 
@@ -152,14 +162,18 @@ where
     T: Encoding + Nan + NanOrd + Primitive,
     P: Constraint<T>,
 {
-    fn min_max_or_nan(&self, other: &Self) -> (Self, Self) {
+    fn is_undefined(&self) -> bool {
+        self.into_inner().is_nan()
+    }
+
+    fn min_max_or_undefined(&self, other: &Self) -> (Self, Self) {
         // This function operates on primitive floating-point values. This
         // avoids the need for implementations for each combination of proxy and
         // constraint (proxy types do not always implement `Nan`, but primitive
         // types do).
         let a = self.into_inner();
         let b = other.into_inner();
-        let (min, max) = a.min_max_or_nan(&b);
+        let (min, max) = a.min_max_or_undefined(&b);
         // Both `min` and `max` are `NaN` if `a` and `b` are incomparable.
         if min.is_nan() {
             let nan = T::NAN.into();
@@ -175,7 +189,11 @@ impl<T> NanOrd for Option<T>
 where
     T: Copy + PartialOrd,
 {
-    fn min_max_or_nan(&self, other: &Self) -> (Self, Self) {
+    fn is_undefined(&self) -> bool {
+        self.is_none()
+    }
+
+    fn min_max_or_undefined(&self, other: &Self) -> (Self, Self) {
         match (self.as_ref(), other.as_ref()) {
             (Some(a), Some(b)) => match a.partial_cmp(b) {
                 Some(ordering) => match ordering {
@@ -189,25 +207,25 @@ where
     }
 }
 
-pub fn max_or_nan<T>(a: T, b: T) -> T
+pub fn max_or_undefined<T>(a: T, b: T) -> T
 where
     T: NanOrd,
 {
-    a.max_or_nan(&b)
+    a.max_or_undefined(&b)
 }
 
-pub fn min_or_nan<T>(a: T, b: T) -> T
+pub fn min_or_undefined<T>(a: T, b: T) -> T
 where
     T: NanOrd,
 {
-    a.min_or_nan(&b)
+    a.min_or_undefined(&b)
 }
 
 #[cfg(test)]
 mod tests {
     use num_traits::{One, Zero};
 
-    use crate::cmp::{self, FloatEq, NanOrd};
+    use crate::cmp::{self, NanOrd};
     use crate::{Nan, Total};
 
     #[test]
@@ -215,16 +233,20 @@ mod tests {
         let zero = Some(0u64);
         let one = Some(1u64);
 
-        assert_eq!(zero, cmp::min_or_nan(zero, one));
-        assert_eq!(one, cmp::max_or_nan(zero, one));
-        assert_eq!(None, cmp::min_or_nan(None, zero));
+        assert_eq!(zero, cmp::min_or_undefined(zero, one));
+        assert_eq!(one, cmp::max_or_undefined(zero, one));
+        assert!(cmp::min_or_undefined(None, zero).is_undefined());
     }
 
     #[test]
+    #[allow(clippy::float_cmp)]
     fn nan_ord_primitive() {
-        assert_eq!(0.0f64, cmp::min_or_nan(0.0, 1.0));
-        assert_eq!(1.0f64, cmp::max_or_nan(0.0, 1.0));
-        assert!(FloatEq::eq(&f64::NAN, &cmp::min_or_nan(f64::NAN, 0.0)));
+        let zero = 0.0f64;
+        let one = 1.0f64;
+
+        assert_eq!(zero, cmp::min_or_undefined(zero, one));
+        assert_eq!(one, cmp::max_or_undefined(zero, one));
+        assert!(cmp::min_or_undefined(f64::NAN, zero).is_undefined());
     }
 
     #[test]
@@ -233,16 +255,16 @@ mod tests {
         let zero = Total::zero();
         let one = Total::one();
 
-        assert_eq!((zero, one), zero.min_max_or_nan(&one));
-        assert_eq!((zero, one), one.min_max_or_nan(&zero));
+        assert_eq!((zero, one), zero.min_max_or_undefined(&one));
+        assert_eq!((zero, one), one.min_max_or_undefined(&zero));
 
-        assert_eq!((nan, nan), nan.min_max_or_nan(&zero));
-        assert_eq!((nan, nan), zero.min_max_or_nan(&nan));
-        assert_eq!((nan, nan), nan.min_max_or_nan(&nan));
+        assert_eq!((nan, nan), nan.min_max_or_undefined(&zero));
+        assert_eq!((nan, nan), zero.min_max_or_undefined(&nan));
+        assert_eq!((nan, nan), nan.min_max_or_undefined(&nan));
 
-        assert_eq!(nan, cmp::min_or_nan(nan, zero));
-        assert_eq!(nan, cmp::max_or_nan(nan, zero));
-        assert_eq!(nan, cmp::min_or_nan(nan, nan));
-        assert_eq!(nan, cmp::max_or_nan(nan, nan));
+        assert_eq!(nan, cmp::min_or_undefined(nan, zero));
+        assert_eq!(nan, cmp::max_or_undefined(nan, zero));
+        assert_eq!(nan, cmp::min_or_undefined(nan, nan));
+        assert_eq!(nan, cmp::max_or_undefined(nan, nan));
     }
 }

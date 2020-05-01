@@ -494,12 +494,12 @@ where
 
     fn min(self, other: Self) -> Self {
         // Avoid panics by propagating `NaN`s for incomparable values.
-        self.zip_map(other, cmp::min_or_nan)
+        self.zip_map(other, cmp::min_or_undefined)
     }
 
     fn max(self, other: Self) -> Self {
         // Avoid panics by propagating `NaN`s for incomparable values.
-        self.zip_map(other, cmp::max_or_nan)
+        self.zip_map(other, cmp::max_or_undefined)
     }
 
     fn neg_zero() -> Self {
@@ -1728,12 +1728,12 @@ macro_rules! impl_num_traits_real {
 
             fn min(self, other: Self) -> Self {
                 // Avoid panics by propagating `NaN`s for incomparable values.
-                self.zip_map(other, cmp::min_or_nan)
+                self.zip_map(other, cmp::min_or_undefined)
             }
 
             fn max(self, other: Self) -> Self {
                 // Avoid panics by propagating `NaN`s for incomparable values.
-                self.zip_map(other, cmp::max_or_nan)
+                self.zip_map(other, cmp::max_or_undefined)
             }
 
             fn is_sign_positive(self) -> bool {
