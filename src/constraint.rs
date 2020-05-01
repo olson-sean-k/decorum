@@ -11,14 +11,11 @@ use core::marker::PhantomData;
 use crate::primitive::Primitive;
 use crate::{Infinite, Nan};
 
-// TODO: `RealClass` should likely apply to virtually all constraint type
-//       bounds (see `ConstrainedFloat`). Is it necessary at all?
 pub enum RealClass {}
 pub enum InfiniteClass {}
 pub enum NanClass {}
 
-// TODO: Can this be used to provide blanket implementations for `SupersetOf`?
-pub trait Class<T> {}
+pub trait Member<T> {}
 
 pub trait SupersetOf<P> {}
 
@@ -46,11 +43,11 @@ where
     phantom: PhantomData<T>,
 }
 
-impl<T> Class<RealClass> for UnitConstraint<T> where T: Primitive {}
+impl<T> Member<RealClass> for UnitConstraint<T> where T: Primitive {}
 
-impl<T> Class<InfiniteClass> for UnitConstraint<T> where T: Primitive {}
+impl<T> Member<InfiniteClass> for UnitConstraint<T> where T: Primitive {}
 
-impl<T> Class<NanClass> for UnitConstraint<T> where T: Primitive {}
+impl<T> Member<NanClass> for UnitConstraint<T> where T: Primitive {}
 
 // TODO: Should implementations map values like zero and `NaN` to canonical
 //       forms?
@@ -76,9 +73,9 @@ where
     phantom: PhantomData<T>,
 }
 
-impl<T> Class<RealClass> for NotNanConstraint<T> where T: Primitive {}
+impl<T> Member<RealClass> for NotNanConstraint<T> where T: Primitive {}
 
-impl<T> Class<InfiniteClass> for NotNanConstraint<T> where T: Primitive {}
+impl<T> Member<InfiniteClass> for NotNanConstraint<T> where T: Primitive {}
 
 impl<T> Constraint<T> for NotNanConstraint<T>
 where
@@ -105,7 +102,7 @@ where
     phantom: PhantomData<T>,
 }
 
-impl<T> Class<RealClass> for FiniteConstraint<T> where T: Primitive {}
+impl<T> Member<RealClass> for FiniteConstraint<T> where T: Primitive {}
 
 impl<T> Constraint<T> for FiniteConstraint<T>
 where
