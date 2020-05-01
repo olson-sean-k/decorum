@@ -1547,14 +1547,14 @@ mod tests {
     use crate::{Finite, NotNan, Total, N32, R32};
 
     #[test]
-    fn ordered_no_panic_on_inf() {
+    fn total_no_panic_on_inf() {
         let x: Total<f32> = 1.0.into();
         let y = x / 0.0;
         assert!(Infinite::is_infinite(y));
     }
 
     #[test]
-    fn ordered_no_panic_on_nan() {
+    fn total_no_panic_on_nan() {
         let x: Total<f32> = 0.0.into();
         let y = x / 0.0;
         assert!(Nan::is_nan(y));
@@ -1599,7 +1599,7 @@ mod tests {
     #[allow(clippy::eq_op)]
     #[allow(clippy::float_cmp)]
     #[allow(clippy::zero_divided_by_zero)]
-    fn ordered_nan_eq() {
+    fn total_nan_eq() {
         let x: Total<f32> = (0.0 / 0.0).into();
         let y: Total<f32> = (0.0 / 0.0).into();
         assert_eq!(x, y);
@@ -1619,7 +1619,7 @@ mod tests {
     #[allow(clippy::eq_op)]
     #[allow(clippy::float_cmp)]
     #[allow(clippy::zero_divided_by_zero)]
-    fn cmp_proxy_to_primitive() {
+    fn cmp_proxy_primitive() {
         // Compare a canonicalized `NaN` with a primitive `NaN` with a
         // different representation.
         let x: Total<f32> = (0.0 / 0.0).into();
@@ -1648,7 +1648,7 @@ mod tests {
 
     // TODO: This test is questionable.
     #[test]
-    fn constrained_float_impl_traits() {
+    fn impl_traits() {
         fn as_float<T>(_: T)
         where
             T: Float,
