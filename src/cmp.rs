@@ -110,7 +110,7 @@ macro_rules! impl_nan_ord {
                         Ordering::Less | Ordering::Equal => (*self, *other),
                         _ => (*other, *self),
                     },
-                    None => unreachable!(),
+                    _ => unreachable!(),
                 }
             }
         }
@@ -123,7 +123,7 @@ macro_rules! impl_nan_ord {
                         Ordering::Less | Ordering::Equal => (*self, *other),
                         _ => (*other, *self),
                     },
-                    None => (Nan::NAN, Nan::NAN),
+                    _ => (Nan::NAN, Nan::NAN),
                 }
             }
         }
@@ -144,14 +144,19 @@ impl_nan_ord!(total => u128);
 impl_nan_ord!(nan => f32);
 impl_nan_ord!(nan => f64);
 
-// Note that it is not necessary for the constraint to support `NaN`; all proxy
-// types should implement this trait even if it results in panics.
+// Note that it is not necessary for `NaN` to be a member of the constraint.
+// This implementation explicitly detects `NaN`s and emits `NaN` as the
+// maximum and minimum (it does not use `FloatOrd`).
 impl<T, P> NanOrd for ConstrainedFloat<T, P>
 where
     T: Encoding + Nan + Primitive,
     P: Constraint<T>,
 {
     fn min_max_or_nan(&self, other: &Self) -> (Self, Self) {
+        // This function operates on primitive floating-point values. This
+        // avoids the need for implementations for each combination of proxy and
+        // constraint (proxy types do not always implement `Nan`, but primitive
+        // types do).
         let a = self.into_inner();
         let b = other.into_inner();
         match a.partial_cmp(&b) {
@@ -159,7 +164,7 @@ where
                 Ordering::Less | Ordering::Equal => (a.into(), b.into()),
                 _ => (b.into(), a.into()),
             },
-            None => {
+            _ => {
                 let nan = T::NAN.into();
                 (nan, nan)
             }
