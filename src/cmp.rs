@@ -90,7 +90,7 @@ where
     }
 }
 
-pub trait NanOrd: Copy + PartialOrd + Sized {
+pub trait IntrinsicOrd: Copy + PartialOrd + Sized {
     fn is_undefined(&self) -> bool;
 
     fn min_max_or_undefined(&self, other: &Self) -> (Self, Self);
@@ -103,9 +103,9 @@ pub trait NanOrd: Copy + PartialOrd + Sized {
         self.min_max_or_undefined(other).1
     }
 }
-macro_rules! impl_nan_ord {
+macro_rules! impl_intrinsic_ord {
     (no_nan_total => $t:ty) => {
-        impl NanOrd for $t {
+        impl IntrinsicOrd for $t {
             fn is_undefined(&self) -> bool {
                 false
             }
@@ -122,7 +122,7 @@ macro_rules! impl_nan_ord {
         }
     };
     (nan => $t:ty) => {
-        impl NanOrd for $t {
+        impl IntrinsicOrd for $t {
             fn is_undefined(&self) -> bool {
                 self.is_nan()
             }
@@ -139,27 +139,27 @@ macro_rules! impl_nan_ord {
         }
     };
 }
-impl_nan_ord!(no_nan_total => isize);
-impl_nan_ord!(no_nan_total => i8);
-impl_nan_ord!(no_nan_total => i16);
-impl_nan_ord!(no_nan_total => i32);
-impl_nan_ord!(no_nan_total => i64);
-impl_nan_ord!(no_nan_total => i128);
-impl_nan_ord!(no_nan_total => usize);
-impl_nan_ord!(no_nan_total => u8);
-impl_nan_ord!(no_nan_total => u16);
-impl_nan_ord!(no_nan_total => u32);
-impl_nan_ord!(no_nan_total => u64);
-impl_nan_ord!(no_nan_total => u128);
-impl_nan_ord!(nan => f32);
-impl_nan_ord!(nan => f64);
+impl_intrinsic_ord!(no_nan_total => isize);
+impl_intrinsic_ord!(no_nan_total => i8);
+impl_intrinsic_ord!(no_nan_total => i16);
+impl_intrinsic_ord!(no_nan_total => i32);
+impl_intrinsic_ord!(no_nan_total => i64);
+impl_intrinsic_ord!(no_nan_total => i128);
+impl_intrinsic_ord!(no_nan_total => usize);
+impl_intrinsic_ord!(no_nan_total => u8);
+impl_intrinsic_ord!(no_nan_total => u16);
+impl_intrinsic_ord!(no_nan_total => u32);
+impl_intrinsic_ord!(no_nan_total => u64);
+impl_intrinsic_ord!(no_nan_total => u128);
+impl_intrinsic_ord!(nan => f32);
+impl_intrinsic_ord!(nan => f64);
 
 // Note that it is not necessary for `NaN` to be a member of the constraint.
 // This implementation explicitly detects `NaN`s and emits `NaN` as the
 // maximum and minimum (it does not use `FloatOrd`).
-impl<T, P> NanOrd for ConstrainedFloat<T, P>
+impl<T, P> IntrinsicOrd for ConstrainedFloat<T, P>
 where
-    T: Encoding + Nan + NanOrd + Primitive,
+    T: Encoding + IntrinsicOrd + Nan + Primitive,
     P: Constraint<T>,
 {
     fn is_undefined(&self) -> bool {
@@ -185,7 +185,7 @@ where
     }
 }
 
-impl<T> NanOrd for Option<T>
+impl<T> IntrinsicOrd for Option<T>
 where
     T: Copy + PartialOrd,
 {
@@ -209,14 +209,14 @@ where
 
 pub fn max_or_undefined<T>(a: T, b: T) -> T
 where
-    T: NanOrd,
+    T: IntrinsicOrd,
 {
     a.max_or_undefined(&b)
 }
 
 pub fn min_or_undefined<T>(a: T, b: T) -> T
 where
-    T: NanOrd,
+    T: IntrinsicOrd,
 {
     a.min_or_undefined(&b)
 }
@@ -225,11 +225,11 @@ where
 mod tests {
     use num_traits::{One, Zero};
 
-    use crate::cmp::{self, NanOrd};
+    use crate::cmp::{self, IntrinsicOrd};
     use crate::{Nan, Total};
 
     #[test]
-    fn nan_ord_option() {
+    fn intrinsic_ord_option() {
         let zero = Some(0u64);
         let one = Some(1u64);
 
@@ -240,7 +240,7 @@ mod tests {
 
     #[test]
     #[allow(clippy::float_cmp)]
-    fn nan_ord_primitive() {
+    fn intrinsic_ord_primitive() {
         let zero = 0.0f64;
         let one = 1.0f64;
 
@@ -250,7 +250,7 @@ mod tests {
     }
 
     #[test]
-    fn nan_ord_proxy() {
+    fn intrinsic_ord_proxy() {
         let nan = Total::<f64>::NAN;
         let zero = Total::zero();
         let one = Total::one();

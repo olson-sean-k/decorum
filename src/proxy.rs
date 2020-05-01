@@ -21,7 +21,7 @@ use num_traits::float::FloatCore as Float;
 #[cfg(feature = "std")]
 use num_traits::Float;
 
-use crate::cmp::{self, FloatEq, FloatOrd, NanOrd};
+use crate::cmp::{self, FloatEq, FloatOrd, IntrinsicOrd};
 use crate::constraint::{
     Constraint, InfiniteClass, Member, NanClass, RealClass, SubsetOf, SupersetOf,
 };
@@ -448,8 +448,7 @@ where
 
 impl<T, P> Float for ConstrainedFloat<T, P>
 where
-    // TODO: Can these requirements be simplified or reduced?
-    T: Encoding + Float + Infinite + Nan + NanOrd + Primitive + Real,
+    T: Encoding + Float + Infinite + IntrinsicOrd + Nan + Primitive + Real,
     P: Constraint<T> + Member<InfiniteClass> + Member<NanClass> + Member<RealClass>,
 {
     fn infinity() -> Self {
