@@ -149,7 +149,7 @@ impl_nan_ord!(nan => f64);
 // maximum and minimum (it does not use `FloatOrd`).
 impl<T, P> NanOrd for ConstrainedFloat<T, P>
 where
-    T: Encoding + Nan + Primitive,
+    T: Encoding + Nan + NanOrd + Primitive,
     P: Constraint<T>,
 {
     fn min_max_or_nan(&self, other: &Self) -> (Self, Self) {
@@ -159,15 +159,14 @@ where
         // types do).
         let a = self.into_inner();
         let b = other.into_inner();
-        match a.partial_cmp(&b) {
-            Some(ordering) => match ordering {
-                Ordering::Less | Ordering::Equal => (a.into(), b.into()),
-                _ => (b.into(), a.into()),
-            },
-            _ => {
-                let nan = T::NAN.into();
-                (nan, nan)
-            }
+        let (min, max) = a.min_max_or_nan(&b);
+        // Both `min` and `max` are `NaN` if `a` and `b` are incomparable.
+        if min.is_nan() {
+            let nan = T::NAN.into();
+            (nan, nan)
+        }
+        else {
+            (min.into(), max.into())
         }
     }
 }
@@ -184,4 +183,31 @@ where
     T: NanOrd,
 {
     a.min_or_nan(&b)
+}
+
+#[cfg(test)]
+mod tests {
+    use num_traits::{One, Zero};
+
+    use crate::cmp::{self, NanOrd};
+    use crate::{Nan, Total};
+
+    #[test]
+    fn nan_ord() {
+        let nan = Total::<f64>::NAN;
+        let zero = Total::zero();
+        let one = Total::one();
+
+        assert_eq!((zero, one), zero.min_max_or_nan(&one));
+        assert_eq!((zero, one), one.min_max_or_nan(&zero));
+
+        assert_eq!((nan, nan), nan.min_max_or_nan(&zero));
+        assert_eq!((nan, nan), zero.min_max_or_nan(&nan));
+        assert_eq!((nan, nan), nan.min_max_or_nan(&nan));
+
+        assert_eq!(nan, cmp::min_or_nan(nan, zero));
+        assert_eq!(nan, cmp::max_or_nan(nan, zero));
+        assert_eq!(nan, cmp::min_or_nan(nan, nan));
+        assert_eq!(nan, cmp::max_or_nan(nan, nan));
+    }
 }
