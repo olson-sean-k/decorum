@@ -1,12 +1,52 @@
-//! Canonicalization of floating-point values.
+//! Ordering and comparisons.
 //!
-//! This module provides canonicalization of floating-point values, converting
-//! `NaN` and zero to the canonical forms `CNaN` and `C0` for the following
-//! total ordering: `[-INF | ... | C0 | ... | INF | CNaN ]`.
+//! This module provides traits and functions for comparing floating-point and
+//! other partially ordered values. For primitive floating-point types, a total
+//! ordering is provided via the `FloatEq` and `FloatOrd` traits:
 //!
-//! This form is used for hashing and comparisons. Functions are provided that
-//! operate on primitive floating-point values which can be used by user code
-//! and are also used internally by Decorum.
+//! $$-\infin<\cdots<0<\cdots<\infin<\text{NaN}$$
+//!
+//! Note that both zero and `NaN` have more than one representation in IEEE-754
+//! encoding. Given the set of zero representations $Z$ and set of `NaN`
+//! representations $N$, this ordering coalesces `-0`, `+0`, and `NaN`s such
+//! that $a=b|a\in{Z},b\in{Z}$, $a=b|a\in{N},b\in{N}$, and
+//! $n>x|n\in{N},x\notin{N}$.
+//!
+//! These same semantics are used in the `Eq` and `Ord` implementations for
+//! `ContrainedFloat`, which includes the `Total`, `NotNan`, and `Finite` type
+//! definitions.
+//!
+//! # Examples
+//!
+//! Comparing `f64` values using a total ordering:
+//!
+//! ```rust
+//! use core::cmp::Ordering;
+//! use decorum::cmp::FloatOrd;
+//! use decorum::Nan;
+//!
+//! let x = f64::NAN;
+//! let y = 1.0f64;
+//!
+//! let (min, max) = match FloatOrd::cmp(&x, &y) {
+//!     Ordering::Less | Ordering::Equal => (x, y),
+//!     _ => (y, x),
+//! };
+//! ```
+//!
+//! Computing a pairwise minimum that propagates `NaN`s:
+//!
+//! ```rust
+//! use decorum::cmp;
+//! use decorum::Nan;
+//!
+//! let x = f64::NAN;
+//! let y = 1.0f64;
+//!
+//! // `Nan` is incomparable and represents an undefined computation with respect to
+//! // ordering, so `min` is assigned a `NaN` value in this example.
+//! let min = cmp::min_or_undefined(x, y);
+//! ```
 
 use core::cmp::Ordering;
 
@@ -16,6 +56,26 @@ use crate::primitive::Primitive;
 use crate::proxy::ConstrainedFloat;
 use crate::{Encoding, Nan};
 
+/// Equivalence relation for floating-point primitives.
+///
+/// `FloatEq` agrees with the total ordering provided by `FloatOrd`. See the
+/// module documentation for more. Importantly, given the set of `NaN`
+/// representations $N$, `FloatEq` expresses $a=b|a\in{N},b\in{N}$ and
+/// $n>x|n\in{N},x\notin{N}$.
+///
+/// # Examples
+///
+/// Comparing `NaN`s using primitive floating-point types:
+///
+/// ```rust
+/// use decorum::cmp::FloatEq;
+/// use decorum::Infinite;
+///
+/// let x = 0.0f64 / 0.0; // `NaN`.
+/// let y = f64::INFINITY - f64::INFINITY; // `NaN`.
+///
+/// assert!(FloatEq::eq(&x, &y));
+/// ```
 pub trait FloatEq {
     fn eq(&self, other: &Self) -> bool;
 }
@@ -45,6 +105,15 @@ where
     }
 }
 
+/// Total ordering of primitive floating-point types.
+///
+/// `FloatOrd` expresses the total ordering:
+///
+/// $$-\infin<\cdots<0<\cdots<\infin<\text{NaN}$$
+///
+/// This trait can be used to compare primitive floating-point types without the
+/// need to wrap them within a proxy type. See the module documentation for more
+/// about the ordering used by `FloatOrd` and proxy types.
 pub trait FloatOrd {
     fn cmp(&self, other: &Self) -> Ordering;
 }
@@ -90,9 +159,48 @@ where
     }
 }
 
+/// Partial ordering of types with intrinsic representations for undefined
+/// comparisons.
+///
+/// `IntrinsicOrd` is similar to `PartialOrd`, but it provides a more limited
+/// pairwise comparison API and, for types without a total ordering, is only
+/// implemented for such types that additionally have intrinsic representations
+/// for _undefined_, such as the `None` variant of `Option` and `NaN`s for
+/// floating-point primitives.
+///
+/// This trait is also implemented for numeric types with total orderings, and
+/// can be used for comparisons that propagate `NaN`s for floating-point
+/// primitives (unlike `PartialOrd`, which expresses undefined comparisons using
+/// an extrinsic type: `T` ⇒ `Option<T>`).
+///
+/// See the `min_or_undefined` and `max_or_undefined` functions.
 pub trait IntrinsicOrd: Copy + PartialOrd + Sized {
+    /// Returns `true` if a value encodes _undefined_, otherwise `false`.
     fn is_undefined(&self) -> bool;
 
+    /// Compares two values and returns their pairwise minimum and maximum.
+    ///
+    /// This function returns a representation of _undefined_ for both the
+    /// minimum and maximum if either of the inputs are _undefined_ or the
+    /// inputs cannot be compared, **even if undefined values are ordered or the
+    /// type has a total ordering**. Undefined values are always propagated.
+    ///
+    /// # Examples
+    ///
+    /// Propagating `NaN` values when comparing proxy types with a total
+    /// ordering:
+    ///
+    /// ```rust
+    /// use decorum::cmp;
+    /// use decorum::{Nan, Total};
+    ///
+    /// let x: Total<f64> = 0.0.into();
+    /// let y: Total<f64> = (0.0 / 0.0).into(); // `NaN`.
+    ///
+    /// // `Total` provides a total ordering in which zero is less than `NaN`, but `NaN`
+    /// // is considered undefined and is the result of the intrinsic comparison.
+    /// assert_eq!(Total::NAN, cmp::min_or_undefined(x, y));
+    /// ```
     fn min_max_or_undefined(&self, other: &Self) -> (Self, Self);
 
     fn min_or_undefined(&self, other: &Self) -> Self {
@@ -121,7 +229,7 @@ macro_rules! impl_intrinsic_ord {
             }
         }
     };
-    (nan => $t:ty) => {
+    (nan_partial => $t:ty) => {
         impl IntrinsicOrd for $t {
             fn is_undefined(&self) -> bool {
                 self.is_nan()
@@ -151,8 +259,8 @@ impl_intrinsic_ord!(no_nan_total => u16);
 impl_intrinsic_ord!(no_nan_total => u32);
 impl_intrinsic_ord!(no_nan_total => u64);
 impl_intrinsic_ord!(no_nan_total => u128);
-impl_intrinsic_ord!(nan => f32);
-impl_intrinsic_ord!(nan => f64);
+impl_intrinsic_ord!(nan_partial => f32);
+impl_intrinsic_ord!(nan_partial => f64);
 
 // Note that it is not necessary for `NaN` to be a member of the constraint.
 // This implementation explicitly detects `NaN`s and emits `NaN` as the
@@ -207,6 +315,9 @@ where
     }
 }
 
+/// Partial maximum of types with intrinsic representations for undefined.
+///
+/// See the `IntrinsicOrd` trait.
 pub fn max_or_undefined<T>(a: T, b: T) -> T
 where
     T: IntrinsicOrd,
@@ -214,6 +325,9 @@ where
     a.max_or_undefined(&b)
 }
 
+/// Partial minimum of types with intrinsic representations for undefined.
+///
+/// See the `IntrinsicOrd` trait.
 pub fn min_or_undefined<T>(a: T, b: T) -> T
 where
     T: IntrinsicOrd,

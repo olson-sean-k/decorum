@@ -1,3 +1,6 @@
+//! Proxy types that wrap primitive floating-point types and apply constraints
+//! and total orderings.
+
 #[cfg(feature = "approx")]
 use approx::{AbsDiffEq, RelativeEq, UlpsEq};
 use core::cmp::Ordering;
@@ -29,18 +32,36 @@ use crate::hash::FloatHash;
 use crate::primitive::Primitive;
 use crate::{Encoding, Finite, Infinite, Nan, NotNan, Real, Total, N32, N64, R32, R64};
 
-/// Floating-point proxy that provides ordering, hashing, and value
-/// constraints.
+/// Floating-point proxy that provides total ordering, hashing, and constraints.
 ///
-/// Wraps floating-point values and provides a proxy that implements operation
-/// and numerical traits, including `Hash`, `Ord`, and `Eq`. May apply
-/// constraints that prevent certain values from occurring (by panicing).
-///
-/// Proxies canonicalize `NaN` and zero to the forms `CNaN` and `C0` for the
-/// following total ordering: `[-INF | ... | C0 | ... | INF | CNaN ]`.
+/// Wraps primitive floating-point types and provides implementions of numeric
+/// traits using a total ordering, including `Ord`, `Eq`, and `Hash`.
+/// `ConstrainedFloat` supports various contraints on the class of values that
+/// may be represented and panics if these constraints are violated.
 ///
 /// This type is re-exported but should not (and cannot) be used directly. Use
-/// the exported type aliases instead (`Ordered`, `NotNan`, and `Finite`).
+/// the type aliases `Total`, `NotNan`, and `Finite` instead.
+///
+/// # Ordering
+///
+/// All proxy types use the following total ordering:
+///
+/// $$-\infin<\cdots<0<\cdots<\infin<\text{NaN}$$
+///
+/// See the `cmp` module for a description of the total ordering used to
+/// implement `Ord` and `Eq`.
+///
+/// # Constraints
+///
+/// Constraints restrict the set of values that a proxy may take by disallowing
+/// certain classes or subsets of those values. If a constraint is violated
+/// (because a proxy type would need to take a value it disallows), the
+/// operation panics.
+///
+/// Constraints may disallow two broad classes of floating-point values:
+/// _infinities_ and `NaN`s. Constraints are exposed by the `Total`, `NotNan`,
+/// and `Finite` type definitions. Note that `Total` uses a unit constraint,
+/// which enforces no constraints at all.
 #[cfg_attr(feature = "serialize-serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Copy)]
 #[repr(transparent)]
@@ -65,8 +86,7 @@ where
 {
     /// Converts a primitive floating-point value into a proxy.
     ///
-    /// This kind of conversion is the primary way to obtain a proxy. The same
-    /// behavior is provided by an implemention of the `From` trait.
+    /// The same behavior is provided by an implemention of the `From` trait.
     ///
     /// # Panics
     ///
@@ -125,7 +145,7 @@ where
     }
 
     /// Converts a proxy into another proxy that is capable of representing a
-    /// superset of values.
+    /// superset of the values that are members of its constraint.
     ///
     /// # Examples
     ///
@@ -148,7 +168,7 @@ where
     }
 
     /// Converts a proxy into another proxy that is capable of representing a
-    /// superset of values.
+    /// superset of the values that are members of its constraint.
     ///
     /// # Examples
     ///

@@ -4,10 +4,7 @@ use num_traits::{Num, NumCast};
 
 use crate::{Encoding, Infinite, Nan, Real};
 
-/// A primitive floating-point value.
-///
-/// This trait differentiates types that implement floating-point traits but
-/// may not be primitive types.
+/// Primitive floating-point types.
 pub trait Primitive: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd {}
 
 macro_rules! impl_primitive {

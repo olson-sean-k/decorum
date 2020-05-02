@@ -1,10 +1,5 @@
-//! Constraints on floating-point values.
-//!
-//! The `FloatConstraint` trait describes a constraint by filtering illegal
-//! values and optionally supporting variants of `Ord`, `Eq`, etc. that are
-//! also provided in this module. These analogous traits determine if and how
-//! constrained values support these operations and in turn whether or not a
-//! proxy using a constraint does too.
+//! Constraints on the members of floating-point values that proxy types may
+//! represent.
 
 use core::marker::PhantomData;
 
@@ -23,7 +18,10 @@ pub trait SubsetOf<P> {}
 
 impl<P, Q> SubsetOf<Q> for P where Q: SupersetOf<P> {}
 
-/// Constraint on floating-point values.
+/// Describes constraints on the set of floating-point values that a proxy type
+/// may take.
+///
+/// This trait expresses a constraint by filtering values.
 pub trait Constraint<T>: Copy + Sized
 where
     T: Primitive,
@@ -64,7 +62,7 @@ impl<T> SupersetOf<NotNanConstraint<T>> for UnitConstraint<T> where T: Primitive
 
 impl<T> SupersetOf<FiniteConstraint<T>> for UnitConstraint<T> where T: Primitive {}
 
-/// Disallows `NaN` floating-point values.
+/// Disallows `NaN`s.
 #[derive(Clone, Copy, Debug)]
 pub struct NotNanConstraint<T>
 where
@@ -93,7 +91,7 @@ where
 
 impl<T> SupersetOf<FiniteConstraint<T>> for NotNanConstraint<T> where T: Primitive {}
 
-/// Disallows `NaN`, `INF`, and `-INF` floating-point values.
+/// Disallows `NaN`s and infinities.
 #[derive(Clone, Copy, Debug)]
 pub struct FiniteConstraint<T>
 where

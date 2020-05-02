@@ -9,7 +9,14 @@ const MANTISSA_MASK: u64 = 0x000f_ffff_ffff_ffff;
 const CANONICAL_NAN_BITS: u64 = 0x7ff8_0000_0000_0000;
 const CANONICAL_ZERO_BITS: u64 = 0x0;
 
+/// Converts floating-point values into a canonicalized form.
 pub trait ToCanonicalBits: Copy + Sized {
+    /// Conversion to a canonical representation.
+    ///
+    /// Unlike the `to_bits` function provided by `f32` and `f64`, this function
+    /// returns bits in a fix-sized vector (`u64`) and collapses representations
+    /// for real numbers, infinities, and `NaN`s into a canonical form such that
+    /// every semantic value has a unique representation as canonical bits.
     fn to_canonical_bits(self) -> u64;
 }
 

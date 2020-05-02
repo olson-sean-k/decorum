@@ -1,32 +1,29 @@
-//! Making floating-point values behave: traits, ordering, equality, hashing,
-//! and constraints for floating-point types.
+//! Making floating-point behave: ordering, equivalence, hashing, and
+//! constraints for floating-point types.
 //!
-//! Decorum provides proxy (wrapper) types and functions that canonicalize
-//! floating-point values and provide a total ordering. This allows
-//! floating-point values to be hashed and compared. Proxy types also provide
-//! contraints on the values that may be represented and will panic if those
-//! constraints are violated. See the [README](https://docs.rs/crate/decorum/).
+//! Decorum provides traits that describe types using floating-point
+//! representations and provides proxy types that wrap primitive floating-point
+//! types in order to implement a total ordering and various numeric traits.
+//! These proxy types also support constraints on the class of values they may
+//! represent, conditionally implementing traits and panicing if constraints are
+//! violated.
 //!
-//! # Ordering
+//! # Total Ordering
 //!
-//! `NaN` and zero are canonicalized to a single representation (called `CNaN`
-//! and `C0` respectively) to provide the following total ordering for all
-//! proxy types and ordering functions:
+//! The following total ordering is implemented by proxy types and is exposed by
+//! traits in the `cmp` module:
 //!
-//! `[ -INF | ... | C0 | ... | +INF | CNaN ]`
+//! $$-\infin<\cdots<0<\cdots<\infin<\text{NaN}$$
 //!
-//! Note that `NaN` is canonicalized to `CNaN`, which has a single
-//! representation and supports the relations `CNaN = CNaN` and `CNaN > x | x ≠
-//! CNaN`. `+0` and `-0` are also canonicalized to `C0`, which is equivalent to
-//! `+0`.
+//! Note that all zero and `NaN` representations are considered equivalent. See
+//! the `cmp` module documentation for more details.
 //!
 //! # Constraints
 //!
-//! The `NotNan` and `Finite` types wrap raw floating-point values and disallow
-//! certain values like `NaN`, `INF`, and `-INF`. They will panic if an
-//! operation or conversion invalidates these constraints. The `Ordered` type
-//! allows any valid IEEE-754 value (there are no constraints). For most use
-//! cases, either `Ordered` or `NotNan` are appropriate.
+//! The `NotNan` and `Finite` types wrap primitive floating-point values and
+//! disallow values that represent `NaN`, $\infin$, and $-\infin$. Operations
+//! that emit values that violate these constraints will panic. The `Total` type
+//! applies no constraints.
 
 #![no_std]
 
@@ -51,41 +48,40 @@ pub use crate::canonical::ToCanonicalBits;
 pub use crate::primitive::Primitive;
 pub use crate::proxy::ConstrainedFloat;
 
-/// An ordered and canonicalized floating-point value.
+/// Floating-point representation with total ordering.
 pub type Total<T> = ConstrainedFloat<T, UnitConstraint<T>>;
 
-/// An ordered and canonicalized floating-point value that cannot be `NaN`.
+/// Floating-point representation that cannot be `NaN`.
 ///
-/// If any operation results in a `NaN` value, then a panic will occur.
+/// If an operation emits `NaN`, then a panic will occur. Like `Total`, this
+/// type implements a total ordering.
 pub type NotNan<T> = ConstrainedFloat<T, NotNanConstraint<T>>;
 
-/// An alias for a floating-point value that cannot be `NaN`.
+/// 32-bit floating-point representation that cannot be `NaN`.
 pub type N32 = NotNan<f32>;
-/// An alias for a floating-point value that cannot be `NaN`.
+/// 64-bit floating-point representation that cannot be `NaN`.
 pub type N64 = NotNan<f64>;
 
-/// An ordered and canonicalized floating-point value that must represent a
-/// real number.
+/// Floating-point representation that must be a real number.
 ///
-/// `NaN`, `INF`, etc. are not allowed and a panic will occur if any operation
-/// results in such a value. This is sometimes referred to simply as a "real" as
-/// seen in the `R32` and `R64` aliases.
+/// If an operation emits `NaN` or infinities, then a panic will occur. Like
+/// `Total`, this type implements a total ordering.
 pub type Finite<T> = ConstrainedFloat<T, FiniteConstraint<T>>;
 
-/// An alias for a floating-point value that represents a real number.
+/// 32-bit floating-point representation that must be a real number.
 ///
-/// The prefix "R" for "real" is used instead of "F" for "finite", because if
-/// "F" were used, then this name would be very similar to `f32`,
-/// differentiated only by capitalization.
+/// The prefix "R" for _real_ is used instead of "F" for _finite_, because if
+/// "F" were used, then this name would be very similar to `f32`, differentiated
+/// only by capitalization.
 pub type R32 = Finite<f32>;
-/// An alias for a floating-point value that represents a real number.
+/// 64-bit floating-point representation that must be a real number.
 ///
-/// The prefix "R" for "real" is used instead of "F" for "finite", because if
-/// "F" were used, then this name would be very similar to `f64`,
-/// differentiated only by capitalization.
+/// The prefix "R" for _real_ is used instead of "F" for _finite_, because if
+/// "F" were used, then this name would be very similar to `f64`, differentiated
+/// only by capitalization.
 pub type R64 = Finite<f64>;
 
-/// A floating-point value that can be infinite (`-INF` or `INF`).
+/// Floating-point representations that can be infinite.
 pub trait Infinite: Copy {
     const INFINITY: Self;
     const NEG_INFINITY: Self;
@@ -94,7 +90,7 @@ pub trait Infinite: Copy {
     fn is_finite(self) -> bool;
 }
 
-/// A floating-point value that can be `NaN`.
+/// Floating-point representations that can be `NaN`.
 pub trait Nan: Copy {
     const NAN: Self;
 
@@ -103,9 +99,9 @@ pub trait Nan: Copy {
 
 /// Floating-point encoding.
 ///
-/// Provides values and operations that directly relate to the encoding of an
-/// IEEE-754 floating-point value with the exception of `-INF`, `INF`, and
-/// `NaN`. See the `Infinite` and `Nan` traits.
+/// Provides values and operations that describe the encoding of an IEEE-754
+/// floating-point value. Infinities and `NaN`s are described by the `Infinite`
+/// and `NaN` traits.
 pub trait Encoding: Copy {
     const MAX: Self;
     const MIN: Self;
@@ -117,9 +113,10 @@ pub trait Encoding: Copy {
     fn integer_decode(self) -> (u64, i16, i8);
 }
 
-/// A value that can represent a real number.
+/// Types that can represent real numbers.
 ///
-/// Provides values and operations that generally apply to real numbers.
+/// Provides values and operations that generally apply to real numbers. Some
+/// members of this trait depend on the standard library and the `std` feature.
 pub trait Real: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd {
     const E: Self;
     const PI: Self;
