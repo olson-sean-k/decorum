@@ -121,7 +121,7 @@ let w: f32 = z.into();
 
 Proxy types implement `Eq`, `Hash`, and `Ord`, but sometimes it is not
 possible or ergonomic to use such a type. Traits can be used with primitive
-floating-point values for ordering, equivalence, and hasing instead.
+floating-point values for ordering, equivalence, and hashing instead.
 
 | Trait       | Analogous Trait  |
 |-------------|------------------|
