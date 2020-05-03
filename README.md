@@ -42,19 +42,15 @@ types also implement numeric traits from the
 `Num`, `NumCast`, etc.), in addition to more targeted traits like `Real` and
 `Nan` provided by Decorum.
 
+Constraint violations cause panics. For example, `NotNan` is useful for avoiding
+or tracing sources of `NaN`s in computation, while `Total` provides useful
+features without introducing any panics at all, because it allows any IEEE-754
+floating-point values.
+
 Proxy types should work as a drop-in replacement for primitive types in most
 applications, with the most common exception being initialization (because it
 requires a conversion). Serialization is optionally supported via
 [serde](https://crates.io/crates/serde) (see the `serialize-serde` feature).
-
-## Constraints
-
-The `NotNan` and `Finite` types wrap primitive floating-point types and disallow
-`NaN`, `-INF`, and `+INF`. They will panic if an operation
-or conversion violates these constraints.
-
-Note that the `Total` type allows any IEEE-754 value (there are no constraints).
-For most use cases, either `Total` or `NotNan` are appropriate.
 
 ## Traits
 
@@ -85,7 +81,7 @@ Both Decorum and [`num-traits`](https://crates.io/crate/num-traits) expose a
 `Real` trait. Due to some differences in these traits and [a poor
 interaction](https://github.com/rust-num/num-traits/issues/49) with the
 `num-traits` API, Decorum continues to vendor its own trait. Both traits are
-implemented by Decorum's types.
+implemented by Decorum where possible.
 
 ## Conversions
 
