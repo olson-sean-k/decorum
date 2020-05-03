@@ -11,7 +11,7 @@ keywords = ["finite", "float", "hash", "nan", "ord"]
 
 [package.metadata.docs.rs]
 all-features = true
-# Enable KaTex support.
+# Enable KaTeX support.
 rustdoc-args = [
     "--html-in-header",
     "doc/katex-header.html"
