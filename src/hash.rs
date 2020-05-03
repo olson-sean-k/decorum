@@ -2,8 +2,14 @@
 //!
 //! This module provides hashing for primitive floating-point values. Given the
 //! set of zero representations $Z$ and set of `NaN` representations $N$,
-//! hashing coalesces their representations such that
-//! $h(a)=h(b)|a\in{Z},b\in{Z}$ and $h(a)=h(b)|a\in{N},b\in{N}$.
+//! hashing coalesces their representations such that:
+//!
+//! $$
+//! \begin{aligned}
+//! h(a)=h(b)&\mid a\in{Z},~b\in{Z}\cr\[1em\]
+//! h(a)=h(b)&\mid a\in{N},~b\in{N}
+//! \end{aligned}
+//! $$
 //!
 //! The `FloatHash` trait agrees with the ordering and equivalence relations of
 //! the `FloatOrd` and `FloatEq` traits.

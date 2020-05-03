@@ -9,8 +9,15 @@
 //! Note that both zero and `NaN` have more than one representation in IEEE-754
 //! encoding. Given the set of zero representations $Z$ and set of `NaN`
 //! representations $N$, this ordering coalesces `-0`, `+0`, and `NaN`s such
-//! that $a=b|a\in{Z},b\in{Z}$, $a=b|a\in{N},b\in{N}$, and
-//! $n>x|n\in{N},x\notin{N}$.
+//! that:
+//!
+//! $$
+//! \begin{aligned}
+//! a=b&\mid a\in{Z},~b\in{Z}\cr\[1em\]
+//! a=b&\mid a\in{N},~b\in{N}\cr\[1em\]
+//! n>x&\mid n\in{N},~x\notin{N}
+//! \end{aligned}
+//! $$
 //!
 //! These same semantics are used in the `Eq` and `Ord` implementations for
 //! `ContrainedFloat`, which includes the `Total`, `NotNan`, and `Finite` type
@@ -60,8 +67,14 @@ use crate::{Encoding, Nan};
 ///
 /// `FloatEq` agrees with the total ordering provided by `FloatOrd`. See the
 /// module documentation for more. Importantly, given the set of `NaN`
-/// representations $N$, `FloatEq` expresses $a=b|a\in{N},b\in{N}$ and
-/// $n>x|n\in{N},x\notin{N}$.
+/// representations $N$, `FloatEq` expresses:
+///
+/// $$
+/// \begin{aligned}
+/// a=b&\mid a\in{N},~b\in{N}\cr\[1em\]
+/// n>x&\mid n\in{N},~x\notin{N}
+/// \end{aligned}
+/// $$
 ///
 /// # Examples
 ///
