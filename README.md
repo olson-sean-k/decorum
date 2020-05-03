@@ -1,3 +1,8 @@
+<div align="center">
+    <img alt="Decorum" src="https://raw.githubusercontent.com/olson-sean-k/decorum/master/doc/decorum.svg?sanitize=true" width="320"/>
+</div>
+<br/>
+
 **Decorum** is a Rust library that provides total ordering, equivalence,
 hashing, and constraints for floating-point representations. Decorum does not
 require `std` and can be used in `#[no_std]` environments (see the `std`

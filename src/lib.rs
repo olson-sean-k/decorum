@@ -25,6 +25,12 @@
 //! that emit values that violate these constraints will panic. The `Total` type
 //! applies no constraints.
 
+#![doc(
+    html_favicon_url = "https://raw.githubusercontent.com/olson-sean-k/decorum/master/doc/decorum-favicon.ico"
+)]
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/olson-sean-k/decorum/master/doc/decorum.svg?sanitize=true"
+)]
 #![no_std]
 
 #[cfg(feature = "std")]
