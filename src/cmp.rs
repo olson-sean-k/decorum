@@ -208,7 +208,7 @@ pub trait IntrinsicOrd: Copy + PartialOrd + Sized {
     /// ordering:
     ///
     /// ```rust
-    /// use decorum::cmp;
+    /// use decorum::cmp::{self, IntrinsicOrd};
     /// use decorum::{Nan, Total};
     ///
     /// let x: Total<f64> = 0.0.into();
@@ -216,6 +216,7 @@ pub trait IntrinsicOrd: Copy + PartialOrd + Sized {
     ///
     /// // `Total` provides a total ordering in which zero is less than `NaN`, but `NaN`
     /// // is considered undefined and is the result of the intrinsic comparison.
+    /// assert!(y.is_undefined());
     /// assert!(cmp::min_or_undefined(x, y).is_undefined());
     /// ```
     fn min_max_or_undefined(&self, other: &Self) -> (Self, Self);
