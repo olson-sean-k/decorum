@@ -175,7 +175,7 @@ where
 /// Partial ordering of types with intrinsic representations for undefined
 /// comparisons.
 ///
-/// `IntrinsicOrd` is similar to `PartialOrd`, but it provides a more limited
+/// `IntrinsicOrd` is similar to `PartialOrd`, but provides a more limited
 /// pairwise comparison API and, for types without a total ordering, is only
 /// implemented for such types that additionally have intrinsic representations
 /// for _undefined_, such as the `None` variant of `Option` and `NaN`s for
@@ -189,6 +189,10 @@ where
 /// See the `min_or_undefined` and `max_or_undefined` functions.
 pub trait IntrinsicOrd: Copy + PartialOrd + Sized {
     /// Returns `true` if a value encodes _undefined_, otherwise `false`.
+    ///
+    /// Prefer this predicate over direct comparisons. For floating-point
+    /// representations, `NaN` is considered undefined, but direct comparisons
+    /// with `NaN` values should be avoided.
     fn is_undefined(&self) -> bool;
 
     /// Compares two values and returns their pairwise minimum and maximum.
@@ -212,7 +216,7 @@ pub trait IntrinsicOrd: Copy + PartialOrd + Sized {
     ///
     /// // `Total` provides a total ordering in which zero is less than `NaN`, but `NaN`
     /// // is considered undefined and is the result of the intrinsic comparison.
-    /// assert_eq!(Total::NAN, cmp::min_or_undefined(x, y));
+    /// assert!(cmp::min_or_undefined(x, y).is_undefined());
     /// ```
     fn min_max_or_undefined(&self, other: &Self) -> (Self, Self);
 

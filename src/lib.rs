@@ -87,7 +87,7 @@ pub type R32 = Finite<f32>;
 /// only by capitalization.
 pub type R64 = Finite<f64>;
 
-/// Floating-point representations that can be infinite.
+/// Types that can represent infinities.
 pub trait Infinite: Copy {
     const INFINITY: Self;
     const NEG_INFINITY: Self;
@@ -98,6 +98,10 @@ pub trait Infinite: Copy {
 
 /// Floating-point representations that can be `NaN`.
 pub trait Nan: Copy {
+    /// A representation of `NaN`.
+    ///
+    /// For primitive floating-point types, `NaN` is incomparable. Therefore,
+    /// prefer the `is_nan` predicate over direct comparisons with `NAN`.
     const NAN: Self;
 
     fn is_nan(self) -> bool;
