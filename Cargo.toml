@@ -7,7 +7,18 @@ readme = "README.md"
 authors = ["Sean Olson <olson.sean.k@gmail.com>"]
 repository = "https://github.com/olson-sean-k/decorum"
 description = "Total ordering, equivalence, hashing, and constraints for floating-point types."
-keywords = ["finite", "float", "hash", "nan", "ord"]
+keywords = [
+    "finite",
+    "float",
+    "hash",
+    "nan",
+    "ordering"
+]
+categories = [
+    "mathematics",
+    "no-std",
+    "rust-patterns"
+]
 
 [package.metadata.docs.rs]
 all-features = true
