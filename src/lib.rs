@@ -43,6 +43,7 @@ use num_traits::{Num, NumCast, Signed};
 
 #[cfg(not(feature = "std"))]
 pub(in crate) use num_traits::float::FloatCore as ForeignFloat;
+#[cfg(feature = "std")]
 pub(in crate) use num_traits::real::Real as ForeignReal;
 #[cfg(feature = "std")]
 pub(in crate) use num_traits::Float as ForeignFloat;
@@ -222,4 +223,4 @@ pub trait Real: Copy + Neg<Output = Self> + Num + PartialOrd + Signed {
     fn atanh(self) -> Self;
 }
 
-pub trait Float: Encoding /*+ ForeignFloat + ForeignReal */+ Infinite + Nan + Real {}
+pub trait Float: Encoding + Infinite + Nan + Real {}

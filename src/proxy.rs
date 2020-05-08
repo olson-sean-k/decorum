@@ -25,10 +25,9 @@ use crate::constraint::{
 };
 use crate::hash::FloatHash;
 use crate::primitive::Primitive;
-use crate::{
-    Encoding, Finite, Float, ForeignFloat, ForeignReal, Infinite, Nan, NotNan, Real, Total, N32,
-    N64, R32, R64,
-};
+use crate::{Encoding, Finite, Float, ForeignFloat, Infinite, Nan, NotNan, Real, Total};
+#[cfg(feature = "std")]
+use crate::{ForeignReal, N32, N64, R32, R64};
 
 /// Floating-point proxy that provides total ordering, hashing, and constraints.
 ///
