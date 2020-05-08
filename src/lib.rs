@@ -39,7 +39,13 @@ extern crate std;
 use core::num::FpCategory;
 use core::ops::Neg;
 #[allow(unused_imports)]
-use num_traits::{Num, NumCast};
+use num_traits::{Num, NumCast, Signed};
+
+#[cfg(not(feature = "std"))]
+pub(in crate) use num_traits::float::FloatCore as ForeignFloat;
+pub(in crate) use num_traits::real::Real as ForeignReal;
+#[cfg(feature = "std")]
+pub(in crate) use num_traits::Float as ForeignFloat;
 
 mod canonical;
 pub mod cmp;
@@ -120,6 +126,10 @@ pub trait Encoding: Copy {
 
     fn classify(self) -> FpCategory;
     fn is_normal(self) -> bool;
+
+    fn is_sign_positive(self) -> bool;
+    fn is_sign_negative(self) -> bool;
+
     fn integer_decode(self) -> (u64, i16, i8);
 }
 
@@ -127,7 +137,7 @@ pub trait Encoding: Copy {
 ///
 /// Provides values and operations that generally apply to real numbers. Some
 /// members of this trait depend on the standard library and the `std` feature.
-pub trait Real: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd {
+pub trait Real: Copy + Neg<Output = Self> + Num + PartialOrd + Signed {
     const E: Self;
     const PI: Self;
     const FRAC_1_PI: Self;
@@ -144,11 +154,6 @@ pub trait Real: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd {
     const LN_10: Self;
     const LOG2_E: Self;
     const LOG10_E: Self;
-
-    fn is_sign_positive(self) -> bool;
-    fn is_sign_negative(self) -> bool;
-    fn signum(self) -> Self;
-    fn abs(self) -> Self;
 
     fn floor(self) -> Self;
     fn ceil(self) -> Self;
@@ -216,3 +221,5 @@ pub trait Real: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd {
     #[cfg(feature = "std")]
     fn atanh(self) -> Self;
 }
+
+pub trait Float: Encoding /*+ ForeignFloat + ForeignReal */+ Infinite + Nan + Real {}

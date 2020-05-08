@@ -1,14 +1,15 @@
 use core::num::FpCategory;
-use core::ops::Neg;
-use num_traits::{Num, NumCast};
 
-use crate::{Encoding, Infinite, Nan, Real};
+use crate::{Encoding, Float, Infinite, Nan, Real};
 
+// TODO: Remove the `Float` supertrait.
 /// Primitive floating-point types.
-pub trait Primitive: Copy + Neg<Output = Self> + Num + NumCast + PartialOrd {}
+pub trait Primitive: Float {}
 
 macro_rules! impl_primitive {
     (primitive => $t:ident) => {
+        impl Float for $t {}
+
         impl Infinite for $t {
             const INFINITY: Self = <$t>::INFINITY;
             const NEG_INFINITY: Self = <$t>::NEG_INFINITY;
@@ -53,22 +54,6 @@ macro_rules! impl_primitive {
             const LN_10: Self = core::$t::consts::LN_10;
             const LOG2_E: Self = core::$t::consts::LOG2_E;
             const LOG10_E: Self = core::$t::consts::LOG10_E;
-
-            fn is_sign_positive(self) -> bool {
-                <$t>::is_sign_positive(self)
-            }
-
-            fn is_sign_negative(self) -> bool {
-                <$t>::is_sign_negative(self)
-            }
-
-            fn signum(self) -> Self {
-                <$t>::signum(self)
-            }
-
-            fn abs(self) -> Self {
-                <$t>::abs(self)
-            }
 
             fn floor(self) -> Self {
                 <$t>::floor(self)
@@ -253,6 +238,14 @@ impl Encoding for f32 {
         self.is_normal()
     }
 
+    fn is_sign_positive(self) -> bool {
+        Self::is_sign_positive(self)
+    }
+
+    fn is_sign_negative(self) -> bool {
+        Self::is_sign_negative(self)
+    }
+
     fn integer_decode(self) -> (u64, i16, i8) {
         let bits = self.to_bits();
         let sign: i8 = if bits >> 31 == 0 { 1 } else { -1 };
@@ -279,6 +272,14 @@ impl Encoding for f64 {
 
     fn is_normal(self) -> bool {
         self.is_normal()
+    }
+
+    fn is_sign_positive(self) -> bool {
+        Self::is_sign_positive(self)
+    }
+
+    fn is_sign_negative(self) -> bool {
+        Self::is_sign_negative(self)
     }
 
     fn integer_decode(self) -> (u64, i16, i8) {

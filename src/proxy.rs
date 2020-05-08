@@ -14,15 +14,10 @@ use core::ops::{
 };
 use core::str::FromStr;
 use num_traits::{
-    real, Bounded, FloatConst, FromPrimitive, Num, NumCast, One, Signed, ToPrimitive, Zero,
+    Bounded, FloatConst, FromPrimitive, Num, NumCast, One, Signed, ToPrimitive, Zero,
 };
 #[cfg(feature = "serialize-serde")]
 use serde_derive::{Deserialize, Serialize};
-
-#[cfg(not(feature = "std"))]
-use num_traits::float::FloatCore as Float;
-#[cfg(feature = "std")]
-use num_traits::Float;
 
 use crate::cmp::{self, FloatEq, FloatOrd, IntrinsicOrd};
 use crate::constraint::{
@@ -30,7 +25,10 @@ use crate::constraint::{
 };
 use crate::hash::FloatHash;
 use crate::primitive::Primitive;
-use crate::{Encoding, Finite, Infinite, Nan, NotNan, Real, Total, N32, N64, R32, R64};
+use crate::{
+    Encoding, Finite, Float, ForeignFloat, ForeignReal, Infinite, Nan, NotNan, Real, Total, N32,
+    N64, R32, R64,
+};
 
 /// Floating-point proxy that provides total ordering, hashing, and constraints.
 ///
@@ -233,7 +231,7 @@ where
 
 impl<T> From<NotNan<T>> for Total<T>
 where
-    T: Nan + Primitive,
+    T: Primitive,
 {
     fn from(other: NotNan<T>) -> Self {
         Self::from_subset(other)
@@ -242,7 +240,7 @@ where
 
 impl<T> From<Finite<T>> for Total<T>
 where
-    T: Infinite + Nan + Primitive,
+    T: Primitive,
 {
     fn from(other: Finite<T>) -> Self {
         Self::from_subset(other)
@@ -251,7 +249,7 @@ where
 
 impl<T> From<Finite<T>> for NotNan<T>
 where
-    T: Infinite + Nan + Primitive,
+    T: Primitive,
 {
     fn from(other: Finite<T>) -> Self {
         Self::from_subset(other)
@@ -289,7 +287,7 @@ where
 #[cfg(feature = "approx")]
 impl<T, P> AbsDiffEq for ConstrainedFloat<T, P>
 where
-    T: AbsDiffEq<Epsilon = T> + Encoding + Nan + Primitive,
+    T: AbsDiffEq<Epsilon = T> + Primitive,
     P: Constraint<T>,
 {
     type Epsilon = Self;
@@ -306,7 +304,7 @@ where
 
 impl<T, P> Add for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     type Output = Self;
@@ -318,7 +316,7 @@ where
 
 impl<T, P> Add<T> for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     type Output = Self;
@@ -330,7 +328,7 @@ where
 
 impl<T, P> AddAssign for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     fn add_assign(&mut self, other: Self) {
@@ -340,7 +338,7 @@ where
 
 impl<T, P> AddAssign<T> for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     fn add_assign(&mut self, other: T) {
@@ -350,7 +348,7 @@ where
 
 impl<T, P> Bounded for ConstrainedFloat<T, P>
 where
-    T: Encoding + Primitive,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     fn min_value() -> Self {
@@ -394,7 +392,7 @@ where
 
 impl<T, P> Div for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     type Output = Self;
@@ -406,7 +404,7 @@ where
 
 impl<T, P> Div<T> for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     type Output = Self;
@@ -418,7 +416,7 @@ where
 
 impl<T, P> DivAssign for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     fn div_assign(&mut self, other: Self) {
@@ -428,7 +426,7 @@ where
 
 impl<T, P> DivAssign<T> for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     fn div_assign(&mut self, other: T) {
@@ -438,7 +436,7 @@ where
 
 impl<T, P> Encoding for ConstrainedFloat<T, P>
 where
-    T: Encoding + Primitive,
+    T: Primitive,
     P: Constraint<T>,
 {
     const MAX: Self = ConstrainedFloat::from_inner_unchecked(T::MAX);
@@ -454,6 +452,14 @@ where
         T::is_normal(self.into_inner())
     }
 
+    fn is_sign_positive(self) -> bool {
+        self.into_inner().is_sign_positive()
+    }
+
+    fn is_sign_negative(self) -> bool {
+        self.into_inner().is_sign_negative()
+    }
+
     fn integer_decode(self) -> (u64, i16, i8) {
         T::integer_decode(self.into_inner())
     }
@@ -461,14 +467,21 @@ where
 
 impl<T, P> Eq for ConstrainedFloat<T, P>
 where
-    T: Encoding + Nan + Primitive,
+    T: Primitive,
     P: Constraint<T>,
 {
 }
 
 impl<T, P> Float for ConstrainedFloat<T, P>
 where
-    T: Encoding + Float + Infinite + IntrinsicOrd + Nan + Primitive + Real,
+    T: Primitive,
+    P: Constraint<T> + Member<InfiniteClass> + Member<NanClass> + Member<RealClass>,
+{
+}
+
+impl<T, P> ForeignFloat for ConstrainedFloat<T, P>
+where
+    T: ForeignFloat + IntrinsicOrd + Primitive,
     P: Constraint<T> + Member<InfiniteClass> + Member<NanClass> + Member<RealClass>,
 {
     fn infinity() -> Self {
@@ -526,19 +539,19 @@ where
     }
 
     fn is_sign_positive(self) -> bool {
-        Real::is_sign_positive(self.into_inner())
+        Encoding::is_sign_positive(self.into_inner())
     }
 
     fn is_sign_negative(self) -> bool {
-        Real::is_sign_negative(self.into_inner())
+        Encoding::is_sign_negative(self.into_inner())
     }
 
     fn signum(self) -> Self {
-        self.map(Real::signum)
+        self.map(|inner| inner.signum())
     }
 
     fn abs(self) -> Self {
-        self.map(Real::abs)
+        self.map(|inner| inner.abs())
     }
 
     fn classify(self) -> FpCategory {
@@ -584,7 +597,7 @@ where
 
     #[cfg(feature = "std")]
     fn abs_sub(self, other: Self) -> Self {
-        self.zip_map(other, Float::abs_sub)
+        self.zip_map(other, ForeignFloat::abs_sub)
     }
 
     #[cfg(feature = "std")]
@@ -724,18 +737,18 @@ where
 
     #[cfg(not(feature = "std"))]
     fn to_degrees(self) -> Self {
-        self.map(Float::to_degrees)
+        self.map(ForeignFloat::to_degrees)
     }
 
     #[cfg(not(feature = "std"))]
     fn to_radians(self) -> Self {
-        self.map(Float::to_radians)
+        self.map(ForeignFloat::to_radians)
     }
 }
 
 impl<T, P> FloatConst for ConstrainedFloat<T, P>
 where
-    T: Encoding + Nan + Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     fn E() -> Self {
@@ -872,7 +885,7 @@ where
 
 impl<T, P> Hash for ConstrainedFloat<T, P>
 where
-    T: Encoding + Nan + Primitive,
+    T: Primitive,
     P: Constraint<T>,
 {
     fn hash<H>(&self, state: &mut H)
@@ -885,7 +898,7 @@ where
 
 impl<T, P> Infinite for ConstrainedFloat<T, P>
 where
-    T: Infinite + Primitive,
+    T: Primitive,
     P: Constraint<T> + Member<InfiniteClass>,
 {
     const INFINITY: Self = ConstrainedFloat::from_inner_unchecked(T::INFINITY);
@@ -912,7 +925,7 @@ where
 
 impl<T, P> Mul for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     type Output = Self;
@@ -924,7 +937,7 @@ where
 
 impl<T, P> Mul<T> for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     type Output = Self;
@@ -936,7 +949,7 @@ where
 
 impl<T, P> MulAssign for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     fn mul_assign(&mut self, other: Self) {
@@ -946,7 +959,7 @@ where
 
 impl<T, P> MulAssign<T> for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     fn mul_assign(&mut self, other: T) {
@@ -956,7 +969,7 @@ where
 
 impl<T, P> Nan for ConstrainedFloat<T, P>
 where
-    T: Nan + Primitive,
+    T: Primitive,
     P: Constraint<T> + Member<NanClass>,
 {
     const NAN: Self = ConstrainedFloat::from_inner_unchecked(T::NAN);
@@ -968,7 +981,7 @@ where
 
 impl<T, P> Neg for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     type Output = Self;
@@ -981,7 +994,7 @@ where
 impl<T, P> Num for ConstrainedFloat<T, P>
 where
     Self: PartialEq,
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     type FromStrRadixErr = ();
@@ -1008,7 +1021,7 @@ where
 
 impl<T, P> One for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     fn one() -> Self {
@@ -1018,7 +1031,7 @@ where
 
 impl<T, P> Ord for ConstrainedFloat<T, P>
 where
-    T: Encoding + Nan + Primitive,
+    T: Primitive,
     P: Constraint<T>,
 {
     fn cmp(&self, other: &Self) -> Ordering {
@@ -1028,7 +1041,7 @@ where
 
 impl<T, P> PartialEq for ConstrainedFloat<T, P>
 where
-    T: Encoding + Nan + Primitive,
+    T: Primitive,
     P: Constraint<T>,
 {
     fn eq(&self, other: &Self) -> bool {
@@ -1038,7 +1051,7 @@ where
 
 impl<T, P> PartialEq<T> for ConstrainedFloat<T, P>
 where
-    T: Encoding + Nan + Primitive,
+    T: Primitive,
     P: Constraint<T>,
 {
     fn eq(&self, other: &T) -> bool {
@@ -1053,7 +1066,7 @@ where
 
 impl<T, P> PartialOrd for ConstrainedFloat<T, P>
 where
-    T: Encoding + Nan + Primitive,
+    T: Primitive,
     P: Constraint<T>,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -1063,7 +1076,7 @@ where
 
 impl<T, P> PartialOrd<T> for ConstrainedFloat<T, P>
 where
-    T: Encoding + Nan + PartialOrd + Primitive,
+    T: Primitive,
     P: Constraint<T>,
 {
     fn partial_cmp(&self, other: &T) -> Option<Ordering> {
@@ -1075,7 +1088,7 @@ where
 
 impl<T, P> Product for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     fn product<I>(input: I) -> Self
@@ -1088,41 +1101,25 @@ where
 
 impl<T, P> Real for ConstrainedFloat<T, P>
 where
-    T: Encoding + Nan + Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
-    const E: Self = ConstrainedFloat::from_inner_unchecked(T::E);
-    const PI: Self = ConstrainedFloat::from_inner_unchecked(T::PI);
-    const FRAC_1_PI: Self = ConstrainedFloat::from_inner_unchecked(T::FRAC_1_PI);
-    const FRAC_2_PI: Self = ConstrainedFloat::from_inner_unchecked(T::FRAC_2_PI);
-    const FRAC_2_SQRT_PI: Self = ConstrainedFloat::from_inner_unchecked(T::FRAC_2_SQRT_PI);
-    const FRAC_PI_2: Self = ConstrainedFloat::from_inner_unchecked(T::FRAC_PI_2);
-    const FRAC_PI_3: Self = ConstrainedFloat::from_inner_unchecked(T::FRAC_PI_3);
-    const FRAC_PI_4: Self = ConstrainedFloat::from_inner_unchecked(T::FRAC_PI_4);
-    const FRAC_PI_6: Self = ConstrainedFloat::from_inner_unchecked(T::FRAC_PI_6);
-    const FRAC_PI_8: Self = ConstrainedFloat::from_inner_unchecked(T::FRAC_PI_8);
-    const SQRT_2: Self = ConstrainedFloat::from_inner_unchecked(T::SQRT_2);
-    const FRAC_1_SQRT_2: Self = ConstrainedFloat::from_inner_unchecked(T::FRAC_1_SQRT_2);
-    const LN_2: Self = ConstrainedFloat::from_inner_unchecked(T::LN_2);
-    const LN_10: Self = ConstrainedFloat::from_inner_unchecked(T::LN_10);
-    const LOG2_E: Self = ConstrainedFloat::from_inner_unchecked(T::LOG2_E);
-    const LOG10_E: Self = ConstrainedFloat::from_inner_unchecked(T::LOG10_E);
-
-    fn is_sign_positive(self) -> bool {
-        self.into_inner().is_sign_positive()
-    }
-
-    fn is_sign_negative(self) -> bool {
-        self.into_inner().is_sign_negative()
-    }
-
-    fn signum(self) -> Self {
-        self.map(Real::signum)
-    }
-
-    fn abs(self) -> Self {
-        self.map(Real::abs)
-    }
+    const E: Self = ConstrainedFloat::from_inner_unchecked(Real::E);
+    const PI: Self = ConstrainedFloat::from_inner_unchecked(Real::PI);
+    const FRAC_1_PI: Self = ConstrainedFloat::from_inner_unchecked(Real::FRAC_1_PI);
+    const FRAC_2_PI: Self = ConstrainedFloat::from_inner_unchecked(Real::FRAC_2_PI);
+    const FRAC_2_SQRT_PI: Self = ConstrainedFloat::from_inner_unchecked(Real::FRAC_2_SQRT_PI);
+    const FRAC_PI_2: Self = ConstrainedFloat::from_inner_unchecked(Real::FRAC_PI_2);
+    const FRAC_PI_3: Self = ConstrainedFloat::from_inner_unchecked(Real::FRAC_PI_3);
+    const FRAC_PI_4: Self = ConstrainedFloat::from_inner_unchecked(Real::FRAC_PI_4);
+    const FRAC_PI_6: Self = ConstrainedFloat::from_inner_unchecked(Real::FRAC_PI_6);
+    const FRAC_PI_8: Self = ConstrainedFloat::from_inner_unchecked(Real::FRAC_PI_8);
+    const SQRT_2: Self = ConstrainedFloat::from_inner_unchecked(Real::SQRT_2);
+    const FRAC_1_SQRT_2: Self = ConstrainedFloat::from_inner_unchecked(Real::FRAC_1_SQRT_2);
+    const LN_2: Self = ConstrainedFloat::from_inner_unchecked(Real::LN_2);
+    const LN_10: Self = ConstrainedFloat::from_inner_unchecked(Real::LN_10);
+    const LOG2_E: Self = ConstrainedFloat::from_inner_unchecked(Real::LOG2_E);
+    const LOG10_E: Self = ConstrainedFloat::from_inner_unchecked(Real::LOG10_E);
 
     fn floor(self) -> Self {
         self.map(Real::floor)
@@ -1300,7 +1297,7 @@ where
 #[cfg(feature = "approx")]
 impl<T, P> RelativeEq for ConstrainedFloat<T, P>
 where
-    T: Encoding + Nan + Primitive + RelativeEq<Epsilon = T>,
+    T: Primitive + RelativeEq<Epsilon = T>,
     P: Constraint<T>,
 {
     fn default_max_relative() -> Self::Epsilon {
@@ -1323,7 +1320,7 @@ where
 
 impl<T, P> Rem for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     type Output = Self;
@@ -1335,7 +1332,7 @@ where
 
 impl<T, P> Rem<T> for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     type Output = Self;
@@ -1347,7 +1344,7 @@ where
 
 impl<T, P> RemAssign for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     fn rem_assign(&mut self, other: Self) {
@@ -1357,7 +1354,7 @@ where
 
 impl<T, P> RemAssign<T> for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     fn rem_assign(&mut self, other: T) {
@@ -1367,16 +1364,16 @@ where
 
 impl<T, P> Signed for ConstrainedFloat<T, P>
 where
-    T: Encoding + Nan + Primitive + Real + Signed,
+    T: Primitive + Signed,
     P: Constraint<T> + Member<RealClass>,
 {
     fn abs(&self) -> Self {
-        self.map_unchecked(Real::abs)
+        self.map_unchecked(|inner| inner.abs())
     }
 
     #[cfg(feature = "std")]
     fn abs_sub(&self, other: &Self) -> Self {
-        self.zip_map(*other, |a, b| Signed::abs_sub(&a, &b))
+        self.zip_map(*other, |a, b| a.abs_sub(&b))
     }
 
     #[cfg(not(feature = "std"))]
@@ -1406,7 +1403,7 @@ where
 
 impl<T, P> Sub for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     type Output = Self;
@@ -1418,7 +1415,7 @@ where
 
 impl<T, P> Sub<T> for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     type Output = Self;
@@ -1430,7 +1427,7 @@ where
 
 impl<T, P> SubAssign for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     fn sub_assign(&mut self, other: Self) {
@@ -1440,7 +1437,7 @@ where
 
 impl<T, P> SubAssign<T> for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     fn sub_assign(&mut self, other: T) {
@@ -1450,7 +1447,7 @@ where
 
 impl<T, P> Sum for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     fn sum<I>(input: I) -> Self
@@ -1518,7 +1515,7 @@ where
 #[cfg(feature = "approx")]
 impl<T, P> UlpsEq for ConstrainedFloat<T, P>
 where
-    T: Encoding + Nan + Primitive + UlpsEq<Epsilon = T>,
+    T: Primitive + UlpsEq<Epsilon = T>,
     P: Constraint<T>,
 {
     fn default_max_ulps() -> u32 {
@@ -1543,7 +1540,7 @@ where
 
 impl<T, P> Zero for ConstrainedFloat<T, P>
 where
-    T: Primitive + Real,
+    T: Primitive,
     P: Constraint<T> + Member<RealClass>,
 {
     fn zero() -> Self {
@@ -1713,11 +1710,11 @@ mod tests {
 }
 
 /// Implements the `Real` trait from
-/// [num-traits](https://crates.io/crates/num-traits) in terms of Decorum's
+/// [`num-traits`](https://crates.io/crates/num-traits) in terms of Decorum's
 /// numeric traits. Does nothing if the `std` feature is disabled.
 ///
 /// This is not generic, because the blanket implementation provided by
-/// num-traits prevents a constraint-based implementation. Instead, this macro
+/// `num-traits` prevents a constraint-based implementation. Instead, this macro
 /// must be applied manually to each proxy type exported by Decorum that is
 /// `Real` but not `Float`.
 ///
@@ -1725,10 +1722,10 @@ mod tests {
 ///
 ///   https://github.com/olson-sean-k/decorum/issues/10
 ///   https://github.com/rust-num/num-traits/issues/49
-macro_rules! impl_num_traits_real {
+macro_rules! impl_foreign_real {
     (proxy => $t:ty) => {
         #[cfg(feature = "std")]
-        impl real::Real for $t {
+        impl ForeignReal for $t {
             fn max_value() -> Self {
                 Encoding::MAX
             }
@@ -1756,19 +1753,19 @@ macro_rules! impl_num_traits_real {
             }
 
             fn is_sign_positive(self) -> bool {
-                Real::is_sign_positive(self)
+                Encoding::is_sign_positive(self)
             }
 
             fn is_sign_negative(self) -> bool {
-                Real::is_sign_negative(self)
+                Encoding::is_sign_negative(self)
             }
 
             fn signum(self) -> Self {
-                Real::signum(self)
+                Signed::signum(&self)
             }
 
             fn abs(self) -> Self {
-                Real::abs(self)
+                Signed::abs(&self)
             }
 
             fn floor(self) -> Self {
@@ -1800,7 +1797,7 @@ macro_rules! impl_num_traits_real {
             }
 
             fn abs_sub(self, other: Self) -> Self {
-                self.zip_map(other, Float::abs_sub)
+                self.zip_map(other, ForeignFloat::abs_sub)
             }
 
             fn powi(self, n: i32) -> Self {
@@ -1848,11 +1845,11 @@ macro_rules! impl_num_traits_real {
             }
 
             fn to_degrees(self) -> Self {
-                self.map(Float::to_degrees)
+                self.map(ForeignFloat::to_degrees)
             }
 
             fn to_radians(self) -> Self {
-                self.map(Float::to_radians)
+                self.map(ForeignFloat::to_radians)
             }
 
             fn ln_1p(self) -> Self {
@@ -1921,7 +1918,7 @@ macro_rules! impl_num_traits_real {
         }
     };
 }
-impl_num_traits_real!(proxy => N32);
-impl_num_traits_real!(proxy => N64);
-impl_num_traits_real!(proxy => R32);
-impl_num_traits_real!(proxy => R64);
+impl_foreign_real!(proxy => N32);
+impl_foreign_real!(proxy => N64);
+impl_foreign_real!(proxy => R32);
+impl_foreign_real!(proxy => R64);

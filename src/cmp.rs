@@ -61,7 +61,7 @@ use crate::canonical::ToCanonicalBits;
 use crate::constraint::Constraint;
 use crate::primitive::Primitive;
 use crate::proxy::ConstrainedFloat;
-use crate::{Encoding, Nan};
+use crate::Nan;
 
 /// Equivalence relation for floating-point primitives.
 ///
@@ -95,7 +95,7 @@ pub trait FloatEq {
 
 impl<T> FloatEq for T
 where
-    T: Encoding + Nan + Primitive,
+    T: Primitive,
 {
     fn eq(&self, other: &Self) -> bool {
         self.to_canonical_bits() == other.to_canonical_bits()
@@ -104,7 +104,7 @@ where
 
 impl<T> FloatEq for [T]
 where
-    T: Encoding + Nan + Primitive,
+    T: Primitive,
 {
     fn eq(&self, other: &Self) -> bool {
         if self.len() == other.len() {
@@ -133,7 +133,7 @@ pub trait FloatOrd {
 
 impl<T> FloatOrd for T
 where
-    T: Nan + Primitive,
+    T: Primitive,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.partial_cmp(&other) {
@@ -157,7 +157,7 @@ where
 
 impl<T> FloatOrd for [T]
 where
-    T: Nan + Primitive,
+    T: Primitive,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         match self
@@ -285,7 +285,7 @@ impl_intrinsic_ord!(nan_partial => f64);
 // maximum and minimum (it does not use `FloatOrd`).
 impl<T, P> IntrinsicOrd for ConstrainedFloat<T, P>
 where
-    T: Encoding + IntrinsicOrd + Nan + Primitive,
+    T: IntrinsicOrd + Primitive,
     P: Constraint<T>,
 {
     fn is_undefined(&self) -> bool {

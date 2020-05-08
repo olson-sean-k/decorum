@@ -4,7 +4,6 @@
 use core::marker::PhantomData;
 
 use crate::primitive::Primitive;
-use crate::{Infinite, Nan};
 
 pub enum RealClass {}
 pub enum InfiniteClass {}
@@ -77,7 +76,7 @@ impl<T> Member<InfiniteClass> for NotNanConstraint<T> where T: Primitive {}
 
 impl<T> Constraint<T> for NotNanConstraint<T>
 where
-    T: Nan + Primitive,
+    T: Primitive,
 {
     fn filter(value: T) -> Option<T> {
         if value.is_nan() {
@@ -104,7 +103,7 @@ impl<T> Member<RealClass> for FiniteConstraint<T> where T: Primitive {}
 
 impl<T> Constraint<T> for FiniteConstraint<T>
 where
-    T: Infinite + Nan + Primitive,
+    T: Primitive,
 {
     fn filter(value: T) -> Option<T> {
         if value.is_nan() || value.is_infinite() {
