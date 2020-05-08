@@ -2,9 +2,8 @@ use core::num::FpCategory;
 
 use crate::{Encoding, Float, Infinite, Nan, Real};
 
-// TODO: Remove the `Float` supertrait.
 /// Primitive floating-point types.
-pub trait Primitive: Float {}
+pub trait Primitive {}
 
 macro_rules! impl_primitive {
     (primitive => $t:ident) => {

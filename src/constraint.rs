@@ -4,6 +4,7 @@
 use core::marker::PhantomData;
 
 use crate::primitive::Primitive;
+use crate::Float;
 
 pub enum RealClass {}
 pub enum InfiniteClass {}
@@ -23,7 +24,7 @@ impl<P, Q> SubsetOf<Q> for P where Q: SupersetOf<P> {}
 /// This trait expresses a constraint by filtering values.
 pub trait Constraint<T>: Copy + Sized
 where
-    T: Primitive,
+    T: Float + Primitive,
 {
     /// Filters a floating-point value based on some constraints.
     ///
@@ -35,48 +36,48 @@ where
 #[derive(Clone, Copy, Debug)]
 pub struct UnitConstraint<T>
 where
-    T: Primitive,
+    T: Float + Primitive,
 {
     phantom: PhantomData<T>,
 }
 
-impl<T> Member<RealClass> for UnitConstraint<T> where T: Primitive {}
+impl<T> Member<RealClass> for UnitConstraint<T> where T: Float + Primitive {}
 
-impl<T> Member<InfiniteClass> for UnitConstraint<T> where T: Primitive {}
+impl<T> Member<InfiniteClass> for UnitConstraint<T> where T: Float + Primitive {}
 
-impl<T> Member<NanClass> for UnitConstraint<T> where T: Primitive {}
+impl<T> Member<NanClass> for UnitConstraint<T> where T: Float + Primitive {}
 
 // TODO: Should implementations map values like zero and `NaN` to canonical
 //       forms?
 impl<T> Constraint<T> for UnitConstraint<T>
 where
-    T: Primitive,
+    T: Float + Primitive,
 {
     fn filter(value: T) -> Option<T> {
         Some(value)
     }
 }
 
-impl<T> SupersetOf<NotNanConstraint<T>> for UnitConstraint<T> where T: Primitive {}
+impl<T> SupersetOf<NotNanConstraint<T>> for UnitConstraint<T> where T: Float + Primitive {}
 
-impl<T> SupersetOf<FiniteConstraint<T>> for UnitConstraint<T> where T: Primitive {}
+impl<T> SupersetOf<FiniteConstraint<T>> for UnitConstraint<T> where T: Float + Primitive {}
 
 /// Disallows `NaN`s.
 #[derive(Clone, Copy, Debug)]
 pub struct NotNanConstraint<T>
 where
-    T: Primitive,
+    T: Float + Primitive,
 {
     phantom: PhantomData<T>,
 }
 
-impl<T> Member<RealClass> for NotNanConstraint<T> where T: Primitive {}
+impl<T> Member<RealClass> for NotNanConstraint<T> where T: Float + Primitive {}
 
-impl<T> Member<InfiniteClass> for NotNanConstraint<T> where T: Primitive {}
+impl<T> Member<InfiniteClass> for NotNanConstraint<T> where T: Float + Primitive {}
 
 impl<T> Constraint<T> for NotNanConstraint<T>
 where
-    T: Primitive,
+    T: Float + Primitive,
 {
     fn filter(value: T) -> Option<T> {
         if value.is_nan() {
@@ -88,22 +89,22 @@ where
     }
 }
 
-impl<T> SupersetOf<FiniteConstraint<T>> for NotNanConstraint<T> where T: Primitive {}
+impl<T> SupersetOf<FiniteConstraint<T>> for NotNanConstraint<T> where T: Float + Primitive {}
 
 /// Disallows `NaN`s and infinities.
 #[derive(Clone, Copy, Debug)]
 pub struct FiniteConstraint<T>
 where
-    T: Primitive,
+    T: Float + Primitive,
 {
     phantom: PhantomData<T>,
 }
 
-impl<T> Member<RealClass> for FiniteConstraint<T> where T: Primitive {}
+impl<T> Member<RealClass> for FiniteConstraint<T> where T: Float + Primitive {}
 
 impl<T> Constraint<T> for FiniteConstraint<T>
 where
-    T: Primitive,
+    T: Float + Primitive,
 {
     fn filter(value: T) -> Option<T> {
         if value.is_nan() || value.is_infinite() {

@@ -18,6 +18,7 @@ use core::hash::{Hash, Hasher};
 
 use crate::canonical::ToCanonicalBits;
 use crate::primitive::Primitive;
+use crate::Float;
 
 /// Hashing for primitive floating-point values.
 pub trait FloatHash {
@@ -28,7 +29,7 @@ pub trait FloatHash {
 
 impl<T> FloatHash for T
 where
-    T: Primitive,
+    T: Float + Primitive,
 {
     fn hash<H>(&self, state: &mut H)
     where
@@ -40,7 +41,7 @@ where
 
 impl<T> FloatHash for [T]
 where
-    T: Primitive,
+    T: Float + Primitive,
 {
     fn hash<H>(&self, state: &mut H)
     where
