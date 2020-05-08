@@ -95,7 +95,7 @@ pub type R32 = Finite<f32>;
 pub type R64 = Finite<f64>;
 
 /// Types that can represent infinities.
-pub trait Infinite: Copy {
+pub trait Infinite: Encoding {
     const INFINITY: Self;
     const NEG_INFINITY: Self;
 
@@ -104,7 +104,7 @@ pub trait Infinite: Copy {
 }
 
 /// Floating-point representations that can be `NaN`.
-pub trait Nan: Copy {
+pub trait Nan: Encoding {
     /// A representation of `NaN`.
     ///
     /// For primitive floating-point types, `NaN` is incomparable. Therefore,
