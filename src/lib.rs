@@ -224,3 +224,5 @@ pub trait Real: Copy + Neg<Output = Self> + Num + PartialOrd + Signed {
 }
 
 pub trait Float: Encoding + Infinite + Nan + Real {}
+
+impl<T> Float for T where T: Encoding + Infinite + Nan + Real {}

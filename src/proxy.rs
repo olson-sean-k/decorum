@@ -471,13 +471,6 @@ where
 {
 }
 
-impl<T, P> Float for ConstrainedFloat<T, P>
-where
-    T: Float + Primitive,
-    P: Constraint<T> + Member<InfiniteClass> + Member<NanClass> + Member<RealClass>,
-{
-}
-
 impl<T, P> ForeignFloat for ConstrainedFloat<T, P>
 where
     T: Float + ForeignFloat + IntrinsicOrd + Primitive,

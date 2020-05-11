@@ -1,14 +1,12 @@
 use core::num::FpCategory;
 
-use crate::{Encoding, Float, Infinite, Nan, Real};
+use crate::{Encoding, Infinite, Nan, Real};
 
 /// Primitive floating-point types.
 pub trait Primitive {}
 
 macro_rules! impl_primitive {
     (primitive => $t:ident) => {
-        impl Float for $t {}
-
         impl Infinite for $t {
             const INFINITY: Self = <$t>::INFINITY;
             const NEG_INFINITY: Self = <$t>::NEG_INFINITY;
