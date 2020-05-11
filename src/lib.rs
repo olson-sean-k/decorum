@@ -3,27 +3,43 @@
 //!
 //! Decorum provides traits that describe types using floating-point
 //! representations and provides proxy types that wrap primitive floating-point
-//! types in order to implement a total ordering and various numeric traits.
-//! These proxy types also support constraints on the class of values they may
-//! represent, conditionally implementing traits and panicing if constraints are
-//! violated.
+//! types. Proxy types implement a total ordering and constraints on the classes
+//! of values that they may represent.
+//!
+//! # Floating-Point Classes
+//!
+//! Traits, proxy types, and constraints are based on three classes or subsets
+//! of floating-point values:
+//!
+//! | Class        | Trait      | Proxy Types                 |
+//! |--------------|------------|-----------------------------|
+//! | real number  | `Real`     | `Total`, `NotNan`, `Finite` |
+//! | infinity     | `Infinite` | `Total`, `NotNan`           |
+//! | not-a-number | `Nan`      | `Total`, `Finite`           |
+//!
+//! Primitive floating-point values directly expose IEEE-754 and therefore the
+//! complete set of values (and traits). Proxy types like `NotNan` and `Finite`
+//! use a subset of values that disallow `NaN`s and/or infinities. Traits are
+//! implemented by types that expose the corresponding class of values, so
+//! `NotNan` implements the `Real` and `Infinite` traits but not the `Nan`
+//! trait, for example.
+//!
+//! # Constraints
+//!
+//! The `NotNan` and `Finite` types wrap primitive floating-point values and
+//! disallow values that represent `NaN`, $\infin$, and $-\infin$. **Operations
+//! that emit values that violate these constraints will panic**. The `Total`
+//! type applies no constraints and exposes all classes of values.
 //!
 //! # Total Ordering
 //!
-//! The following total ordering is implemented by proxy types and is exposed by
-//! traits in the `cmp` module:
+//! The following total ordering is implemented by all proxy types and is
+//! provided by traits in the `cmp` module:
 //!
 //! $$-\infin<\cdots<0<\cdots<\infin<\text{NaN}$$
 //!
 //! Note that all zero and `NaN` representations are considered equivalent. See
 //! the `cmp` module documentation for more details.
-//!
-//! # Constraints
-//!
-//! The `NotNan` and `Finite` types wrap primitive floating-point values and
-//! disallow values that represent `NaN`, $\infin$, and $-\infin$. Operations
-//! that emit values that violate these constraints will panic. The `Total` type
-//! applies no constraints.
 
 #![doc(
     html_favicon_url = "https://raw.githubusercontent.com/olson-sean-k/decorum/master/doc/decorum-favicon.ico"
@@ -94,7 +110,7 @@ pub type R32 = Finite<f32>;
 /// only by capitalization.
 pub type R64 = Finite<f64>;
 
-/// Types that can represent infinities.
+/// Floating-point representations that expose infinities.
 pub trait Infinite: Encoding {
     const INFINITY: Self;
     const NEG_INFINITY: Self;
@@ -103,12 +119,12 @@ pub trait Infinite: Encoding {
     fn is_finite(self) -> bool;
 }
 
-/// Floating-point representations that can be `NaN`.
+/// Floating-point representations that expose `NaN`s.
 pub trait Nan: Encoding {
     /// A representation of `NaN`.
     ///
     /// For primitive floating-point types, `NaN` is incomparable. Therefore,
-    /// prefer the `is_nan` predicate over direct comparisons with `NAN`.
+    /// prefer the `is_nan` predicate over direct comparisons with `NaN`.
     const NAN: Self;
 
     fn is_nan(self) -> bool;
@@ -118,7 +134,7 @@ pub trait Nan: Encoding {
 ///
 /// Provides values and operations that describe the encoding of an IEEE-754
 /// floating-point value. Infinities and `NaN`s are described by the `Infinite`
-/// and `NaN` traits.
+/// and `NaN` sub-traits.
 pub trait Encoding: Copy {
     const MAX: Self;
     const MIN: Self;
@@ -136,8 +152,13 @@ pub trait Encoding: Copy {
 
 /// Types that can represent real numbers.
 ///
-/// Provides values and operations that generally apply to real numbers. Some
-/// members of this trait depend on the standard library and the `std` feature.
+/// Provides values and operations that generally apply to real numbers. As
+/// such, this trait is implemented by types using floating-point
+/// representations, but this trait is a general numeric trait and can apply to
+/// other numeric types as well.
+///
+/// Some members of this trait depend on the standard library and the `std`
+/// feature.
 pub trait Real: Copy + Neg<Output = Self> + Num + PartialOrd + Signed {
     const E: Self;
     const PI: Self;
@@ -223,6 +244,12 @@ pub trait Real: Copy + Neg<Output = Self> + Num + PartialOrd + Signed {
     fn atanh(self) -> Self;
 }
 
+/// Floating-point representations.
+///
+/// Types that implement this trait are represented using IEEE-754 encoding and
+/// expose the details of that encoding, including infinities, `NaN`, and
+/// operations on real numbers. This trait is implemented by primitive
+/// floating-point types and the `Total` proxy type.
 pub trait Float: Encoding + Infinite + Nan + Real {}
 
 impl<T> Float for T where T: Encoding + Infinite + Nan + Real {}

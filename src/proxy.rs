@@ -1,5 +1,5 @@
 //! Proxy types that wrap primitive floating-point types and apply constraints
-//! and total orderings.
+//! and a total ordering.
 
 #[cfg(feature = "approx")]
 use approx::{AbsDiffEq, RelativeEq, UlpsEq};
@@ -29,17 +29,19 @@ use crate::{Encoding, Finite, Float, ForeignFloat, Infinite, Nan, NotNan, Real, 
 #[cfg(feature = "std")]
 use crate::{ForeignReal, N32, N64, R32, R64};
 
-/// Floating-point proxy that provides total ordering, hashing, and constraints.
+/// Floating-point proxy that provides a total ordering, equivalence, hashing,
+/// and constraints.
 ///
-/// Wraps primitive floating-point types and provides implementions of numeric
-/// traits using a total ordering, including `Ord`, `Eq`, and `Hash`.
-/// `ConstrainedFloat` supports various contraints on the class of values that
-/// may be represented and panics if these constraints are violated.
+/// `ConstrainedFloat` wraps primitive floating-point types and provides
+/// implementions for numeric traits using a total ordering, including `Ord`,
+/// `Eq`, and `Hash`. `ConstrainedFloat` supports various contraints on the
+/// class of values that may be represented and panics if these constraints are
+/// violated.
 ///
 /// This type is re-exported but should not (and cannot) be used directly. Use
 /// the type aliases `Total`, `NotNan`, and `Finite` instead.
 ///
-/// # Ordering
+/// # Total Ordering
 ///
 /// All proxy types use the following total ordering:
 ///
@@ -56,9 +58,9 @@ use crate::{ForeignReal, N32, N64, R32, R64};
 /// operation panics.
 ///
 /// Constraints may disallow two broad classes of floating-point values:
-/// _infinities_ and `NaN`s. Constraints are exposed by the `Total`, `NotNan`,
-/// and `Finite` type definitions. Note that `Total` uses a unit constraint,
-/// which enforces no constraints at all.
+/// infinities and `NaN`s. Constraints are exposed by the `Total`, `NotNan`, and
+/// `Finite` type definitions. Note that `Total` uses a unit constraint, which
+/// enforces no constraints at all and never panics.
 #[cfg_attr(feature = "serialize-serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Copy)]
 #[repr(transparent)]

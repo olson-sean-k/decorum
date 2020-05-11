@@ -357,8 +357,19 @@ where
 mod tests {
     use num_traits::{One, Zero};
 
-    use crate::cmp::{self, IntrinsicOrd};
+    use crate::cmp::{self, FloatEq, IntrinsicOrd};
     use crate::{Nan, Total};
+
+    #[test]
+    fn primitive_eq() {
+        let x = 0.0f64 / 0.0f64; // `NaN`.
+        let y = f64::INFINITY + f64::NEG_INFINITY; // `NaN`.
+        let xs = [1.0f64, f64::NAN, f64::INFINITY];
+        let ys = [1.0f64, f64::NAN, f64::INFINITY];
+
+        assert!(x.float_eq(&y));
+        assert!(xs.float_eq(&ys));
+    }
 
     #[test]
     fn intrinsic_ord_option() {

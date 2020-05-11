@@ -34,7 +34,7 @@ constrain the class of values they can represent. Different type definitions
 apply different constraints, with the `Total` type applying no constraints at
 all.
 
-| Type     | Aliases      | Numeric Traits                             | Disallowed Values     |
+| Type     | Aliases      | Trait Implementations                      | Disallowed Values     |
 |----------|--------------|--------------------------------------------|-----------------------|
 | `Total`  |              | `Encoding + Real + Infinite + Nan + Float` |                       |
 | `NotNan` | `N32`, `N64` | `Encoding + Real + Infinite`               | `NaN`                 |
@@ -59,9 +59,10 @@ requires a conversion). Serialization is optionally supported via
 
 ## Traits
 
-Numeric traits are essential for generic programming, but the constraints used
-by some proxy types prevent them from implementing the ubiquitous `Float`
-trait, because it implies the presence of `-INF`, `+INF`, and `NaN`.
+Traits are essential for generic programming, but the constraints used by some
+proxy types prevent them from implementing the `Float` trait, because it implies
+the presence of `-INF`, `+INF`, and `NaN` (and their corresponding trait
+implementations).
 
 Decorum provides more granular traits that separate these APIs: `Real`,
 `Infinite`, `Nan`, and `Encoding`. Primitive floating-point types implement all
@@ -69,24 +70,25 @@ of these traits and proxy types implement traits that are consistent with their
 constraints.
 
 For example, code that wishes to be generic over floating-point types
-representing real numbers can use a bound on the `Real` trait:
+representing real numbers and `NaN` can use a bound on the `Nan` and `Real`
+traits:
 
 ```rust
-use decorum::Real;
+use decorum::{Nan, Real};
 
 fn f<T>(x: T, y: T) -> T
 where
-    T: Real,
+    T: Nan + Real,
 {
     x + y
 }
 ```
 
-Both Decorum and [`num-traits`](https://crates.io/crate/num-traits) expose a
-`Real` trait. Due to some differences in these traits and [a poor
-interaction](https://github.com/rust-num/num-traits/issues/49) with the
-`num-traits` API, Decorum continues to vendor its own trait. Both traits are
-implemented by Decorum where possible.
+Both Decorum and [`num-traits`](https://crates.io/crate/num-traits) provide
+`Real` and `Float` traits. These traits are somewhat different and are not
+always interchangeable. Traits from both crates are implemented by Decorum where
+possible. For example, `Total` implements `Float` from both Decorum and
+`num-traits`.
 
 ## Conversions
 
@@ -130,4 +132,16 @@ floating-point values for ordering, equivalence, and hashing instead.
 | `FloatOrd`  | `Ord`            |
 
 These traits use the same total ordering and equivalence rules that proxy types
-do.
+do. They are implemented for base types as well as slices:
+
+```rust
+use decorum::cmp::FloatEq;
+
+let x = 0.0f64 / 0.0f64; // `NaN`.
+let y = f64::INFINITY + f64::NEG_INFINITY; // `NaN`.
+assert!(x.float_eq(&y));
+
+let xs = [1.0f64, f64::NAN, f64::INFINITY];
+let ys = [1.0f64, f64::NAN, f64::INFINITY];
+assert!(xs.float_eq(&ys));
+```
