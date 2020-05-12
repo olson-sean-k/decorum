@@ -1029,7 +1029,7 @@ where
     P: Constraint<T>,
 {
     fn cmp(&self, other: &Self) -> Ordering {
-        FloatOrd::cmp(self.as_ref(), other.as_ref())
+        FloatOrd::float_cmp(self.as_ref(), other.as_ref())
     }
 }
 
@@ -1039,7 +1039,7 @@ where
     P: Constraint<T>,
 {
     fn eq(&self, other: &Self) -> bool {
-        FloatEq::eq(self.as_ref(), other.as_ref())
+        FloatEq::float_eq(self.as_ref(), other.as_ref())
     }
 }
 
@@ -1064,7 +1064,7 @@ where
     P: Constraint<T>,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(FloatOrd::cmp(self.as_ref(), other.as_ref()))
+        Some(FloatOrd::float_cmp(self.as_ref(), other.as_ref()))
     }
 }
 

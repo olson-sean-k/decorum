@@ -35,7 +35,7 @@
 //! let x = f64::NAN;
 //! let y = 1.0f64;
 //!
-//! let (min, max) = match FloatOrd::cmp(&x, &y) {
+//! let (min, max) = match x.float_cmp(&y) {
 //!     Ordering::Less | Ordering::Equal => (x, y),
 //!     _ => (y, x),
 //! };
@@ -87,17 +87,17 @@ use crate::{Float, Nan};
 /// let x = 0.0f64 / 0.0; // `NaN`.
 /// let y = f64::INFINITY - f64::INFINITY; // `NaN`.
 ///
-/// assert!(FloatEq::eq(&x, &y));
+/// assert!(x.float_eq(&y));
 /// ```
 pub trait FloatEq {
-    fn eq(&self, other: &Self) -> bool;
+    fn float_eq(&self, other: &Self) -> bool;
 }
 
 impl<T> FloatEq for T
 where
     T: Float + Primitive,
 {
-    fn eq(&self, other: &Self) -> bool {
+    fn float_eq(&self, other: &Self) -> bool {
         self.to_canonical_bits() == other.to_canonical_bits()
     }
 }
@@ -106,11 +106,9 @@ impl<T> FloatEq for [T]
 where
     T: Float + Primitive,
 {
-    fn eq(&self, other: &Self) -> bool {
+    fn float_eq(&self, other: &Self) -> bool {
         if self.len() == other.len() {
-            self.iter()
-                .zip(other.iter())
-                .all(|(a, b)| FloatEq::eq(a, b))
+            self.iter().zip(other.iter()).all(|(a, b)| a.float_eq(b))
         }
         else {
             false
@@ -128,14 +126,14 @@ where
 /// need to wrap them within a proxy type. See the module documentation for more
 /// about the ordering used by `FloatOrd` and proxy types.
 pub trait FloatOrd {
-    fn cmp(&self, other: &Self) -> Ordering;
+    fn float_cmp(&self, other: &Self) -> Ordering;
 }
 
 impl<T> FloatOrd for T
 where
     T: Float + Primitive,
 {
-    fn cmp(&self, other: &Self) -> Ordering {
+    fn float_cmp(&self, other: &Self) -> Ordering {
         match self.partial_cmp(&other) {
             Some(ordering) => ordering,
             None => {
@@ -159,11 +157,11 @@ impl<T> FloatOrd for [T]
 where
     T: Float + Primitive,
 {
-    fn cmp(&self, other: &Self) -> Ordering {
+    fn float_cmp(&self, other: &Self) -> Ordering {
         match self
             .iter()
             .zip(other.iter())
-            .map(|(a, b)| FloatOrd::cmp(a, b))
+            .map(|(a, b)| a.float_cmp(b))
             .find(|ordering| *ordering != Ordering::Equal)
         {
             Some(ordering) => ordering,
@@ -361,6 +359,8 @@ mod tests {
     use crate::{Nan, Total};
 
     #[test]
+    #[allow(clippy::eq_op)]
+    #[allow(clippy::zero_divided_by_zero)]
     fn primitive_eq() {
         let x = 0.0f64 / 0.0f64; // `NaN`.
         let y = f64::INFINITY + f64::NEG_INFINITY; // `NaN`.
