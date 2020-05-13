@@ -173,8 +173,8 @@ where
 /// Partial ordering of types with intrinsic representations for undefined
 /// comparisons.
 ///
-/// `IntrinsicOrd` is similar to `PartialOrd`, but provides a more limited
-/// pairwise comparison API and, for types without a total ordering, is only
+/// `IntrinsicOrd` is similar to `PartialOrd`, but provides a pairwise
+/// minimum-maximum API and, for types without a total ordering, is only
 /// implemented for such types that additionally have intrinsic representations
 /// for _undefined_, such as the `None` variant of `Option` and `NaN`s for
 /// floating-point primitives.

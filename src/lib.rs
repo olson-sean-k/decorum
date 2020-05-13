@@ -71,6 +71,7 @@ pub mod hash;
 mod primitive;
 mod proxy;
 
+use crate::cmp::IntrinsicOrd;
 use crate::constraint::{FiniteConstraint, NotNanConstraint, UnitConstraint};
 
 pub use crate::canonical::ToCanonicalBits;
@@ -250,6 +251,6 @@ pub trait Real: Copy + Neg<Output = Self> + Num + PartialOrd + Signed {
 /// expose the details of that encoding, including infinities, `NaN`, and
 /// operations on real numbers. This trait is implemented by primitive
 /// floating-point types and the `Total` proxy type.
-pub trait Float: Encoding + Infinite + Nan + Real {}
+pub trait Float: Encoding + Infinite + IntrinsicOrd + Nan + Real {}
 
-impl<T> Float for T where T: Encoding + Infinite + Nan + Real {}
+impl<T> Float for T where T: Encoding + Infinite + IntrinsicOrd + Nan + Real {}
