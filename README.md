@@ -70,17 +70,23 @@ of these traits and proxy types implement traits that are consistent with their
 constraints.
 
 For example, code that wishes to be generic over floating-point types
-representing real numbers and `NaN` can use a bound on the `Nan` and `Real`
-traits:
+representing real numbers and infinities can use a bound on the `Infinite` and
+`Real` traits:
 
 ```rust
-use decorum::{Nan, Real};
+use decorum::{Infinite, Real};
 
 fn f<T>(x: T, y: T) -> T
 where
-    T: Nan + Real,
+    T: Infinite + Real,
 {
-    x + y
+    let z = x / y;
+    if z.is_infinite() {
+        y
+    }
+    else {
+        z
+    }
 }
 ```
 

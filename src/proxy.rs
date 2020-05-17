@@ -33,8 +33,8 @@ use crate::{ForeignReal, N32, N64, R32, R64};
 /// and constraints.
 ///
 /// `ConstrainedFloat` wraps primitive floating-point types and provides
-/// implementions for numeric traits using a total ordering, including `Ord`,
-/// `Eq`, and `Hash`. `ConstrainedFloat` supports various contraints on the
+/// implementations for numeric traits using a total ordering, including `Ord`,
+/// `Eq`, and `Hash`. `ConstrainedFloat` supports various constraints on the
 /// class of values that may be represented and panics if these constraints are
 /// violated.
 ///
@@ -85,7 +85,7 @@ where
 {
     /// Converts a primitive floating-point value into a proxy.
     ///
-    /// The same behavior is provided by an implemention of the `From` trait.
+    /// The same behavior is provided by an implementation of the `From` trait.
     ///
     /// # Panics
     ///

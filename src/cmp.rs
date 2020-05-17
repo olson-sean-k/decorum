@@ -177,12 +177,13 @@ where
 /// minimum-maximum API and, for types without a total ordering, is only
 /// implemented for such types that additionally have intrinsic representations
 /// for _undefined_, such as the `None` variant of `Option` and `NaN`s for
-/// floating-point primitives.
+/// floating-point primitives. `PrimitiveOrd` is also _closed_ and always
+/// compares two values of the same type.
 ///
 /// This trait is also implemented for numeric types with total orderings, and
 /// can be used for comparisons that propagate `NaN`s for floating-point
-/// primitives (unlike `PartialOrd`, which expresses undefined comparisons using
-/// an extrinsic type: `T` ⇒ `Option<T>`).
+/// primitives (unlike `PartialOrd`, which expresses comparisons of types `T`
+/// and `U` with the extrinsic type `Option<Ordering>`).
 ///
 /// See the `min_or_undefined` and `max_or_undefined` functions.
 pub trait IntrinsicOrd: Copy + PartialOrd + Sized {
