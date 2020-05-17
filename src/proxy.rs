@@ -1546,163 +1546,6 @@ where
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{Finite, NotNan, Total, N32, R32};
-
-    #[test]
-    fn total_no_panic_on_inf() {
-        let x: Total<f32> = 1.0.into();
-        let y = x / 0.0;
-        assert!(Infinite::is_infinite(y));
-    }
-
-    #[test]
-    fn total_no_panic_on_nan() {
-        let x: Total<f32> = 0.0.into();
-        let y = x / 0.0;
-        assert!(Nan::is_nan(y));
-    }
-
-    #[test]
-    fn notnan_no_panic_on_inf() {
-        let x: N32 = 1.0.into();
-        let y = x / 0.0;
-        assert!(Infinite::is_infinite(y));
-    }
-
-    #[test]
-    #[should_panic]
-    fn notnan_panic_on_nan() {
-        let x: N32 = 0.0.into();
-        let _ = x / 0.0;
-    }
-
-    #[test]
-    #[should_panic]
-    fn finite_panic_on_nan() {
-        let x: R32 = 0.0.into();
-        let _ = x / 0.0;
-    }
-
-    #[test]
-    #[should_panic]
-    fn finite_panic_on_inf() {
-        let x: R32 = 1.0.into();
-        let _ = x / 0.0;
-    }
-
-    #[test]
-    #[should_panic]
-    fn finite_panic_on_neg_inf() {
-        let x: R32 = (-1.0).into();
-        let _ = x / 0.0;
-    }
-
-    #[test]
-    #[allow(clippy::eq_op)]
-    #[allow(clippy::float_cmp)]
-    #[allow(clippy::zero_divided_by_zero)]
-    fn total_nan_eq() {
-        let x: Total<f32> = (0.0 / 0.0).into();
-        let y: Total<f32> = (0.0 / 0.0).into();
-        assert_eq!(x, y);
-
-        let z: Total<f32> = (<f32 as Infinite>::INFINITY + <f32 as Infinite>::NEG_INFINITY).into();
-        assert_eq!(x, z);
-
-        #[cfg(feature = "std")]
-        {
-            let w: Total<f32> = (Real::sqrt(-1.0)).into();
-            assert_eq!(x, w);
-        }
-    }
-
-    #[test]
-    #[allow(clippy::cmp_nan)]
-    #[allow(clippy::eq_op)]
-    #[allow(clippy::float_cmp)]
-    #[allow(clippy::zero_divided_by_zero)]
-    fn cmp_proxy_primitive() {
-        // Compare a canonicalized `NaN` with a primitive `NaN` with a
-        // different representation.
-        let x: Total<f32> = (0.0 / 0.0).into();
-        assert_eq!(x, f32::sqrt(-1.0));
-
-        // Compare a canonicalized `INF` with a primitive `NaN`.
-        let y: Total<f32> = (1.0 / 0.0).into();
-        assert!(y < (0.0 / 0.0));
-
-        // Compare a proxy that disallows `INF` to a primitive `INF`.
-        let z: R32 = 0.0.into();
-        assert_eq!(z.partial_cmp(&(1.0 / 0.0)), None);
-    }
-
-    #[test]
-    fn sum() {
-        let xs = [1.0.into(), 2.0.into(), 3.0.into()];
-        assert_eq!(xs.iter().cloned().sum::<R32>(), R32::from_inner(6.0));
-    }
-
-    #[test]
-    fn product() {
-        let xs = [1.0.into(), 2.0.into(), 3.0.into()];
-        assert_eq!(xs.iter().cloned().product::<R32>(), R32::from_inner(6.0));
-    }
-
-    // TODO: This test is questionable.
-    #[test]
-    fn impl_traits() {
-        fn as_float<T>(_: T)
-        where
-            T: Float,
-        {
-        }
-
-        fn as_infinite<T>(_: T)
-        where
-            T: Infinite,
-        {
-        }
-
-        fn as_nan<T>(_: T)
-        where
-            T: Nan,
-        {
-        }
-
-        fn as_real<T>(_: T)
-        where
-            T: Real,
-        {
-        }
-
-        let finite = Finite::<f32>::default();
-        as_real(finite);
-
-        let notnan = NotNan::<f32>::default();
-        as_infinite(notnan);
-        as_real(notnan);
-
-        let ordered = Total::<f32>::default();
-        as_float(ordered);
-        as_infinite(ordered);
-        as_nan(ordered);
-        as_real(ordered);
-    }
-
-    #[test]
-    fn fmt() {
-        let x: Total<f32> = 1.0.into();
-        format_args!("{0} {0:e} {0:E} {0:?} {0:#?}", x);
-        let y: NotNan<f32> = 1.0.into();
-        format_args!("{0} {0:e} {0:E} {0:?} {0:#?}", y);
-        let z: Finite<f32> = 1.0.into();
-        format_args!("{0} {0:e} {0:E} {0:?} {0:#?}", z);
-    }
-}
-
 /// Implements the `Real` trait from
 /// [`num-traits`](https://crates.io/crates/num-traits) in terms of Decorum's
 /// numeric traits. Does nothing if the `std` feature is disabled.
@@ -1916,3 +1759,160 @@ impl_foreign_real!(proxy => N32);
 impl_foreign_real!(proxy => N64);
 impl_foreign_real!(proxy => R32);
 impl_foreign_real!(proxy => R64);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Finite, NotNan, Total, N32, R32};
+
+    #[test]
+    fn total_no_panic_on_inf() {
+        let x: Total<f32> = 1.0.into();
+        let y = x / 0.0;
+        assert!(Infinite::is_infinite(y));
+    }
+
+    #[test]
+    fn total_no_panic_on_nan() {
+        let x: Total<f32> = 0.0.into();
+        let y = x / 0.0;
+        assert!(Nan::is_nan(y));
+    }
+
+    #[test]
+    fn notnan_no_panic_on_inf() {
+        let x: N32 = 1.0.into();
+        let y = x / 0.0;
+        assert!(Infinite::is_infinite(y));
+    }
+
+    #[test]
+    #[should_panic]
+    fn notnan_panic_on_nan() {
+        let x: N32 = 0.0.into();
+        let _ = x / 0.0;
+    }
+
+    #[test]
+    #[should_panic]
+    fn finite_panic_on_nan() {
+        let x: R32 = 0.0.into();
+        let _ = x / 0.0;
+    }
+
+    #[test]
+    #[should_panic]
+    fn finite_panic_on_inf() {
+        let x: R32 = 1.0.into();
+        let _ = x / 0.0;
+    }
+
+    #[test]
+    #[should_panic]
+    fn finite_panic_on_neg_inf() {
+        let x: R32 = (-1.0).into();
+        let _ = x / 0.0;
+    }
+
+    #[test]
+    #[allow(clippy::eq_op)]
+    #[allow(clippy::float_cmp)]
+    #[allow(clippy::zero_divided_by_zero)]
+    fn total_nan_eq() {
+        let x: Total<f32> = (0.0 / 0.0).into();
+        let y: Total<f32> = (0.0 / 0.0).into();
+        assert_eq!(x, y);
+
+        let z: Total<f32> = (<f32 as Infinite>::INFINITY + <f32 as Infinite>::NEG_INFINITY).into();
+        assert_eq!(x, z);
+
+        #[cfg(feature = "std")]
+        {
+            let w: Total<f32> = (Real::sqrt(-1.0)).into();
+            assert_eq!(x, w);
+        }
+    }
+
+    #[test]
+    #[allow(clippy::cmp_nan)]
+    #[allow(clippy::eq_op)]
+    #[allow(clippy::float_cmp)]
+    #[allow(clippy::zero_divided_by_zero)]
+    fn cmp_proxy_primitive() {
+        // Compare a canonicalized `NaN` with a primitive `NaN` with a
+        // different representation.
+        let x: Total<f32> = (0.0 / 0.0).into();
+        assert_eq!(x, f32::sqrt(-1.0));
+
+        // Compare a canonicalized `INF` with a primitive `NaN`.
+        let y: Total<f32> = (1.0 / 0.0).into();
+        assert!(y < (0.0 / 0.0));
+
+        // Compare a proxy that disallows `INF` to a primitive `INF`.
+        let z: R32 = 0.0.into();
+        assert_eq!(z.partial_cmp(&(1.0 / 0.0)), None);
+    }
+
+    #[test]
+    fn sum() {
+        let xs = [1.0.into(), 2.0.into(), 3.0.into()];
+        assert_eq!(xs.iter().cloned().sum::<R32>(), R32::from_inner(6.0));
+    }
+
+    #[test]
+    fn product() {
+        let xs = [1.0.into(), 2.0.into(), 3.0.into()];
+        assert_eq!(xs.iter().cloned().product::<R32>(), R32::from_inner(6.0));
+    }
+
+    // TODO: This test is questionable.
+    #[test]
+    fn impl_traits() {
+        fn as_float<T>(_: T)
+        where
+            T: Float,
+        {
+        }
+
+        fn as_infinite<T>(_: T)
+        where
+            T: Infinite,
+        {
+        }
+
+        fn as_nan<T>(_: T)
+        where
+            T: Nan,
+        {
+        }
+
+        fn as_real<T>(_: T)
+        where
+            T: Real,
+        {
+        }
+
+        let finite = Finite::<f32>::default();
+        as_real(finite);
+
+        let notnan = NotNan::<f32>::default();
+        as_infinite(notnan);
+        as_real(notnan);
+
+        let ordered = Total::<f32>::default();
+        as_float(ordered);
+        as_infinite(ordered);
+        as_nan(ordered);
+        as_real(ordered);
+    }
+
+    #[test]
+    fn fmt() {
+        let x: Total<f32> = 1.0.into();
+        format_args!("{0} {0:e} {0:E} {0:?} {0:#?}", x);
+        let y: NotNan<f32> = 1.0.into();
+        format_args!("{0} {0:e} {0:E} {0:?} {0:#?}", y);
+        let z: Finite<f32> = 1.0.into();
+        format_args!("{0} {0:e} {0:E} {0:?} {0:#?}", z);
+    }
+}

@@ -15,7 +15,7 @@
 //! |--------------|------------|-----------------------------|
 //! | real number  | `Real`     | `Total`, `NotNan`, `Finite` |
 //! | infinity     | `Infinite` | `Total`, `NotNan`           |
-//! | not-a-number | `Nan`      | `Total`, `Finite`           |
+//! | not-a-number | `Nan`      | `Total`,                    |
 //!
 //! Primitive floating-point values directly expose IEEE-754 and therefore the
 //! complete set of values (and traits). Proxy types like `NotNan` and `Finite`
