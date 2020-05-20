@@ -886,7 +886,7 @@ where
     where
         H: Hasher,
     {
-        FloatHash::hash(self.as_ref(), state);
+        FloatHash::float_hash(self.as_ref(), state);
     }
 }
 
