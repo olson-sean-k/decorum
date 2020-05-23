@@ -1473,7 +1473,9 @@ where
     T: Float + Primitive,
     P: Constraint<T>,
 {
-    fn to_canonical_bits(self) -> u64 {
+    type Bits = <T as ToCanonicalBits>::Bits;
+
+    fn to_canonical_bits(self) -> Self::Bits {
         self.value.to_canonical_bits()
     }
 }

@@ -1,4 +1,5 @@
 use core::mem;
+use num_traits::{PrimInt, Unsigned};
 
 use crate::{Encoding, Nan, Primitive};
 
@@ -11,19 +12,23 @@ const CANONICAL_ZERO_BITS: u64 = 0x0;
 
 /// Converts floating-point values into a canonicalized form.
 pub trait ToCanonicalBits: Encoding {
+    type Bits: PrimInt + Unsigned;
+
     /// Conversion to a canonical representation.
     ///
     /// Unlike the `to_bits` function provided by `f32` and `f64`, this function
-    /// returns bits in a fix-sized vector (`u64`) and collapses representations
-    /// for real numbers, infinities, and `NaN`s into a canonical form such that
-    /// every semantic value has a unique representation as canonical bits.
-    fn to_canonical_bits(self) -> u64;
+    /// collapses representations for real numbers, infinities, and `NaN`s into
+    /// a canonical form such that every semantic value has a unique
+    /// representation as canonical bits.
+    fn to_canonical_bits(self) -> Self::Bits;
 }
 
 impl<T> ToCanonicalBits for T
 where
     T: Encoding + Nan + Primitive,
 {
+    type Bits = u64;
+
     fn to_canonical_bits(self) -> u64 {
         if self.is_nan() {
             CANONICAL_NAN_BITS
