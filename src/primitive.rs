@@ -222,9 +222,9 @@ impl_primitive!(primitive => f32);
 impl_primitive!(primitive => f64);
 
 impl Encoding for f32 {
-    const MAX: Self = f32::MAX;
-    const MIN: Self = f32::MIN;
-    const MIN_POSITIVE: Self = f32::MIN_POSITIVE;
+    const MAX_FINITE: Self = f32::MAX;
+    const MIN_FINITE: Self = f32::MIN;
+    const MIN_POSITIVE_NORMAL: Self = f32::MIN_POSITIVE;
     const EPSILON: Self = f32::EPSILON;
 
     fn classify(self) -> FpCategory {
@@ -258,9 +258,9 @@ impl Encoding for f32 {
 }
 
 impl Encoding for f64 {
-    const MAX: Self = f64::MAX;
-    const MIN: Self = f64::MIN;
-    const MIN_POSITIVE: Self = f64::MIN_POSITIVE;
+    const MAX_FINITE: Self = f64::MAX;
+    const MIN_FINITE: Self = f64::MIN;
+    const MIN_POSITIVE_NORMAL: Self = f64::MIN_POSITIVE;
     const EPSILON: Self = f64::EPSILON;
 
     fn classify(self) -> FpCategory {
