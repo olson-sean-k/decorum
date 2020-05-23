@@ -361,6 +361,33 @@ where
     }
 }
 
+impl<T> Debug for Finite<T>
+where
+    T: Debug + Float + Primitive,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Finite").field(self.as_ref()).finish()
+    }
+}
+
+impl<T> Debug for NotNan<T>
+where
+    T: Debug + Float + Primitive,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("NotNan").field(self.as_ref()).finish()
+    }
+}
+
+impl<T> Debug for Total<T>
+where
+    T: Debug + Float + Primitive,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Total").field(self.as_ref()).finish()
+    }
+}
+
 impl<T, P> Default for ConstrainedFloat<T, P>
 where
     T: Default + Float + Primitive,
@@ -378,16 +405,6 @@ where
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.as_ref().fmt(f)
-    }
-}
-
-impl<T, P> Debug for ConstrainedFloat<T, P>
-where
-    T: Debug + Float + Primitive,
-    P: Constraint<T>,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "ConstrainedFloat({:?})", self.into_inner())
     }
 }
 
