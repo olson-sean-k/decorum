@@ -1,6 +1,6 @@
 use core::mem;
 
-use crate::{Encoding, Nan};
+use crate::{Encoding, Nan, Primitive};
 
 const SIGN_MASK: u64 = 0x8000_0000_0000_0000;
 const EXPONENT_MASK: u64 = 0x7ff0_0000_0000_0000;
@@ -22,7 +22,7 @@ pub trait ToCanonicalBits: Copy + Sized {
 
 impl<T> ToCanonicalBits for T
 where
-    T: Encoding + Nan,
+    T: Encoding + Nan + Primitive,
 {
     fn to_canonical_bits(self) -> u64 {
         if self.is_nan() {

@@ -19,6 +19,7 @@ use num_traits::{
 #[cfg(feature = "serialize-serde")]
 use serde_derive::{Deserialize, Serialize};
 
+use crate::canonical::ToCanonicalBits;
 use crate::cmp::{self, FloatEq, FloatOrd, IntrinsicOrd};
 use crate::constraint::{
     Constraint, InfiniteClass, Member, NanClass, RealClass, SubsetOf, SupersetOf,
@@ -1466,6 +1467,16 @@ where
         I: Iterator<Item = Self>,
     {
         input.fold(Zero::zero(), |a, b| a + b)
+    }
+}
+
+impl<T, P> ToCanonicalBits for ConstrainedFloat<T, P>
+where
+    T: Float + Primitive,
+    P: Constraint<T>,
+{
+    fn to_canonical_bits(self) -> u64 {
+        self.value.to_canonical_bits()
     }
 }
 
