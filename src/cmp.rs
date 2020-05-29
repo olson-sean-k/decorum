@@ -72,7 +72,7 @@ use crate::{Float, Nan};
 /// $$
 /// \begin{aligned}
 /// a=b&\mid a\in{N},~b\in{N}\cr\[1em\]
-/// n>x&\mid n\in{N},~x\notin{N}
+/// n\ne x&\mid n\in{N},~x\notin{N}
 /// \end{aligned}
 /// $$
 ///
