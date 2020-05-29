@@ -10,7 +10,7 @@ const CANONICAL_NAN_BITS: u64 = 0x7ff8_0000_0000_0000;
 const CANONICAL_ZERO_BITS: u64 = 0x0;
 
 /// Converts floating-point values into a canonicalized form.
-pub trait ToCanonicalBits: Copy + Sized {
+pub trait ToCanonicalBits: Encoding {
     /// Conversion to a canonical representation.
     ///
     /// Unlike the `to_bits` function provided by `f32` and `f64`, this function
