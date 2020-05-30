@@ -5,8 +5,7 @@
 
 **Decorum** is a Rust library that provides total ordering, equivalence,
 hashing, and constraints for floating-point representations. Decorum does not
-require `std` and can be used in `#[no_std]` environments (see the `std`
-feature).
+require `std`.
 
 [![CI](https://github.com/olson-sean-k/decorum/workflows/CI/badge.svg)](https://github.com/olson-sean-k/decorum/actions)
 [![Documentation](https://docs.rs/decorum/badge.svg)](https://docs.rs/decorum)
@@ -26,13 +25,17 @@ and `+0`) and `NaN`. This ordering considers all zero and `NaN` representations
 equal, which differs from the [standard partial
 ordering](https://en.wikipedia.org/wiki/NaN#Comparison_with_NaN).
 
+Some proxy types disallow unordered `NaN` values and therefore support a total
+ordering based on the ordered subset of non-`NaN` floating-point values (see
+below).
+
 ## Proxy Types
 
 Decorum exposes several proxy (wrapper) types. Proxy types provide two primary
-features: they implement a total ordering with `Eq`, `Ord`, and `Hash` and they
-constrain the class of values they can represent. Different type definitions
-apply different constraints, with the `Total` type applying no constraints at
-all.
+features: they implement total ordering and equivalence via the `Eq`, `Ord`, and
+`Hash` traits and they constrain the class of floating-point values they can
+represent. Different type definitions apply different constraints, with the
+`Total` type applying no constraints at all.
 
 | Type     | Aliases      | Trait Implementations                      | Disallowed Values     |
 |----------|--------------|--------------------------------------------|-----------------------|
@@ -42,10 +45,9 @@ all.
 
 
 Proxy types implement common operation traits, such as `Add` and `Mul`. These
-types also implement numeric traits from the
-[`num-traits`](https://crates.io/crate/num-traits) crate (such as `Float`,
-`Num`, `NumCast`, etc.), in addition to more targeted traits like `Real` and
-`Nan` provided by Decorum.
+types also implement numeric traits from the [`num-traits`] crate (such as
+`Float`, `Num`, `NumCast`, etc.), in addition to more targeted traits like
+`Real` and `Nan` provided by Decorum.
 
 Constraint violations cause panics. For example, `NotNan` is useful for avoiding
 or tracing sources of `NaN`s in computation, while `Total` provides useful
@@ -53,9 +55,10 @@ features without introducing any panics at all, because it allows any IEEE-754
 floating-point values.
 
 Proxy types should work as a drop-in replacement for primitive types in most
-applications, with the most common exception being initialization (because it
-requires a conversion). Serialization is optionally supported via
-[serde](https://crates.io/crates/serde) (see the `serialize-serde` feature).
+applications with the most common exception being initialization (because it
+requires a conversion). Serialization is optionally supported with [`serde`] and
+approximate comparisons are optionally supported with [`approx`] via the
+`serialize-serde` and `approx` features, respectively.
 
 ## Traits
 
@@ -90,11 +93,10 @@ where
 }
 ```
 
-Both Decorum and [`num-traits`](https://crates.io/crate/num-traits) provide
-`Real` and `Float` traits. These traits are somewhat different and are not
-always interchangeable. Traits from both crates are implemented by Decorum where
-possible. For example, `Total` implements `Float` from both Decorum and
-`num-traits`.
+Both Decorum and [`num-traits`] provide `Real` and `Float` traits. These traits
+are somewhat different and are not always interchangeable. Traits from both
+crates are implemented by Decorum where possible. For example, `Total`
+implements `Float` from both Decorum and [`num-traits`].
 
 ## Conversions
 
@@ -131,11 +133,11 @@ Proxy types implement `Eq`, `Hash`, and `Ord`, but sometimes it is not
 possible or ergonomic to use such a type. Traits can be used with primitive
 floating-point values for ordering, equivalence, and hashing instead.
 
-| Trait       | Analogous Trait  |
-|-------------|------------------|
-| `FloatEq`   | `Eq`             |
-| `FloatHash` | `Hash`           |
-| `FloatOrd`  | `Ord`            |
+| Floating-Point Trait | General Trait    |
+|----------------------|------------------|
+| `FloatEq`            | `Eq`             |
+| `FloatHash`          | `Hash`           |
+| `FloatOrd`           | `Ord`            |
 
 These traits use the same total ordering and equivalence rules that proxy types
 do. They are implemented for base types as well as slices:
@@ -151,3 +153,7 @@ let xs = [1.0f64, f64::NAN, f64::INFINITY];
 let ys = [1.0f64, f64::NAN, f64::INFINITY];
 assert!(xs.float_eq(&ys));
 ```
+
+[`approx`]: https://crates.io/crate/approx
+[`num-traits`]: https://crates.io/crate/num-traits
+[`serde`]: https://crates.io/crate/serde
