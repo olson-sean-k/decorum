@@ -64,15 +64,15 @@ use crate::{ForeignReal, N32, N64, R32, R64};
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct ConstrainedFloat<T, P> {
-    value: T,
+    inner: T,
     #[cfg_attr(feature = "serialize-serde", serde(skip))]
     phantom: PhantomData<P>,
 }
 
 impl<T, P> ConstrainedFloat<T, P> {
-    const fn from_inner_unchecked(value: T) -> Self {
+    const fn from_inner_unchecked(inner: T) -> Self {
         ConstrainedFloat {
-            value,
+            inner,
             phantom: PhantomData,
         }
     }
@@ -118,8 +118,8 @@ where
     /// // `R64` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
     /// let x = R64::from_inner(0.0 / 0.0); // Panics.
     /// ```
-    pub fn from_inner(value: T) -> Self {
-        Self::try_from_inner(value).expect("floating-point constraint violated")
+    pub fn from_inner(inner: T) -> Self {
+        Self::try_from_inner(inner).expect("floating-point constraint violated")
     }
 
     /// Converts a proxy into a primitive floating-point value.
@@ -139,8 +139,7 @@ where
     /// let x: f64 = f().into_inner();
     /// ```
     pub fn into_inner(self) -> T {
-        let ConstrainedFloat { value, .. } = self;
-        value
+        self.inner
     }
 
     /// Converts a proxy into another proxy that is capable of representing a
@@ -189,10 +188,10 @@ where
         ConstrainedFloat::from_inner_unchecked(self.into_inner())
     }
 
-    fn try_from_inner(value: T) -> Result<Self, ()> {
-        P::filter(value)
-            .map(|value| ConstrainedFloat {
-                value,
+    fn try_from_inner(inner: T) -> Result<Self, ()> {
+        P::filter(inner)
+            .map(|inner| ConstrainedFloat {
+                inner,
                 phantom: PhantomData,
             })
             .ok_or(())
@@ -226,7 +225,7 @@ where
     P: Constraint<T>,
 {
     fn as_ref(&self) -> &T {
-        &self.value
+        &self.inner
     }
 }
 
@@ -262,8 +261,8 @@ where
     T: Float + Primitive,
     P: Constraint<T>,
 {
-    fn from(value: T) -> Self {
-        Self::from_inner(value)
+    fn from(inner: T) -> Self {
+        Self::from_inner(inner)
     }
 }
 
@@ -271,8 +270,8 @@ impl<P> From<ConstrainedFloat<f32, P>> for f32
 where
     P: Constraint<f32>,
 {
-    fn from(value: ConstrainedFloat<f32, P>) -> Self {
-        value.into_inner()
+    fn from(proxy: ConstrainedFloat<f32, P>) -> Self {
+        proxy.into_inner()
     }
 }
 
@@ -280,8 +279,8 @@ impl<P> From<ConstrainedFloat<f64, P>> for f64
 where
     P: Constraint<f64>,
 {
-    fn from(value: ConstrainedFloat<f64, P>) -> Self {
-        value.into_inner()
+    fn from(proxy: ConstrainedFloat<f64, P>) -> Self {
+        proxy.into_inner()
     }
 }
 
@@ -835,51 +834,51 @@ where
     P: Constraint<T>,
 {
     fn from_i8(value: i8) -> Option<Self> {
-        T::from_i8(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
+        T::from_i8(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
     }
 
     fn from_u8(value: u8) -> Option<Self> {
-        T::from_u8(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
+        T::from_u8(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
     }
 
     fn from_i16(value: i16) -> Option<Self> {
-        T::from_i16(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
+        T::from_i16(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
     }
 
     fn from_u16(value: u16) -> Option<Self> {
-        T::from_u16(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
+        T::from_u16(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
     }
 
     fn from_i32(value: i32) -> Option<Self> {
-        T::from_i32(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
+        T::from_i32(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
     }
 
     fn from_u32(value: u32) -> Option<Self> {
-        T::from_u32(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
+        T::from_u32(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
     }
 
     fn from_i64(value: i64) -> Option<Self> {
-        T::from_i64(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
+        T::from_i64(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
     }
 
     fn from_u64(value: u64) -> Option<Self> {
-        T::from_u64(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
+        T::from_u64(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
     }
 
     fn from_isize(value: isize) -> Option<Self> {
-        T::from_isize(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
+        T::from_isize(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
     }
 
     fn from_usize(value: usize) -> Option<Self> {
-        T::from_usize(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
+        T::from_usize(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
     }
 
     fn from_f32(value: f32) -> Option<Self> {
-        T::from_f32(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
+        T::from_f32(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
     }
 
     fn from_f64(value: f64) -> Option<Self> {
-        T::from_f64(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
+        T::from_f64(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
     }
 }
 
@@ -1027,7 +1026,7 @@ where
     where
         U: ToPrimitive,
     {
-        T::from(value).and_then(|value| ConstrainedFloat::try_from_inner(value).ok())
+        T::from(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
     }
 }
 
@@ -1478,7 +1477,7 @@ where
     type Bits = <T as ToCanonicalBits>::Bits;
 
     fn to_canonical_bits(self) -> Self::Bits {
-        self.value.to_canonical_bits()
+        self.inner.to_canonical_bits()
     }
 }
 
