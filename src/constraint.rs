@@ -21,8 +21,10 @@ impl<P, Q> SubsetOf<Q> for P where Q: SupersetOf<P> {}
 /// Describes constraints on the set of floating-point values that a proxy type
 /// may take.
 ///
-/// This trait expresses a constraint by filtering values.
-pub trait Constraint<T>: Copy + Sized
+/// This trait expresses a constraint by filtering values. Note that constraints
+/// require `Member<RealClass>`, meaning that the class of real numbers must
+/// always be supported and is implied.
+pub trait Constraint<T>: Copy + Member<RealClass> + Sized
 where
     T: Float + Primitive,
 {

@@ -21,9 +21,7 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::canonical::ToCanonicalBits;
 use crate::cmp::{self, FloatEq, FloatOrd, IntrinsicOrd};
-use crate::constraint::{
-    Constraint, InfiniteClass, Member, NanClass, RealClass, SubsetOf, SupersetOf,
-};
+use crate::constraint::{Constraint, InfiniteClass, Member, NanClass, SubsetOf, SupersetOf};
 use crate::hash::FloatHash;
 use crate::primitive::Primitive;
 use crate::{Encoding, Finite, Float, ForeignFloat, Infinite, Nan, NotNan, Real, Total};
@@ -307,7 +305,7 @@ where
 impl<T, P> Add for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -319,7 +317,7 @@ where
 impl<T, P> Add<T> for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -331,7 +329,7 @@ where
 impl<T, P> AddAssign for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     fn add_assign(&mut self, other: Self) {
         *self = *self + other;
@@ -341,7 +339,7 @@ where
 impl<T, P> AddAssign<T> for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     fn add_assign(&mut self, other: T) {
         *self = self.map(|inner| inner + other);
@@ -351,7 +349,7 @@ where
 impl<T, P> Bounded for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     fn min_value() -> Self {
         Encoding::MIN
@@ -412,7 +410,7 @@ where
 impl<T, P> Div for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -424,7 +422,7 @@ where
 impl<T, P> Div<T> for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -436,7 +434,7 @@ where
 impl<T, P> DivAssign for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     fn div_assign(&mut self, other: Self) {
         *self = *self / other
@@ -446,7 +444,7 @@ where
 impl<T, P> DivAssign<T> for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     fn div_assign(&mut self, other: T) {
         *self = self.map(|inner| inner / other);
@@ -494,7 +492,7 @@ where
 impl<T, P> ForeignFloat for ConstrainedFloat<T, P>
 where
     T: Float + ForeignFloat + IntrinsicOrd + Primitive,
-    P: Constraint<T> + Member<InfiniteClass> + Member<NanClass> + Member<RealClass>,
+    P: Constraint<T> + Member<InfiniteClass> + Member<NanClass>,
 {
     fn infinity() -> Self {
         Infinite::INFINITY
@@ -761,7 +759,7 @@ where
 impl<T, P> FloatConst for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     fn E() -> Self {
         <Self as Real>::E
@@ -938,7 +936,7 @@ where
 impl<T, P> Mul for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -950,7 +948,7 @@ where
 impl<T, P> Mul<T> for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -962,7 +960,7 @@ where
 impl<T, P> MulAssign for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     fn mul_assign(&mut self, other: Self) {
         *self = *self * other;
@@ -972,7 +970,7 @@ where
 impl<T, P> MulAssign<T> for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     fn mul_assign(&mut self, other: T) {
         *self = *self * other;
@@ -994,7 +992,7 @@ where
 impl<T, P> Neg for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -1007,7 +1005,7 @@ impl<T, P> Num for ConstrainedFloat<T, P>
 where
     Self: PartialEq,
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     type FromStrRadixErr = ();
 
@@ -1034,7 +1032,7 @@ where
 impl<T, P> One for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     fn one() -> Self {
         ConstrainedFloat::from_inner_unchecked(T::one())
@@ -1101,7 +1099,7 @@ where
 impl<T, P> Product for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     fn product<I>(input: I) -> Self
     where
@@ -1114,7 +1112,7 @@ where
 impl<T, P> Real for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     const E: Self = ConstrainedFloat::from_inner_unchecked(Real::E);
     const PI: Self = ConstrainedFloat::from_inner_unchecked(Real::PI);
@@ -1333,7 +1331,7 @@ where
 impl<T, P> Rem for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -1345,7 +1343,7 @@ where
 impl<T, P> Rem<T> for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -1357,7 +1355,7 @@ where
 impl<T, P> RemAssign for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     fn rem_assign(&mut self, other: Self) {
         *self = *self % other;
@@ -1367,7 +1365,7 @@ where
 impl<T, P> RemAssign<T> for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     fn rem_assign(&mut self, other: T) {
         *self = self.map(|inner| inner % other);
@@ -1377,7 +1375,7 @@ where
 impl<T, P> Signed for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     fn abs(&self) -> Self {
         self.map_unchecked(|inner| inner.abs())
@@ -1416,7 +1414,7 @@ where
 impl<T, P> Sub for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -1428,7 +1426,7 @@ where
 impl<T, P> Sub<T> for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     type Output = Self;
 
@@ -1440,7 +1438,7 @@ where
 impl<T, P> SubAssign for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     fn sub_assign(&mut self, other: Self) {
         *self = *self - other
@@ -1450,7 +1448,7 @@ where
 impl<T, P> SubAssign<T> for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     fn sub_assign(&mut self, other: T) {
         *self = self.map(|inner| inner - other)
@@ -1460,7 +1458,7 @@ where
 impl<T, P> Sum for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     fn sum<I>(input: I) -> Self
     where
@@ -1563,7 +1561,7 @@ where
 impl<T, P> Zero for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<RealClass>,
+    P: Constraint<T>,
 {
     fn zero() -> Self {
         ConstrainedFloat::from_inner_unchecked(T::zero())
