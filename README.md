@@ -154,6 +154,6 @@ let ys = [1.0f64, f64::NAN, f64::INFINITY];
 assert!(xs.float_eq(&ys));
 ```
 
-[`approx`]: https://crates.io/crate/approx
-[`num-traits`]: https://crates.io/crate/num-traits
-[`serde`]: https://crates.io/crate/serde
+[`approx`]: https://crates.io/crates/approx
+[`num-traits`]: https://crates.io/crates/num-traits
+[`serde`]: https://crates.io/crates/serde
