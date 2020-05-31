@@ -22,30 +22,16 @@ use crate::Float;
 
 /// Hashing for primitive floating-point values.
 pub trait FloatHash {
-    // The name `hash` is ambiguous. `float_hash` is more clear and is
-    // consistent with the `FloatEq` and `FloatOrd` traits.
-    #[deprecated(since = "0.3.1", note = "use `FloatHash::float_hash` instead")]
-    fn hash<H>(&self, state: &mut H)
-    where
-        H: Hasher;
-
     fn float_hash<H>(&self, state: &mut H)
     where
-        H: Hasher,
-    {
-        // For compatibility, `float_hash` provides a default implementation.
-        // Eventually, `hash` will be removed along with this default
-        // implementation.
-        #[allow(deprecated)]
-        self.hash(state)
-    }
+        H: Hasher;
 }
 
 impl<T> FloatHash for T
 where
     T: Float + Primitive,
 {
-    fn hash<H>(&self, state: &mut H)
+    fn float_hash<H>(&self, state: &mut H)
     where
         H: Hasher,
     {
@@ -57,7 +43,7 @@ impl<T> FloatHash for [T]
 where
     T: Float + Primitive,
 {
-    fn hash<H>(&self, state: &mut H)
+    fn float_hash<H>(&self, state: &mut H)
     where
         H: Hasher,
     {
