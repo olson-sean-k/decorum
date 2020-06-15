@@ -55,4 +55,4 @@ default-features = false
 optional = true
 
 [dev-dependencies]
-num = "^0.2.0"
+num = "^0.3.0"
