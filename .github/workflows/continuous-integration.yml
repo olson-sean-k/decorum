@@ -40,7 +40,10 @@ jobs:
       fail-fast: false
       matrix:
         os: [macOS-latest, ubuntu-latest, windows-latest]
-        toolchain: [stable, beta]
+        toolchain:
+          - 1.43.0 # Minimum.
+          - stable
+          - beta
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1

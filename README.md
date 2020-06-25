@@ -4,8 +4,8 @@
 <br/>
 
 **Decorum** is a Rust library that provides total ordering, equivalence,
-hashing, and constraints for floating-point representations. Decorum does not
-require `std`.
+hashing, and constraints for floating-point representations. Decorum requires
+Rust 1.43.0 or higher and does not require the `std` library.
 
 [![GitHub](https://img.shields.io/badge/GitHub-olson--sean--k/decorum-8da0cb?logo=github&style=for-the-badge)](https://github.com/olson-sean-k/decorum)
 [![docs.rs](https://img.shields.io/badge/docs.rs-decorum-66c2a5?logo=rust&style=for-the-badge)](https://docs.rs/decorum)

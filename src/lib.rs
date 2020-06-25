@@ -6,6 +6,8 @@
 //! types. Proxy types implement a total ordering and constraints on the classes
 //! of values that they may represent.
 //!
+//! Decorum requires Rust 1.43.0 or higher.
+//!
 //! # Floating-Point Classes
 //!
 //! Traits, proxy types, and constraints are based on three classes or subsets
