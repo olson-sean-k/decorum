@@ -7,9 +7,9 @@
 hashing, and constraints for floating-point representations. Decorum does not
 require `std`.
 
-[![CI](https://github.com/olson-sean-k/decorum/workflows/CI/badge.svg)](https://github.com/olson-sean-k/decorum/actions)
-[![Documentation](https://docs.rs/decorum/badge.svg)](https://docs.rs/decorum)
-[![Crate](https://img.shields.io/crates/v/decorum.svg)](https://crates.io/crates/decorum)
+[![GitHub](https://img.shields.io/badge/GitHub-olson--sean--k/decorum-8da0cb?logo=github&style=for-the-badge)](https://github.com/olson-sean-k/decorum)
+[![docs.rs](https://img.shields.io/badge/docs.rs-decorum-66c2a5?logo=rust&style=for-the-badge)](https://docs.rs/decorum)
+[![crates.io](https://img.shields.io/crates/v/decorum.svg?logo=rust&style=for-the-badge)](https://crates.io/crates/decorum)
 
 ## Total Ordering
 
