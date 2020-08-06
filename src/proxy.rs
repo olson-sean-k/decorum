@@ -65,6 +65,7 @@ use crate::{ForeignReal, N32, N64, R32, R64};
 #[repr(transparent)]
 pub struct ConstrainedFloat<T, P> {
     value: T,
+    #[cfg_attr(feature = "serialize-serde", serde(skip))]
     phantom: PhantomData<P>,
 }
 
