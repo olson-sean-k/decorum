@@ -451,6 +451,88 @@ where
     }
 }
 
+macro_rules! op_ref {
+    ($trait_name: ident, $fn_name: ident) => {
+        impl<T, P> $trait_name for &ConstrainedFloat<T, P>
+        where
+            T: Float + Primitive,
+            P: Constraint<T>,
+        {
+            type Output = ConstrainedFloat<T, P>;
+
+            fn $fn_name(self, other: Self) -> Self::Output {
+                $trait_name::$fn_name(*self, *other)
+            }
+        }
+
+        impl<T, P> $trait_name<ConstrainedFloat<T, P>> for &ConstrainedFloat<T, P>
+        where
+            T: Float + Primitive,
+            P: Constraint<T>,
+        {
+            type Output = ConstrainedFloat<T, P>;
+
+            fn $fn_name(self, other: ConstrainedFloat<T, P>) -> Self::Output {
+                $trait_name::$fn_name(*self, other)
+            }
+        }
+
+        impl<T, P> $trait_name<&ConstrainedFloat<T, P>> for ConstrainedFloat<T, P>
+        where
+            T: Float + Primitive,
+            P: Constraint<T>,
+        {
+            type Output = ConstrainedFloat<T, P>;
+
+            fn $fn_name(self, other: &ConstrainedFloat<T, P>) -> Self::Output {
+                $trait_name::$fn_name(self, *other)
+            }
+        }
+
+        impl<T, P> $trait_name<&T> for &ConstrainedFloat<T, P>
+        where
+            T: Float + Primitive,
+            P: Constraint<T>,
+        {
+            type Output = ConstrainedFloat<T, P>;
+
+            fn $fn_name(self, other: &T) -> Self::Output {
+                $trait_name::$fn_name(*self, *other)
+            }
+        }
+
+        impl<T, P> $trait_name<T> for &ConstrainedFloat<T, P>
+        where
+            T: Float + Primitive,
+            P: Constraint<T>,
+        {
+            type Output = ConstrainedFloat<T, P>;
+
+            fn $fn_name(self, other: T) -> Self::Output {
+                $trait_name::$fn_name(*self, other)
+            }
+        }
+
+        impl<T, P> $trait_name<&T> for ConstrainedFloat<T, P>
+        where
+            T: Float + Primitive,
+            P: Constraint<T>,
+        {
+            type Output = ConstrainedFloat<T, P>;
+
+            fn $fn_name(self, other: &T) -> Self::Output {
+                $trait_name::$fn_name(self, *other)
+            }
+        }
+    };
+}
+
+op_ref!(Add, add);
+op_ref!(Sub, sub);
+op_ref!(Mul, mul);
+op_ref!(Div, div);
+op_ref!(Rem, rem);
+
 impl<T, P> Encoding for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
