@@ -533,6 +533,36 @@ op_ref!(Mul, mul);
 op_ref!(Div, div);
 op_ref!(Rem, rem);
 
+macro_rules! op_assign_ref {
+    ($trait_name: ident, $fn_name: ident) => {
+        impl<T, P> $trait_name<&ConstrainedFloat<T, P>> for ConstrainedFloat<T, P>
+        where
+            T: Float + Primitive,
+            P: Constraint<T>,
+        {
+            fn $fn_name(&mut self, other: &ConstrainedFloat<T, P>) {
+                $trait_name::$fn_name(self, *other)
+            }
+        }
+
+        impl<T, P> $trait_name<&T> for ConstrainedFloat<T, P>
+        where
+            T: Float + Primitive,
+            P: Constraint<T>,
+        {
+            fn $fn_name(&mut self, other: &T) {
+                $trait_name::$fn_name(self, *other)
+            }
+        }
+    };
+}
+
+op_assign_ref!(AddAssign, add_assign);
+op_assign_ref!(SubAssign, sub_assign);
+op_assign_ref!(MulAssign, mul_assign);
+op_assign_ref!(DivAssign, div_assign);
+op_assign_ref!(RemAssign, rem_assign);
+
 impl<T, P> Encoding for ConstrainedFloat<T, P>
 where
     T: Float + Primitive,
