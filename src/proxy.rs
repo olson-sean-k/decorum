@@ -1113,6 +1113,18 @@ where
     }
 }
 
+impl<T, P> Neg for &ConstrainedFloat<T, P>
+where
+    T: Float + Primitive,
+    P: Constraint<T>,
+{
+    type Output = ConstrainedFloat<T, P>;
+
+    fn neg(self) -> Self::Output {
+        ConstrainedFloat::from_inner_unchecked(-self.into_inner())
+    }
+}
+
 impl<T, P> Num for ConstrainedFloat<T, P>
 where
     Self: PartialEq,
