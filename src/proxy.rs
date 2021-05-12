@@ -271,7 +271,7 @@ where
     P: Constraint<f32>,
 {
     fn from(proxy: Proxy<f32, P>) -> Self {
-        proxy.into_inner()
+        proxy.into()
     }
 }
 
@@ -280,7 +280,7 @@ where
     P: Constraint<f64>,
 {
     fn from(proxy: Proxy<f64, P>) -> Self {
-        proxy.into_inner()
+        proxy.into()
     }
 }
 
