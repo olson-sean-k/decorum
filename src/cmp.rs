@@ -57,11 +57,9 @@
 
 use core::cmp::Ordering;
 
-use crate::canonical::ToCanonicalBits;
 use crate::constraint::Constraint;
-use crate::primitive::Primitive;
 use crate::proxy::ConstrainedFloat;
-use crate::{Float, Nan};
+use crate::{Float, Nan, Primitive, ToCanonicalBits};
 
 /// Equivalence relation for floating-point primitives.
 ///

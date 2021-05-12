@@ -16,9 +16,7 @@
 
 use core::hash::{Hash, Hasher};
 
-use crate::canonical::ToCanonicalBits;
-use crate::primitive::Primitive;
-use crate::Float;
+use crate::{Float, Primitive, ToCanonicalBits};
 
 /// Hashing for primitive floating-point values.
 pub trait FloatHash {

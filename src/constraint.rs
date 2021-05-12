@@ -3,8 +3,7 @@
 
 use core::marker::PhantomData;
 
-use crate::primitive::Primitive;
-use crate::Float;
+use crate::{Float, Primitive};
 
 pub enum RealClass {}
 pub enum InfiniteClass {}

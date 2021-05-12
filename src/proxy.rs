@@ -19,12 +19,13 @@ use num_traits::{
 #[cfg(feature = "serialize-serde")]
 use serde_derive::{Deserialize, Serialize};
 
-use crate::canonical::ToCanonicalBits;
 use crate::cmp::{self, FloatEq, FloatOrd, IntrinsicOrd};
 use crate::constraint::{Constraint, InfiniteClass, Member, NanClass, SubsetOf, SupersetOf};
 use crate::hash::FloatHash;
-use crate::primitive::Primitive;
-use crate::{Encoding, Finite, Float, ForeignFloat, Infinite, Nan, NotNan, Real, Total};
+use crate::{
+    Encoding, Finite, Float, ForeignFloat, Infinite, Nan, NotNan, Primitive, Real, ToCanonicalBits,
+    Total,
+};
 #[cfg(feature = "std")]
 use crate::{ForeignReal, N32, N64, R32, R64};
 
