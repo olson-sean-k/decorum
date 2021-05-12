@@ -123,6 +123,8 @@ pub type R32 = Finite<f32>;
 /// "F" were used, then this name would be very similar to `f64`.
 pub type R64 = Finite<f64>;
 
+// TODO: Inverse the relationship between `Encoding` and `ToCanonicalBits` such
+//       that `Encoding` requires `ToCanonicalBits`.
 /// Converts floating-point values into a canonicalized form.
 pub trait ToCanonicalBits: Encoding {
     type Bits: PrimInt + Unsigned;
@@ -136,13 +138,14 @@ pub trait ToCanonicalBits: Encoding {
     fn to_canonical_bits(self) -> Self::Bits;
 }
 
+// TODO: Implement this differently for differently sized types.
 impl<T> ToCanonicalBits for T
 where
     T: Encoding + Nan + Primitive,
 {
     type Bits = u64;
 
-    fn to_canonical_bits(self) -> u64 {
+    fn to_canonical_bits(self) -> Self::Bits {
         const SIGN_MASK: u64 = 0x8000_0000_0000_0000;
         const EXPONENT_MASK: u64 = 0x7ff0_0000_0000_0000;
         const MANTISSA_MASK: u64 = 0x000f_ffff_ffff_ffff;
