@@ -3,8 +3,8 @@
 //!
 //! Decorum provides traits that describe types using floating-point
 //! representations and provides proxy types that wrap primitive floating-point
-//! types. Proxy types implement a total ordering and constraints on the classes
-//! of values that they may represent.
+//! types. Proxy types implement a total ordering and constraints on the sets of
+//! values that they may represent.
 //!
 //! Decorum requires Rust 1.43.0 or higher.
 //!
@@ -13,7 +13,7 @@
 //! Traits, proxy types, and constraints are based on three classes or subsets
 //! of floating-point values:
 //!
-//! | Class        | Trait      |
+//! | Set          | Trait      |
 //! |--------------|------------|
 //! | real number  | `Real`     |
 //! | infinity     | `Infinite` |
@@ -26,7 +26,7 @@
 //!
 //! # Proxy Types
 //!
-//! Proxy types wrap primitive floating-point types and constrain the classes of
+//! Proxy types wrap primitive floating-point types and constrain the sets of
 //! values that they can represent:
 //!
 //! | Type     | Aliases      | Trait Implementations                      | Disallowed Values     |
@@ -90,16 +90,16 @@ mod proxy;
 use crate::cmp::IntrinsicOrd;
 use crate::constraint::{FiniteConstraint, NotNanConstraint, UnitConstraint};
 
-pub use crate::proxy::ConstrainedFloat;
+pub use crate::proxy::Proxy;
 
 /// Floating-point representation with total ordering.
-pub type Total<T> = ConstrainedFloat<T, UnitConstraint<T>>;
+pub type Total<T> = Proxy<T, UnitConstraint<T>>;
 
 /// Floating-point representation that cannot be `NaN`.
 ///
 /// If an operation emits `NaN`, then a panic will occur. Like `Total`, this
 /// type implements a total ordering.
-pub type NotNan<T> = ConstrainedFloat<T, NotNanConstraint<T>>;
+pub type NotNan<T> = Proxy<T, NotNanConstraint<T>>;
 
 /// 32-bit floating-point representation that cannot be `NaN`.
 pub type N32 = NotNan<f32>;
@@ -110,7 +110,7 @@ pub type N64 = NotNan<f64>;
 ///
 /// If an operation emits `NaN` or infinities, then a panic will occur. Like
 /// `Total`, this type implements a total ordering.
-pub type Finite<T> = ConstrainedFloat<T, FiniteConstraint<T>>;
+pub type Finite<T> = Proxy<T, FiniteConstraint<T>>;
 
 /// 32-bit floating-point representation that must be a real number.
 ///

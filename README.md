@@ -33,7 +33,7 @@ below).
 
 Decorum exposes several proxy (wrapper) types. Proxy types provide two primary
 features: they implement total ordering and equivalence via the `Eq`, `Ord`, and
-`Hash` traits and they constrain the class of floating-point values they can
+`Hash` traits and they constrain the set of floating-point values they can
 represent. Different type definitions apply different constraints, with the
 `Total` type applying no constraints at all.
 

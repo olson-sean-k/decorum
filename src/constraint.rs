@@ -5,9 +5,9 @@ use core::marker::PhantomData;
 
 use crate::{Float, Primitive};
 
-pub enum RealClass {}
-pub enum InfiniteClass {}
-pub enum NanClass {}
+pub enum RealSet {}
+pub enum InfiniteSet {}
+pub enum NanSet {}
 
 pub trait Member<T> {}
 
@@ -18,20 +18,19 @@ pub trait SubsetOf<P> {}
 impl<P, Q> SubsetOf<Q> for P where Q: SupersetOf<P> {}
 
 /// Describes constraints on the set of floating-point values that a proxy type
-/// may take.
+/// may represent.
 ///
-/// This trait expresses a constraint by filtering values. Note that constraints
-/// require `Member<RealClass>`, meaning that the class of real numbers must
-/// always be supported and is implied.
-pub trait Constraint<T>: Copy + Member<RealClass> + Sized
+/// This trait expresses a constraint by filter-mapping values. Note that
+/// constraints require `Member<RealSet>`, meaning that the set of real numbers
+/// must always be supported and is implied.
+pub trait Constraint<T>: Copy + Member<RealSet> + Sized
 where
     T: Float + Primitive,
 {
-    /// Filters a floating-point value based on some constraints.
+    /// Filter-maps a primitive floating-point value based on some constraints.
     ///
-    /// Returns `Some` for values that satisfy constraints and `None` for
-    /// values that do not.
-    fn filter(value: T) -> Option<T>;
+    /// Returns `None` for values that cannot satify constraints.
+    fn filter_map(value: T) -> Option<T>;
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -42,11 +41,11 @@ where
     phantom: PhantomData<T>,
 }
 
-impl<T> Member<RealClass> for UnitConstraint<T> where T: Float + Primitive {}
+impl<T> Member<RealSet> for UnitConstraint<T> where T: Float + Primitive {}
 
-impl<T> Member<InfiniteClass> for UnitConstraint<T> where T: Float + Primitive {}
+impl<T> Member<InfiniteSet> for UnitConstraint<T> where T: Float + Primitive {}
 
-impl<T> Member<NanClass> for UnitConstraint<T> where T: Float + Primitive {}
+impl<T> Member<NanSet> for UnitConstraint<T> where T: Float + Primitive {}
 
 // TODO: Should implementations map values like zero and `NaN` to canonical
 //       forms?
@@ -54,7 +53,7 @@ impl<T> Constraint<T> for UnitConstraint<T>
 where
     T: Float + Primitive,
 {
-    fn filter(value: T) -> Option<T> {
+    fn filter_map(value: T) -> Option<T> {
         Some(value)
     }
 }
@@ -72,15 +71,15 @@ where
     phantom: PhantomData<T>,
 }
 
-impl<T> Member<RealClass> for NotNanConstraint<T> where T: Float + Primitive {}
+impl<T> Member<RealSet> for NotNanConstraint<T> where T: Float + Primitive {}
 
-impl<T> Member<InfiniteClass> for NotNanConstraint<T> where T: Float + Primitive {}
+impl<T> Member<InfiniteSet> for NotNanConstraint<T> where T: Float + Primitive {}
 
 impl<T> Constraint<T> for NotNanConstraint<T>
 where
     T: Float + Primitive,
 {
-    fn filter(value: T) -> Option<T> {
+    fn filter_map(value: T) -> Option<T> {
         if value.is_nan() {
             None
         }
@@ -101,13 +100,13 @@ where
     phantom: PhantomData<T>,
 }
 
-impl<T> Member<RealClass> for FiniteConstraint<T> where T: Float + Primitive {}
+impl<T> Member<RealSet> for FiniteConstraint<T> where T: Float + Primitive {}
 
 impl<T> Constraint<T> for FiniteConstraint<T>
 where
     T: Float + Primitive,
 {
-    fn filter(value: T) -> Option<T> {
+    fn filter_map(value: T) -> Option<T> {
         if value.is_nan() || value.is_infinite() {
             None
         }

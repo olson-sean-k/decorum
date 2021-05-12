@@ -20,7 +20,7 @@ use num_traits::{
 use serde_derive::{Deserialize, Serialize};
 
 use crate::cmp::{self, FloatEq, FloatOrd, IntrinsicOrd};
-use crate::constraint::{Constraint, InfiniteClass, Member, NanClass, SubsetOf, SupersetOf};
+use crate::constraint::{Constraint, InfiniteSet, Member, NanSet, SubsetOf, SupersetOf};
 use crate::hash::FloatHash;
 use crate::{
     Encoding, Finite, Float, ForeignFloat, Infinite, Nan, NotNan, Primitive, Real, ToCanonicalBits,
@@ -32,11 +32,10 @@ use crate::{ForeignReal, N32, N64, R32, R64};
 /// Floating-point proxy that provides a total ordering, equivalence, hashing,
 /// and constraints.
 ///
-/// `ConstrainedFloat` wraps primitive floating-point types and provides
-/// implementations for numeric traits using a total ordering, including `Ord`,
-/// `Eq`, and `Hash`. `ConstrainedFloat` supports various constraints on the
-/// class of values that may be represented and panics if these constraints are
-/// violated.
+/// `Proxy` wraps primitive floating-point types and provides implementations
+/// for numeric traits using a total ordering, including `Ord`, `Eq`, and
+/// `Hash`. `Proxy` supports various constraints on the set of values that may
+/// be represented and panics if these constraints are violated.
 ///
 /// This type is re-exported but should not (and cannot) be used directly. Use
 /// the type aliases `Total`, `NotNan`, and `Finite` instead.
@@ -64,22 +63,22 @@ use crate::{ForeignReal, N32, N64, R32, R64};
 #[cfg_attr(feature = "serialize-serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Copy)]
 #[repr(transparent)]
-pub struct ConstrainedFloat<T, P> {
+pub struct Proxy<T, P> {
     inner: T,
     #[cfg_attr(feature = "serialize-serde", serde(skip))]
     phantom: PhantomData<P>,
 }
 
-impl<T, P> ConstrainedFloat<T, P> {
+impl<T, P> Proxy<T, P> {
     const fn from_inner_unchecked(inner: T) -> Self {
-        ConstrainedFloat {
+        Proxy {
             inner,
             phantom: PhantomData,
         }
     }
 }
 
-impl<T, P> ConstrainedFloat<T, P>
+impl<T, P> Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -159,7 +158,7 @@ where
     /// let x = R64::zero();
     /// let y = N64::from_subset(x);
     /// ```
-    pub fn from_subset<Q>(other: ConstrainedFloat<T, Q>) -> Self
+    pub fn from_subset<Q>(other: Proxy<T, Q>) -> Self
     where
         Q: Constraint<T> + SubsetOf<P>,
     {
@@ -182,16 +181,16 @@ where
     /// let x = R64::zero();
     /// let y: N64 = x.into_superset();
     /// ```
-    pub fn into_superset<Q>(self) -> ConstrainedFloat<T, Q>
+    pub fn into_superset<Q>(self) -> Proxy<T, Q>
     where
         Q: Constraint<T> + SupersetOf<P>,
     {
-        ConstrainedFloat::from_inner_unchecked(self.into_inner())
+        Proxy::from_inner_unchecked(self.into_inner())
     }
 
     fn try_from_inner(inner: T) -> Result<Self, ()> {
-        P::filter(inner)
-            .map(|inner| ConstrainedFloat {
+        P::filter_map(inner)
+            .map(|inner| Proxy {
                 inner,
                 phantom: PhantomData,
             })
@@ -202,25 +201,25 @@ where
     where
         F: Fn(T) -> T,
     {
-        ConstrainedFloat::from_inner(f(self.into_inner()))
+        Proxy::from_inner(f(self.into_inner()))
     }
 
     fn map_unchecked<F>(self, f: F) -> Self
     where
         F: Fn(T) -> T,
     {
-        ConstrainedFloat::from_inner_unchecked(f(self.into_inner()))
+        Proxy::from_inner_unchecked(f(self.into_inner()))
     }
 
     fn zip_map<F>(self, other: Self, f: F) -> Self
     where
         F: Fn(T, T) -> T,
     {
-        ConstrainedFloat::from_inner(f(self.into_inner(), other.into_inner()))
+        Proxy::from_inner(f(self.into_inner(), other.into_inner()))
     }
 }
 
-impl<T, P> AsRef<T> for ConstrainedFloat<T, P>
+impl<T, P> AsRef<T> for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -257,7 +256,7 @@ where
     }
 }
 
-impl<T, P> From<T> for ConstrainedFloat<T, P>
+impl<T, P> From<T> for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -267,26 +266,26 @@ where
     }
 }
 
-impl<P> From<ConstrainedFloat<f32, P>> for f32
+impl<P> From<Proxy<f32, P>> for f32
 where
     P: Constraint<f32>,
 {
-    fn from(proxy: ConstrainedFloat<f32, P>) -> Self {
+    fn from(proxy: Proxy<f32, P>) -> Self {
         proxy.into_inner()
     }
 }
 
-impl<P> From<ConstrainedFloat<f64, P>> for f64
+impl<P> From<Proxy<f64, P>> for f64
 where
     P: Constraint<f64>,
 {
-    fn from(proxy: ConstrainedFloat<f64, P>) -> Self {
+    fn from(proxy: Proxy<f64, P>) -> Self {
         proxy.into_inner()
     }
 }
 
 #[cfg(feature = "approx")]
-impl<T, P> AbsDiffEq for ConstrainedFloat<T, P>
+impl<T, P> AbsDiffEq for Proxy<T, P>
 where
     T: AbsDiffEq<Epsilon = T> + Float + Primitive,
     P: Constraint<T>,
@@ -303,7 +302,7 @@ where
     }
 }
 
-impl<T, P> Add for ConstrainedFloat<T, P>
+impl<T, P> Add for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -315,7 +314,7 @@ where
     }
 }
 
-impl<T, P> Add<T> for ConstrainedFloat<T, P>
+impl<T, P> Add<T> for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -327,7 +326,7 @@ where
     }
 }
 
-impl<T, P> AddAssign for ConstrainedFloat<T, P>
+impl<T, P> AddAssign for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -337,7 +336,7 @@ where
     }
 }
 
-impl<T, P> AddAssign<T> for ConstrainedFloat<T, P>
+impl<T, P> AddAssign<T> for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -347,7 +346,7 @@ where
     }
 }
 
-impl<T, P> Bounded for ConstrainedFloat<T, P>
+impl<T, P> Bounded for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -388,7 +387,7 @@ where
     }
 }
 
-impl<T, P> Default for ConstrainedFloat<T, P>
+impl<T, P> Default for Proxy<T, P>
 where
     T: Default + Float + Primitive,
     P: Constraint<T>,
@@ -398,7 +397,7 @@ where
     }
 }
 
-impl<T, P> Display for ConstrainedFloat<T, P>
+impl<T, P> Display for Proxy<T, P>
 where
     T: Display + Float + Primitive,
     P: Constraint<T>,
@@ -408,7 +407,7 @@ where
     }
 }
 
-impl<T, P> Div for ConstrainedFloat<T, P>
+impl<T, P> Div for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -420,7 +419,7 @@ where
     }
 }
 
-impl<T, P> Div<T> for ConstrainedFloat<T, P>
+impl<T, P> Div<T> for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -432,7 +431,7 @@ where
     }
 }
 
-impl<T, P> DivAssign for ConstrainedFloat<T, P>
+impl<T, P> DivAssign for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -442,7 +441,7 @@ where
     }
 }
 
-impl<T, P> DivAssign<T> for ConstrainedFloat<T, P>
+impl<T, P> DivAssign<T> for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -452,16 +451,15 @@ where
     }
 }
 
-impl<T, P> Encoding for ConstrainedFloat<T, P>
+impl<T, P> Encoding for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
 {
-    const MAX_FINITE: Self = ConstrainedFloat::from_inner_unchecked(T::MAX_FINITE);
-    const MIN_FINITE: Self = ConstrainedFloat::from_inner_unchecked(T::MIN_FINITE);
-    const MIN_POSITIVE_NORMAL: Self =
-        ConstrainedFloat::from_inner_unchecked(T::MIN_POSITIVE_NORMAL);
-    const EPSILON: Self = ConstrainedFloat::from_inner_unchecked(T::EPSILON);
+    const MAX_FINITE: Self = Proxy::from_inner_unchecked(T::MAX_FINITE);
+    const MIN_FINITE: Self = Proxy::from_inner_unchecked(T::MIN_FINITE);
+    const MIN_POSITIVE_NORMAL: Self = Proxy::from_inner_unchecked(T::MIN_POSITIVE_NORMAL);
+    const EPSILON: Self = Proxy::from_inner_unchecked(T::EPSILON);
 
     fn classify(self) -> FpCategory {
         T::classify(self.into_inner())
@@ -484,17 +482,17 @@ where
     }
 }
 
-impl<T, P> Eq for ConstrainedFloat<T, P>
+impl<T, P> Eq for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
 {
 }
 
-impl<T, P> ForeignFloat for ConstrainedFloat<T, P>
+impl<T, P> ForeignFloat for Proxy<T, P>
 where
     T: Float + ForeignFloat + IntrinsicOrd + Primitive,
-    P: Constraint<T> + Member<InfiniteClass> + Member<NanClass>,
+    P: Constraint<T> + Member<InfiniteSet> + Member<NanSet>,
 {
     fn infinity() -> Self {
         Infinite::INFINITY
@@ -758,7 +756,7 @@ where
     }
 }
 
-impl<T, P> FloatConst for ConstrainedFloat<T, P>
+impl<T, P> FloatConst for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -829,61 +827,61 @@ where
 }
 
 // TODO: Should constraint violations panic here?
-impl<T, P> FromPrimitive for ConstrainedFloat<T, P>
+impl<T, P> FromPrimitive for Proxy<T, P>
 where
     T: Float + FromPrimitive + Primitive,
     P: Constraint<T>,
 {
     fn from_i8(value: i8) -> Option<Self> {
-        T::from_i8(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
+        T::from_i8(value).and_then(|inner| Proxy::try_from_inner(inner).ok())
     }
 
     fn from_u8(value: u8) -> Option<Self> {
-        T::from_u8(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
+        T::from_u8(value).and_then(|inner| Proxy::try_from_inner(inner).ok())
     }
 
     fn from_i16(value: i16) -> Option<Self> {
-        T::from_i16(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
+        T::from_i16(value).and_then(|inner| Proxy::try_from_inner(inner).ok())
     }
 
     fn from_u16(value: u16) -> Option<Self> {
-        T::from_u16(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
+        T::from_u16(value).and_then(|inner| Proxy::try_from_inner(inner).ok())
     }
 
     fn from_i32(value: i32) -> Option<Self> {
-        T::from_i32(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
+        T::from_i32(value).and_then(|inner| Proxy::try_from_inner(inner).ok())
     }
 
     fn from_u32(value: u32) -> Option<Self> {
-        T::from_u32(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
+        T::from_u32(value).and_then(|inner| Proxy::try_from_inner(inner).ok())
     }
 
     fn from_i64(value: i64) -> Option<Self> {
-        T::from_i64(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
+        T::from_i64(value).and_then(|inner| Proxy::try_from_inner(inner).ok())
     }
 
     fn from_u64(value: u64) -> Option<Self> {
-        T::from_u64(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
+        T::from_u64(value).and_then(|inner| Proxy::try_from_inner(inner).ok())
     }
 
     fn from_isize(value: isize) -> Option<Self> {
-        T::from_isize(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
+        T::from_isize(value).and_then(|inner| Proxy::try_from_inner(inner).ok())
     }
 
     fn from_usize(value: usize) -> Option<Self> {
-        T::from_usize(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
+        T::from_usize(value).and_then(|inner| Proxy::try_from_inner(inner).ok())
     }
 
     fn from_f32(value: f32) -> Option<Self> {
-        T::from_f32(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
+        T::from_f32(value).and_then(|inner| Proxy::try_from_inner(inner).ok())
     }
 
     fn from_f64(value: f64) -> Option<Self> {
-        T::from_f64(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
+        T::from_f64(value).and_then(|inner| Proxy::try_from_inner(inner).ok())
     }
 }
 
-impl<T, P> FromStr for ConstrainedFloat<T, P>
+impl<T, P> FromStr for Proxy<T, P>
 where
     T: Float + FromStr + Primitive,
     P: Constraint<T>,
@@ -895,7 +893,7 @@ where
     }
 }
 
-impl<T, P> Hash for ConstrainedFloat<T, P>
+impl<T, P> Hash for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -908,13 +906,13 @@ where
     }
 }
 
-impl<T, P> Infinite for ConstrainedFloat<T, P>
+impl<T, P> Infinite for Proxy<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<InfiniteClass>,
+    P: Constraint<T> + Member<InfiniteSet>,
 {
-    const INFINITY: Self = ConstrainedFloat::from_inner_unchecked(T::INFINITY);
-    const NEG_INFINITY: Self = ConstrainedFloat::from_inner_unchecked(T::NEG_INFINITY);
+    const INFINITY: Self = Proxy::from_inner_unchecked(T::INFINITY);
+    const NEG_INFINITY: Self = Proxy::from_inner_unchecked(T::NEG_INFINITY);
 
     fn is_infinite(self) -> bool {
         self.into_inner().is_infinite()
@@ -925,7 +923,7 @@ where
     }
 }
 
-impl<T, P> LowerExp for ConstrainedFloat<T, P>
+impl<T, P> LowerExp for Proxy<T, P>
 where
     T: Float + LowerExp + Primitive,
     P: Constraint<T>,
@@ -935,7 +933,7 @@ where
     }
 }
 
-impl<T, P> Mul for ConstrainedFloat<T, P>
+impl<T, P> Mul for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -947,7 +945,7 @@ where
     }
 }
 
-impl<T, P> Mul<T> for ConstrainedFloat<T, P>
+impl<T, P> Mul<T> for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -959,7 +957,7 @@ where
     }
 }
 
-impl<T, P> MulAssign for ConstrainedFloat<T, P>
+impl<T, P> MulAssign for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -969,7 +967,7 @@ where
     }
 }
 
-impl<T, P> MulAssign<T> for ConstrainedFloat<T, P>
+impl<T, P> MulAssign<T> for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -979,19 +977,19 @@ where
     }
 }
 
-impl<T, P> Nan for ConstrainedFloat<T, P>
+impl<T, P> Nan for Proxy<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<NanClass>,
+    P: Constraint<T> + Member<NanSet>,
 {
-    const NAN: Self = ConstrainedFloat::from_inner_unchecked(T::NAN);
+    const NAN: Self = Proxy::from_inner_unchecked(T::NAN);
 
     fn is_nan(self) -> bool {
         self.into_inner().is_nan()
     }
 }
 
-impl<T, P> Neg for ConstrainedFloat<T, P>
+impl<T, P> Neg for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -999,11 +997,11 @@ where
     type Output = Self;
 
     fn neg(self) -> Self::Output {
-        ConstrainedFloat::from_inner_unchecked(-self.into_inner())
+        Proxy::from_inner_unchecked(-self.into_inner())
     }
 }
 
-impl<T, P> Num for ConstrainedFloat<T, P>
+impl<T, P> Num for Proxy<T, P>
 where
     Self: PartialEq,
     T: Float + Primitive,
@@ -1014,11 +1012,11 @@ where
     fn from_str_radix(source: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
         T::from_str_radix(source, radix)
             .map_err(|_| ())
-            .and_then(ConstrainedFloat::try_from_inner)
+            .and_then(Proxy::try_from_inner)
     }
 }
 
-impl<T, P> NumCast for ConstrainedFloat<T, P>
+impl<T, P> NumCast for Proxy<T, P>
 where
     T: Float + NumCast + Primitive + ToPrimitive,
     P: Constraint<T>,
@@ -1027,21 +1025,21 @@ where
     where
         U: ToPrimitive,
     {
-        T::from(value).and_then(|inner| ConstrainedFloat::try_from_inner(inner).ok())
+        T::from(value).and_then(|inner| Proxy::try_from_inner(inner).ok())
     }
 }
 
-impl<T, P> One for ConstrainedFloat<T, P>
+impl<T, P> One for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
 {
     fn one() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::one())
+        Proxy::from_inner_unchecked(T::one())
     }
 }
 
-impl<T, P> Ord for ConstrainedFloat<T, P>
+impl<T, P> Ord for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -1051,7 +1049,7 @@ where
     }
 }
 
-impl<T, P> PartialEq for ConstrainedFloat<T, P>
+impl<T, P> PartialEq for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -1061,7 +1059,7 @@ where
     }
 }
 
-impl<T, P> PartialEq<T> for ConstrainedFloat<T, P>
+impl<T, P> PartialEq<T> for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -1076,7 +1074,7 @@ where
     }
 }
 
-impl<T, P> PartialOrd for ConstrainedFloat<T, P>
+impl<T, P> PartialOrd for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -1086,7 +1084,7 @@ where
     }
 }
 
-impl<T, P> PartialOrd<T> for ConstrainedFloat<T, P>
+impl<T, P> PartialOrd<T> for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -1098,7 +1096,7 @@ where
     }
 }
 
-impl<T, P> Product for ConstrainedFloat<T, P>
+impl<T, P> Product for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -1111,27 +1109,27 @@ where
     }
 }
 
-impl<T, P> Real for ConstrainedFloat<T, P>
+impl<T, P> Real for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
 {
-    const E: Self = ConstrainedFloat::from_inner_unchecked(Real::E);
-    const PI: Self = ConstrainedFloat::from_inner_unchecked(Real::PI);
-    const FRAC_1_PI: Self = ConstrainedFloat::from_inner_unchecked(Real::FRAC_1_PI);
-    const FRAC_2_PI: Self = ConstrainedFloat::from_inner_unchecked(Real::FRAC_2_PI);
-    const FRAC_2_SQRT_PI: Self = ConstrainedFloat::from_inner_unchecked(Real::FRAC_2_SQRT_PI);
-    const FRAC_PI_2: Self = ConstrainedFloat::from_inner_unchecked(Real::FRAC_PI_2);
-    const FRAC_PI_3: Self = ConstrainedFloat::from_inner_unchecked(Real::FRAC_PI_3);
-    const FRAC_PI_4: Self = ConstrainedFloat::from_inner_unchecked(Real::FRAC_PI_4);
-    const FRAC_PI_6: Self = ConstrainedFloat::from_inner_unchecked(Real::FRAC_PI_6);
-    const FRAC_PI_8: Self = ConstrainedFloat::from_inner_unchecked(Real::FRAC_PI_8);
-    const SQRT_2: Self = ConstrainedFloat::from_inner_unchecked(Real::SQRT_2);
-    const FRAC_1_SQRT_2: Self = ConstrainedFloat::from_inner_unchecked(Real::FRAC_1_SQRT_2);
-    const LN_2: Self = ConstrainedFloat::from_inner_unchecked(Real::LN_2);
-    const LN_10: Self = ConstrainedFloat::from_inner_unchecked(Real::LN_10);
-    const LOG2_E: Self = ConstrainedFloat::from_inner_unchecked(Real::LOG2_E);
-    const LOG10_E: Self = ConstrainedFloat::from_inner_unchecked(Real::LOG10_E);
+    const E: Self = Proxy::from_inner_unchecked(Real::E);
+    const PI: Self = Proxy::from_inner_unchecked(Real::PI);
+    const FRAC_1_PI: Self = Proxy::from_inner_unchecked(Real::FRAC_1_PI);
+    const FRAC_2_PI: Self = Proxy::from_inner_unchecked(Real::FRAC_2_PI);
+    const FRAC_2_SQRT_PI: Self = Proxy::from_inner_unchecked(Real::FRAC_2_SQRT_PI);
+    const FRAC_PI_2: Self = Proxy::from_inner_unchecked(Real::FRAC_PI_2);
+    const FRAC_PI_3: Self = Proxy::from_inner_unchecked(Real::FRAC_PI_3);
+    const FRAC_PI_4: Self = Proxy::from_inner_unchecked(Real::FRAC_PI_4);
+    const FRAC_PI_6: Self = Proxy::from_inner_unchecked(Real::FRAC_PI_6);
+    const FRAC_PI_8: Self = Proxy::from_inner_unchecked(Real::FRAC_PI_8);
+    const SQRT_2: Self = Proxy::from_inner_unchecked(Real::SQRT_2);
+    const FRAC_1_SQRT_2: Self = Proxy::from_inner_unchecked(Real::FRAC_1_SQRT_2);
+    const LN_2: Self = Proxy::from_inner_unchecked(Real::LN_2);
+    const LN_10: Self = Proxy::from_inner_unchecked(Real::LN_10);
+    const LOG2_E: Self = Proxy::from_inner_unchecked(Real::LOG2_E);
+    const LOG10_E: Self = Proxy::from_inner_unchecked(Real::LOG10_E);
 
     fn floor(self) -> Self {
         self.map(Real::floor)
@@ -1159,7 +1157,7 @@ where
 
     #[cfg(feature = "std")]
     fn mul_add(self, a: Self, b: Self) -> Self {
-        ConstrainedFloat::from_inner(<T as Real>::mul_add(
+        Proxy::from_inner(<T as Real>::mul_add(
             self.into_inner(),
             a.into_inner(),
             b.into_inner(),
@@ -1270,8 +1268,8 @@ where
     fn sin_cos(self) -> (Self, Self) {
         let (sin, cos) = self.into_inner().sin_cos();
         (
-            ConstrainedFloat::from_inner_unchecked(sin),
-            ConstrainedFloat::from_inner_unchecked(cos),
+            Proxy::from_inner_unchecked(sin),
+            Proxy::from_inner_unchecked(cos),
         )
     }
 
@@ -1307,7 +1305,7 @@ where
 }
 
 #[cfg(feature = "approx")]
-impl<T, P> RelativeEq for ConstrainedFloat<T, P>
+impl<T, P> RelativeEq for Proxy<T, P>
 where
     T: Float + Primitive + RelativeEq<Epsilon = T>,
     P: Constraint<T>,
@@ -1330,7 +1328,7 @@ where
     }
 }
 
-impl<T, P> Rem for ConstrainedFloat<T, P>
+impl<T, P> Rem for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -1342,7 +1340,7 @@ where
     }
 }
 
-impl<T, P> Rem<T> for ConstrainedFloat<T, P>
+impl<T, P> Rem<T> for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -1354,7 +1352,7 @@ where
     }
 }
 
-impl<T, P> RemAssign for ConstrainedFloat<T, P>
+impl<T, P> RemAssign for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -1364,7 +1362,7 @@ where
     }
 }
 
-impl<T, P> RemAssign<T> for ConstrainedFloat<T, P>
+impl<T, P> RemAssign<T> for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -1374,7 +1372,7 @@ where
     }
 }
 
-impl<T, P> Signed for ConstrainedFloat<T, P>
+impl<T, P> Signed for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -1413,7 +1411,7 @@ where
     }
 }
 
-impl<T, P> Sub for ConstrainedFloat<T, P>
+impl<T, P> Sub for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -1425,7 +1423,7 @@ where
     }
 }
 
-impl<T, P> Sub<T> for ConstrainedFloat<T, P>
+impl<T, P> Sub<T> for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -1437,7 +1435,7 @@ where
     }
 }
 
-impl<T, P> SubAssign for ConstrainedFloat<T, P>
+impl<T, P> SubAssign for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -1447,7 +1445,7 @@ where
     }
 }
 
-impl<T, P> SubAssign<T> for ConstrainedFloat<T, P>
+impl<T, P> SubAssign<T> for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -1457,7 +1455,7 @@ where
     }
 }
 
-impl<T, P> Sum for ConstrainedFloat<T, P>
+impl<T, P> Sum for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -1470,7 +1468,7 @@ where
     }
 }
 
-impl<T, P> ToCanonicalBits for ConstrainedFloat<T, P>
+impl<T, P> ToCanonicalBits for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
@@ -1482,7 +1480,7 @@ where
     }
 }
 
-impl<T, P> ToPrimitive for ConstrainedFloat<T, P>
+impl<T, P> ToPrimitive for Proxy<T, P>
 where
     T: Float + Primitive + ToPrimitive,
     P: Constraint<T>,
@@ -1537,7 +1535,7 @@ where
 }
 
 #[cfg(feature = "approx")]
-impl<T, P> UlpsEq for ConstrainedFloat<T, P>
+impl<T, P> UlpsEq for Proxy<T, P>
 where
     T: Float + Primitive + UlpsEq<Epsilon = T>,
     P: Constraint<T>,
@@ -1552,7 +1550,7 @@ where
     }
 }
 
-impl<T, P> UpperExp for ConstrainedFloat<T, P>
+impl<T, P> UpperExp for Proxy<T, P>
 where
     T: Float + Primitive + UpperExp,
     P: Constraint<T>,
@@ -1562,13 +1560,13 @@ where
     }
 }
 
-impl<T, P> Zero for ConstrainedFloat<T, P>
+impl<T, P> Zero for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
 {
     fn zero() -> Self {
-        ConstrainedFloat::from_inner_unchecked(T::zero())
+        Proxy::from_inner_unchecked(T::zero())
     }
 
     fn is_zero(&self) -> bool {

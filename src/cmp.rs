@@ -20,7 +20,7 @@
 //! $$
 //!
 //! These same semantics are used in the `Eq` and `Ord` implementations for
-//! `ContrainedFloat`, which includes the `Total`, `NotNan`, and `Finite` type
+//! `Proxy`, which includes the `Total`, `NotNan`, and `Finite` type
 //! definitions.
 //!
 //! # Examples
@@ -58,7 +58,7 @@
 use core::cmp::Ordering;
 
 use crate::constraint::Constraint;
-use crate::proxy::ConstrainedFloat;
+use crate::proxy::Proxy;
 use crate::{Float, Nan, Primitive, ToCanonicalBits};
 
 /// Equivalence relation for floating-point primitives.
@@ -280,7 +280,7 @@ impl_intrinsic_ord!(nan_partial => f64);
 // Note that it is not necessary for `NaN` to be a member of the constraint.
 // This implementation explicitly detects `NaN`s and emits `NaN` as the
 // maximum and minimum (it does not use `FloatOrd`).
-impl<T, P> IntrinsicOrd for ConstrainedFloat<T, P>
+impl<T, P> IntrinsicOrd for Proxy<T, P>
 where
     T: Float + IntrinsicOrd + Primitive,
     P: Constraint<T>,
