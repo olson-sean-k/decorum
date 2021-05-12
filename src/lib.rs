@@ -13,11 +13,11 @@
 //! Traits, proxy types, and constraints are based on three classes or subsets
 //! of floating-point values:
 //!
-//! | Set          | Trait      |
-//! |--------------|------------|
-//! | real number  | `Real`     |
-//! | infinity     | `Infinite` |
-//! | not-a-number | `Nan`      |
+//! | Set          | Trait        |
+//! |--------------|--------------|
+//! | real number  | [`Real`]     |
+//! | infinity     | [`Infinite`] |
+//! | not-a-number | [`Nan`]      |
 //!
 //! Primitive floating-point values directly expose IEEE-754 and therefore the
 //! complete set of values (and traits). Proxy types implement traits that are
@@ -29,26 +29,26 @@
 //! Proxy types wrap primitive floating-point types and constrain the sets of
 //! values that they can represent:
 //!
-//! | Type     | Aliases      | Trait Implementations                      | Disallowed Values     |
-//! |----------|--------------|--------------------------------------------|-----------------------|
-//! | `Total`  |              | `Encoding + Real + Infinite + Nan + Float` |                       |
-//! | `NotNan` | `N32`, `N64` | `Encoding + Real + Infinite`               | `NaN`                 |
-//! | `Finite` | `R32`, `R64` | `Encoding + Real`                          | `NaN`, `-INF`, `+INF` |
+//! | Type       | Aliases      | Trait Implementations                      | Disallowed Values     |
+//! |------------|--------------|--------------------------------------------|-----------------------|
+//! | [`Total`]  |              | `Encoding + Real + Infinite + Nan + Float` |                       |
+//! | [`NotNan`] | `N32`, `N64` | `Encoding + Real + Infinite`               | `NaN`                 |
+//! | [`Finite`] | `R32`, `R64` | `Encoding + Real`                          | `NaN`, `-INF`, `+INF` |
 //!
-//! The `NotNan` and `Finite` types disallow values that represent `NaN`,
+//! The [`NotNan`] and [`Finite`] types disallow values that represent `NaN`,
 //! $\infin$, and $-\infin$. **Operations that emit values that violate these
-//! constraints will panic**. The `Total` type applies no constraints and
+//! constraints will panic**. The [`Total`] type applies no constraints and
 //! exposes all classes of floating-point values.
 //!
 //! # Total Ordering
 //!
 //! The following total ordering is implemented by all proxy types and is
-//! provided by traits in the `cmp` module:
+//! provided by traits in the [`cmp`] module:
 //!
 //! $$-\infin<\cdots<0<\cdots<\infin<\text{NaN}$$
 //!
 //! Note that all zero and `NaN` representations are considered equivalent. See
-//! the `cmp` module documentation for more details.
+//! the [`cmp`] module documentation for more details.
 //!
 //! # Equivalence
 //!
@@ -57,7 +57,15 @@
 //! representations and any and all `NaN` representations are unequal to
 //! non-`NaN` values.
 //!
-//! See the `cmp` module documentation for more details.
+//! See the [`cmp`] module documentation for more details.
+//!
+//! [`cmp`]: crate::cmp
+//! [`Finite`]: crate::Finite
+//! [`Infinite`]: crate::Infinite
+//! [`Nan`]: crate::Nan
+//! [`NotNan`]: crate::NotNan
+//! [`Real`]: crate::Real
+//! [`Total`]: crate::Total
 
 #![doc(
     html_favicon_url = "https://raw.githubusercontent.com/olson-sean-k/decorum/master/doc/decorum-favicon.ico"
@@ -97,8 +105,10 @@ pub type Total<T> = Proxy<T, UnitConstraint<T>>;
 
 /// Floating-point representation that cannot be `NaN`.
 ///
-/// If an operation emits `NaN`, then a panic will occur. Like `Total`, this
+/// If an operation emits `NaN`, then a panic will occur. Like [`Total`], this
 /// type implements a total ordering.
+///
+/// [`Total`]: crate::Total
 pub type NotNan<T> = Proxy<T, NotNanConstraint<T>>;
 
 /// 32-bit floating-point representation that cannot be `NaN`.
@@ -109,7 +119,9 @@ pub type N64 = NotNan<f64>;
 /// Floating-point representation that must be a real number.
 ///
 /// If an operation emits `NaN` or infinities, then a panic will occur. Like
-/// `Total`, this type implements a total ordering.
+/// [`Total`], this type implements a total ordering.
+///
+/// [`Total`]: crate::Total
 pub type Finite<T> = Proxy<T, FiniteConstraint<T>>;
 
 /// 32-bit floating-point representation that must be a real number.

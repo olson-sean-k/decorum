@@ -2,7 +2,7 @@
 //!
 //! This module provides traits and functions for comparing floating-point and
 //! other partially ordered values. For primitive floating-point types, a total
-//! ordering is provided via the `FloatEq` and `FloatOrd` traits:
+//! ordering is provided via the [`FloatEq`] and [`FloatOrd`] traits:
 //!
 //! $$-\infin<\cdots<0<\cdots<\infin<\text{NaN}$$
 //!
@@ -19,8 +19,8 @@
 //! \end{aligned}
 //! $$
 //!
-//! These same semantics are used in the `Eq` and `Ord` implementations for
-//! `Proxy`, which includes the `Total`, `NotNan`, and `Finite` type
+//! These same semantics are used in the [`Eq`] and [`Ord`] implementations for
+//! [`Proxy`], which includes the [`Total`], [`NotNan`], and [`Finite`] type
 //! definitions.
 //!
 //! # Examples
@@ -54,6 +54,13 @@
 //! // ordering, so `min` is assigned a `NaN` value in this example.
 //! let min = cmp::min_or_undefined(x, y);
 //! ```
+//!
+//! [`Eq`]: core::cmp::Eq
+//! [`Finite`]: crate::Finite
+//! [`NotNan`]: crate::NotNan
+//! [`Ord`]: core::cmp::Ord
+//! [`Proxy`]: crate::Proxy
+//! [`Total`]: crate::Total
 
 use core::cmp::Ordering;
 
@@ -171,19 +178,24 @@ where
 /// Partial ordering of types with intrinsic representations for undefined
 /// comparisons.
 ///
-/// `IntrinsicOrd` is similar to `PartialOrd`, but provides a pairwise
-/// minimum-maximum API and, for types without a total ordering, is only
-/// implemented for such types that additionally have intrinsic representations
-/// for _undefined_, such as the `None` variant of `Option` and `NaN`s for
-/// floating-point primitives. `PrimitiveOrd` is also _closed_ and always
-/// compares two values of the same type.
+/// `IntrinsicOrd` provides similar functionality to [`PartialOrd`], but exposes
+/// a pairwise minimum-maximum API that is closed with respect to type and, for
+/// types without a total ordering, is only implemented for types that
+/// additionally have intrinsic representations for _undefined_, such as the
+/// `None` variant of [`Option`] and `NaN`s for floating-point primitives.
 ///
 /// This trait is also implemented for numeric types with total orderings, and
 /// can be used for comparisons that propagate `NaN`s for floating-point
-/// primitives (unlike `PartialOrd`, which expresses comparisons of types `T`
-/// and `U` with the extrinsic type `Option<Ordering>`).
+/// primitives (unlike [`PartialOrd`], which expresses comparisons of types `T`
+/// and `U` with the extrinsic type [`Option<Ordering>`]).
 ///
-/// See the `min_or_undefined` and `max_or_undefined` functions.
+/// See the [`min_or_undefined`] and [`max_or_undefined`] functions.
+///
+/// [`max_or_undefined`]: crate::cmp::max_or_undefined
+/// [`min_or_undefined`]: crate::cmp::min_or_undefined
+/// [`Option`]: core::option::Option
+/// [`Option<Ordering>`]: core::cmp::Ordering
+/// [`PartialOrd`]: core::cmp::PartialOrd
 pub trait IntrinsicOrd: Copy + PartialOrd + Sized {
     /// Returns `true` if a value encodes _undefined_, otherwise `false`.
     ///
@@ -332,7 +344,9 @@ where
 
 /// Partial maximum of types with intrinsic representations for undefined.
 ///
-/// See the `IntrinsicOrd` trait.
+/// See the [`IntrinsicOrd`] trait.
+///
+/// [`IntrinsicOrd`]: crate::cmp::IntrinsicOrd
 pub fn max_or_undefined<T>(a: T, b: T) -> T
 where
     T: IntrinsicOrd,
@@ -342,7 +356,9 @@ where
 
 /// Partial minimum of types with intrinsic representations for undefined.
 ///
-/// See the `IntrinsicOrd` trait.
+/// See the [`IntrinsicOrd`] trait.
+///
+/// [`IntrinsicOrd`]: crate::cmp::IntrinsicOrd
 pub fn min_or_undefined<T>(a: T, b: T) -> T
 where
     T: IntrinsicOrd,

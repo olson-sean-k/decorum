@@ -11,8 +11,12 @@
 //! \end{aligned}
 //! $$
 //!
-//! The `FloatHash` trait agrees with the ordering and equivalence relations of
-//! the `FloatOrd` and `FloatEq` traits.
+//! The [`FloatHash`] trait agrees with the ordering and equivalence relations of
+//! the [`FloatOrd`] and [`FloatEq`] traits.
+//!
+//! [`FloatEq`]: crate::cmp::FloatEq
+//! [`FloatHash`]: crate::hash::FloatHash
+//! [`FloatOrd`]: crate::cmp::FloatOrd
 
 use core::hash::{Hash, Hasher};
 
