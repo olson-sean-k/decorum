@@ -239,7 +239,7 @@ impl Encoding for f32 {
             (bits & 0x7f_ffff) << 1
         }
         else {
-            (bits & 0x7f_ffff) | 0x800_000
+            (bits & 0x7f_ffff) | 0x80_0000
         };
         (mantissa as u64, exponent - (127 + 23), sign)
     }
