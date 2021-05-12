@@ -72,8 +72,7 @@ extern crate std;
 
 use core::num::FpCategory;
 use core::ops::Neg;
-#[allow(unused_imports)]
-use num_traits::{Num, NumCast, Signed};
+use num_traits::{Num, Signed};
 
 #[cfg(not(feature = "std"))]
 pub(in crate) use num_traits::float::FloatCore as ForeignFloat;
