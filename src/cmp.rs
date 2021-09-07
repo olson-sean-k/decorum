@@ -139,7 +139,7 @@ where
     T: Float + Primitive,
 {
     fn float_cmp(&self, other: &Self) -> Ordering {
-        match self.partial_cmp(&other) {
+        match self.partial_cmp(other) {
             Some(ordering) => ordering,
             None => {
                 if self.is_nan() {
