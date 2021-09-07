@@ -121,6 +121,71 @@ where
         Self::try_from_inner(value).expect("floating-point constraint violated")
     }
 
+    /// Converts a reference to a primitive floating-point value into a proxy with the same lifetime.
+    ///
+    /// The same behavior is provided by an implementation of the `AsRef` trait.
+    ///
+    /// # Panics
+    ///
+    /// This conversion and the implementation of the `AsRef` trait will panic
+    /// if the primitive floating-point value violates the constraints of the
+    /// proxy.
+    ///
+    /// # Examples
+    ///
+    /// Converting primitive floating-point values into proxies:
+    ///
+    /// ```rust
+    /// use decorum::NotNan;
+    ///
+    /// struct Data {
+    ///     inner: Vec<f64>
+    /// }
+    ///
+    /// impl Data {
+    ///     pub fn new(inner: Vec<f64>) -> Self {
+    ///         Self { inner }
+    ///     }
+    ///
+    ///     pub fn get_non_nan(&self, idx: usize) -> &NotNan<f64> {
+    ///         self.inner[idx].as_ref()
+    ///         // equivalent to following:
+    ///         // NonNan::from_ref(&self.inner[idx])
+    ///     }
+    ///     
+    ///     pub fn get_non_nan_mut(&mut self, idx: usize) -> &mut NotNan<f64> {
+    ///         self.inner[idx].as_mut()
+    ///         // equivalent to following:
+    ///         // NonNan::from_mut(&mut self.inner[idx])
+    ///     }
+    /// }
+    ///
+    /// let mut data = Data::new(vec![1.0, 0.5, 0.25, 0.075]);
+    /// assert_eq!(*data.get_non_nan(0), 1.0);
+    /// let ptr = data.get_non_nan_mut(3);
+    /// *ptr = 0.125.into();
+    /// assert_eq!(data.inner[3], 0.125);
+    /// ```
+    ///
+    pub fn from_ref(value: &T) -> &Self {
+        Self::try_from_ref(value).expect("floating-point constraint violated")
+    }
+
+    /// Converts a mutable reference to a primitive floating-point value into a proxy with the same lifetime.
+    ///
+    /// The same behavior is provided by an implementation of the `AsRef` trait.
+    ///
+    /// # Panics
+    ///
+    /// This conversion and the implementation of the `AsRef` trait will panic
+    /// if the primitive floating-point value violates the constraints of the
+    /// proxy.
+    /// # Examples
+    /// see [`Constraint::from_ref`]
+    pub fn from_mut(value: &mut T) -> &mut Self {
+        Self::try_from_mut(value).expect("floating-point constraint violated")
+    }
+
     /// Converts a proxy into a primitive floating-point value.
     ///
     /// # Examples
@@ -197,6 +262,22 @@ where
             .ok_or(())
     }
 
+    fn try_from_ref(value: &T) -> Result<&Self, ()> {
+        // SAFETY: Since `ConstrainedFloat` is `#[repr(transparent)]`,
+        // it is legal to transmute between &'a ConstrainedFloat<T, P> and &'a T
+        P::filter(*value)
+            .map(|_| unsafe { &*(value as *const T as *const Self) })
+            .ok_or(())
+    }
+
+    fn try_from_mut(value: &mut T) -> Result<&mut Self, ()> {
+        // SAFETY: Since `ConstrainedFloat` is `#[repr(transparent)]`,
+        // it is legal to transmute between &'a mut ConstrainedFloat<T, P> and &'a mut T
+        P::filter(*value)
+            .map(|_| unsafe { &mut *(value as *mut T as *mut Self) })
+            .ok_or(())
+    }
+
     fn map<F>(self, f: F) -> Self
     where
         F: Fn(T) -> T,
@@ -226,6 +307,42 @@ where
 {
     fn as_ref(&self) -> &T {
         &self.value
+    }
+}
+
+impl<P> AsRef<ConstrainedFloat<f32, P>> for f32
+where
+    P: Constraint<f32>,
+{
+    fn as_ref(&self) -> &ConstrainedFloat<f32, P> {
+        ConstrainedFloat::from_ref(self)
+    }
+}
+
+impl<P> AsRef<ConstrainedFloat<f64, P>> for f64
+where
+    P: Constraint<f64>,
+{
+    fn as_ref(&self) -> &ConstrainedFloat<f64, P> {
+        ConstrainedFloat::from_ref(self)
+    }
+}
+
+impl<P> AsMut<ConstrainedFloat<f32, P>> for f32
+where
+    P: Constraint<f32>,
+{
+    fn as_mut(&mut self) -> &mut ConstrainedFloat<f32, P> {
+        ConstrainedFloat::from_mut(self)
+    }
+}
+
+impl<P> AsMut<ConstrainedFloat<f64, P>> for f64
+where
+    P: Constraint<f64>,
+{
+    fn as_mut(&mut self) -> &mut ConstrainedFloat<f64, P> {
+        ConstrainedFloat::from_mut(self)
     }
 }
 
@@ -1067,8 +1184,7 @@ where
     fn eq(&self, other: &T) -> bool {
         if let Ok(other) = Self::try_from_inner(*other) {
             Self::eq(self, &other)
-        }
-        else {
+        } else {
             false
         }
     }
@@ -1388,14 +1504,7 @@ where
 
     #[cfg(not(feature = "std"))]
     fn abs_sub(&self, other: &Self) -> Self {
-        self.zip_map(*other, |a, b| {
-            if a <= b {
-                Zero::zero()
-            }
-            else {
-                a - b
-            }
-        })
+        self.zip_map(*other, |a, b| if a <= b { Zero::zero() } else { a - b })
     }
 
     fn signum(&self) -> Self {
