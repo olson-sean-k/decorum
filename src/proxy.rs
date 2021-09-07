@@ -61,12 +61,11 @@ use crate::{ForeignReal, N32, N64, R32, R64};
 /// `Finite` type definitions. Note that `Total` uses a unit constraint, which
 /// enforces no constraints at all and never panics.
 #[cfg_attr(feature = "serialize-serde", derive(Deserialize, Serialize))]
-#[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct Proxy<T, P> {
     inner: T,
     #[cfg_attr(feature = "serialize-serde", serde(skip))]
-    phantom: PhantomData<P>,
+    phantom: PhantomData<*const P>,
 }
 
 impl<T, P> Proxy<T, P> {
@@ -359,6 +358,20 @@ where
         Encoding::MAX_FINITE
     }
 }
+
+impl<T, P> Clone for Proxy<T, P>
+where
+    T: Float + Primitive,
+{
+    fn clone(&self) -> Self {
+        Proxy {
+            inner: self.inner,
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<T, P> Copy for Proxy<T, P> where T: Float + Primitive {}
 
 impl<T> Debug for Finite<T>
 where
