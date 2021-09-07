@@ -265,7 +265,7 @@ where
     fn try_from_ref(value: &T) -> Result<&Self, ()> {
         // SAFETY: Since `ConstrainedFloat` is `#[repr(transparent)]`,
         // it is legal to transmute between &'a ConstrainedFloat<T, P> and &'a T
-        P::filter(*value)
+        P::filter_map(*value)
             .map(|_| unsafe { &*(value as *const T as *const Self) })
             .ok_or(())
     }
@@ -273,7 +273,7 @@ where
     fn try_from_mut(value: &mut T) -> Result<&mut Self, ()> {
         // SAFETY: Since `ConstrainedFloat` is `#[repr(transparent)]`,
         // it is legal to transmute between &'a mut ConstrainedFloat<T, P> and &'a mut T
-        P::filter(*value)
+        P::filter_map(*value)
             .map(|_| unsafe { &mut *(value as *mut T as *mut Self) })
             .ok_or(())
     }
@@ -310,39 +310,39 @@ where
     }
 }
 
-impl<P> AsRef<ConstrainedFloat<f32, P>> for f32
+impl<P> AsRef<Proxy<f32, P>> for f32
 where
     P: Constraint<f32>,
 {
-    fn as_ref(&self) -> &ConstrainedFloat<f32, P> {
-        ConstrainedFloat::from_ref(self)
+    fn as_ref(&self) -> &Proxy<f32, P> {
+        Proxy::from_ref(self)
     }
 }
 
-impl<P> AsRef<ConstrainedFloat<f64, P>> for f64
+impl<P> AsRef<Proxy<f64, P>> for f64
 where
     P: Constraint<f64>,
 {
-    fn as_ref(&self) -> &ConstrainedFloat<f64, P> {
-        ConstrainedFloat::from_ref(self)
+    fn as_ref(&self) -> &Proxy<f64, P> {
+        Proxy::from_ref(self)
     }
 }
 
-impl<P> AsMut<ConstrainedFloat<f32, P>> for f32
+impl<P> AsMut<Proxy<f32, P>> for f32
 where
     P: Constraint<f32>,
 {
-    fn as_mut(&mut self) -> &mut ConstrainedFloat<f32, P> {
-        ConstrainedFloat::from_mut(self)
+    fn as_mut(&mut self) -> &mut Proxy<f32, P> {
+        Proxy::from_mut(self)
     }
 }
 
-impl<P> AsMut<ConstrainedFloat<f64, P>> for f64
+impl<P> AsMut<Proxy<f64, P>> for f64
 where
     P: Constraint<f64>,
 {
-    fn as_mut(&mut self) -> &mut ConstrainedFloat<f64, P> {
-        ConstrainedFloat::from_mut(self)
+    fn as_mut(&mut self) -> &mut Proxy<f64, P> {
+        Proxy::from_mut(self)
     }
 }
 
