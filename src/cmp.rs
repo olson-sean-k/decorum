@@ -238,6 +238,60 @@ pub trait IntrinsicOrd: Copy + PartialOrd + Sized {
         self.min_max_or_undefined(other).1
     }
 }
+
+impl<T> IntrinsicOrd for Option<T>
+where
+    T: Copy + PartialOrd,
+{
+    fn is_undefined(&self) -> bool {
+        self.is_none()
+    }
+
+    fn min_max_or_undefined(&self, other: &Self) -> (Self, Self) {
+        match (self.as_ref(), other.as_ref()) {
+            (Some(a), Some(b)) => match a.partial_cmp(b) {
+                Some(ordering) => match ordering {
+                    Ordering::Less | Ordering::Equal => (Some(*a), Some(*b)),
+                    _ => (Some(*b), Some(*a)),
+                },
+                _ => (None, None),
+            },
+            _ => (None, None),
+        }
+    }
+}
+
+// Note that it is not necessary for `NaN` to be a member of the constraint.
+// This implementation explicitly detects `NaN`s and emits `NaN` as the
+// maximum and minimum (it does not use `FloatOrd`).
+impl<T, P> IntrinsicOrd for Proxy<T, P>
+where
+    T: Float + IntrinsicOrd + Primitive,
+    P: Constraint<T>,
+{
+    fn is_undefined(&self) -> bool {
+        self.into_inner().is_nan()
+    }
+
+    fn min_max_or_undefined(&self, other: &Self) -> (Self, Self) {
+        // This function operates on primitive floating-point values. This
+        // avoids the need for implementations for each combination of proxy and
+        // constraint (proxy types do not always implement `Nan`, but primitive
+        // types do).
+        let a = self.into_inner();
+        let b = other.into_inner();
+        let (min, max) = a.min_max_or_undefined(&b);
+        // Both `min` and `max` are `NaN` if `a` and `b` are incomparable.
+        if min.is_nan() {
+            let nan = T::NAN.into();
+            (nan, nan)
+        }
+        else {
+            (min.into(), max.into())
+        }
+    }
+}
+
 macro_rules! impl_intrinsic_ord {
     (no_nan_total => $t:ty) => {
         impl IntrinsicOrd for $t {
@@ -288,59 +342,6 @@ impl_intrinsic_ord!(no_nan_total => u64);
 impl_intrinsic_ord!(no_nan_total => u128);
 impl_intrinsic_ord!(nan_partial => f32);
 impl_intrinsic_ord!(nan_partial => f64);
-
-// Note that it is not necessary for `NaN` to be a member of the constraint.
-// This implementation explicitly detects `NaN`s and emits `NaN` as the
-// maximum and minimum (it does not use `FloatOrd`).
-impl<T, P> IntrinsicOrd for Proxy<T, P>
-where
-    T: Float + IntrinsicOrd + Primitive,
-    P: Constraint<T>,
-{
-    fn is_undefined(&self) -> bool {
-        self.into_inner().is_nan()
-    }
-
-    fn min_max_or_undefined(&self, other: &Self) -> (Self, Self) {
-        // This function operates on primitive floating-point values. This
-        // avoids the need for implementations for each combination of proxy and
-        // constraint (proxy types do not always implement `Nan`, but primitive
-        // types do).
-        let a = self.into_inner();
-        let b = other.into_inner();
-        let (min, max) = a.min_max_or_undefined(&b);
-        // Both `min` and `max` are `NaN` if `a` and `b` are incomparable.
-        if min.is_nan() {
-            let nan = T::NAN.into();
-            (nan, nan)
-        }
-        else {
-            (min.into(), max.into())
-        }
-    }
-}
-
-impl<T> IntrinsicOrd for Option<T>
-where
-    T: Copy + PartialOrd,
-{
-    fn is_undefined(&self) -> bool {
-        self.is_none()
-    }
-
-    fn min_max_or_undefined(&self, other: &Self) -> (Self, Self) {
-        match (self.as_ref(), other.as_ref()) {
-            (Some(a), Some(b)) => match a.partial_cmp(b) {
-                Some(ordering) => match ordering {
-                    Ordering::Less | Ordering::Equal => (Some(*a), Some(*b)),
-                    _ => (Some(*b), Some(*a)),
-                },
-                _ => (None, None),
-            },
-            _ => (None, None),
-        }
-    }
-}
 
 /// Partial maximum of types with intrinsic representations for undefined.
 ///

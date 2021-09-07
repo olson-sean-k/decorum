@@ -41,12 +41,6 @@ where
     phantom: PhantomData<fn() -> T>,
 }
 
-impl<T> Member<RealSet> for UnitConstraint<T> where T: Float + Primitive {}
-
-impl<T> Member<InfiniteSet> for UnitConstraint<T> where T: Float + Primitive {}
-
-impl<T> Member<NanSet> for UnitConstraint<T> where T: Float + Primitive {}
-
 // TODO: Should implementations map values like zero and `NaN` to canonical
 //       forms?
 impl<T> Constraint<T> for UnitConstraint<T>
@@ -58,9 +52,15 @@ where
     }
 }
 
-impl<T> SupersetOf<NotNanConstraint<T>> for UnitConstraint<T> where T: Float + Primitive {}
+impl<T> Member<InfiniteSet> for UnitConstraint<T> where T: Float + Primitive {}
+
+impl<T> Member<NanSet> for UnitConstraint<T> where T: Float + Primitive {}
+
+impl<T> Member<RealSet> for UnitConstraint<T> where T: Float + Primitive {}
 
 impl<T> SupersetOf<FiniteConstraint<T>> for UnitConstraint<T> where T: Float + Primitive {}
+
+impl<T> SupersetOf<NotNanConstraint<T>> for UnitConstraint<T> where T: Float + Primitive {}
 
 /// Disallows `NaN`s.
 #[derive(Debug)]
@@ -70,10 +70,6 @@ where
 {
     phantom: PhantomData<fn() -> T>,
 }
-
-impl<T> Member<RealSet> for NotNanConstraint<T> where T: Float + Primitive {}
-
-impl<T> Member<InfiniteSet> for NotNanConstraint<T> where T: Float + Primitive {}
 
 impl<T> Constraint<T> for NotNanConstraint<T>
 where
@@ -89,6 +85,10 @@ where
     }
 }
 
+impl<T> Member<InfiniteSet> for NotNanConstraint<T> where T: Float + Primitive {}
+
+impl<T> Member<RealSet> for NotNanConstraint<T> where T: Float + Primitive {}
+
 impl<T> SupersetOf<FiniteConstraint<T>> for NotNanConstraint<T> where T: Float + Primitive {}
 
 /// Disallows `NaN`s and infinities.
@@ -99,8 +99,6 @@ where
 {
     phantom: PhantomData<fn() -> T>,
 }
-
-impl<T> Member<RealSet> for FiniteConstraint<T> where T: Float + Primitive {}
 
 impl<T> Constraint<T> for FiniteConstraint<T>
 where
@@ -115,3 +113,5 @@ where
         }
     }
 }
+
+impl<T> Member<RealSet> for FiniteConstraint<T> where T: Float + Primitive {}
