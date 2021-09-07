@@ -34,13 +34,13 @@ serialize-serde = ["serde", "serde_derive"]
 std = ["approx/std", "num-traits/std"]
 
 [dependencies.approx]
-version = "^0.3.0"
+version = "^0.5.0"
 default-features = false
 features = []
 optional = true
 
 [dependencies.num-traits]
-version = "^0.2.4"
+version = "^0.2.0"
 default-features = false
 features = []
 
@@ -55,4 +55,4 @@ default-features = false
 optional = true
 
 [dev-dependencies]
-num = "^0.3.0"
+num = "^0.4.0"
