@@ -25,7 +25,7 @@ pub trait Sealed {}
 /// This trait expresses a constraint by filter-mapping values. Note that
 /// constraints require `Member<RealSet>`, meaning that the set of real numbers
 /// must always be supported and is implied.
-pub trait Constraint<T>: Copy + Member<RealSet> + Sized + Sealed
+pub trait Constraint<T>: Member<RealSet> + Sealed
 where
     T: Float + Primitive,
 {
@@ -35,19 +35,13 @@ where
     fn filter_map(value: T) -> Option<T>;
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug)]
 pub struct UnitConstraint<T>
 where
     T: Float + Primitive,
 {
-    phantom: PhantomData<T>,
+    phantom: PhantomData<fn() -> T>,
 }
-
-impl<T> Member<RealSet> for UnitConstraint<T> where T: Float + Primitive {}
-
-impl<T> Member<InfiniteSet> for UnitConstraint<T> where T: Float + Primitive {}
-
-impl<T> Member<NanSet> for UnitConstraint<T> where T: Float + Primitive {}
 
 // TODO: Should implementations map values like zero and `NaN` to canonical
 //       forms?
@@ -62,22 +56,24 @@ where
 
 impl<T> Sealed for UnitConstraint<T> where T: Float + Primitive {}
 
-impl<T> SupersetOf<NotNanConstraint<T>> for UnitConstraint<T> where T: Float + Primitive {}
+impl<T> Member<InfiniteSet> for UnitConstraint<T> where T: Float + Primitive {}
+
+impl<T> Member<NanSet> for UnitConstraint<T> where T: Float + Primitive {}
+
+impl<T> Member<RealSet> for UnitConstraint<T> where T: Float + Primitive {}
 
 impl<T> SupersetOf<FiniteConstraint<T>> for UnitConstraint<T> where T: Float + Primitive {}
 
+impl<T> SupersetOf<NotNanConstraint<T>> for UnitConstraint<T> where T: Float + Primitive {}
+
 /// Disallows `NaN`s.
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug)]
 pub struct NotNanConstraint<T>
 where
     T: Float + Primitive,
 {
-    phantom: PhantomData<T>,
+    phantom: PhantomData<fn() -> T>,
 }
-
-impl<T> Member<RealSet> for NotNanConstraint<T> where T: Float + Primitive {}
-
-impl<T> Member<InfiniteSet> for NotNanConstraint<T> where T: Float + Primitive {}
 
 impl<T> Constraint<T> for NotNanConstraint<T>
 where
@@ -94,18 +90,20 @@ where
 
 impl<T> Sealed for NotNanConstraint<T> where T: Float + Primitive {}
 
+impl<T> Member<InfiniteSet> for NotNanConstraint<T> where T: Float + Primitive {}
+
+impl<T> Member<RealSet> for NotNanConstraint<T> where T: Float + Primitive {}
+
 impl<T> SupersetOf<FiniteConstraint<T>> for NotNanConstraint<T> where T: Float + Primitive {}
 
 /// Disallows `NaN`s and infinities.
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug)]
 pub struct FiniteConstraint<T>
 where
     T: Float + Primitive,
 {
-    phantom: PhantomData<T>,
+    phantom: PhantomData<fn() -> T>,
 }
-
-impl<T> Member<RealSet> for FiniteConstraint<T> where T: Float + Primitive {}
 
 impl<T> Constraint<T> for FiniteConstraint<T>
 where
@@ -121,3 +119,5 @@ where
 }
 
 impl<T> Sealed for FiniteConstraint<T> where T: Float + Primitive {}
+
+impl<T> Member<RealSet> for FiniteConstraint<T> where T: Float + Primitive {}

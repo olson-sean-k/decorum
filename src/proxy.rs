@@ -61,12 +61,11 @@ use crate::{ForeignReal, N32, N64, R32, R64};
 /// `Finite` type definitions. Note that `Total` uses a unit constraint, which
 /// enforces no constraints at all and never panics.
 #[cfg_attr(feature = "serialize-serde", derive(Deserialize, Serialize))]
-#[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct Proxy<T, P> {
     inner: T,
     #[cfg_attr(feature = "serialize-serde", serde(skip))]
-    phantom: PhantomData<P>,
+    phantom: PhantomData<*const P>,
 }
 
 impl<T, P> Proxy<T, P> {
@@ -219,71 +218,6 @@ where
     }
 }
 
-impl<T, P> AsRef<T> for Proxy<T, P>
-where
-    T: Float + Primitive,
-    P: Constraint<T>,
-{
-    fn as_ref(&self) -> &T {
-        &self.inner
-    }
-}
-
-impl<T> From<NotNan<T>> for Total<T>
-where
-    T: Float + Primitive,
-{
-    fn from(other: NotNan<T>) -> Self {
-        Self::from_subset(other)
-    }
-}
-
-impl<T> From<Finite<T>> for Total<T>
-where
-    T: Float + Primitive,
-{
-    fn from(other: Finite<T>) -> Self {
-        Self::from_subset(other)
-    }
-}
-
-impl<T> From<Finite<T>> for NotNan<T>
-where
-    T: Float + Primitive,
-{
-    fn from(other: Finite<T>) -> Self {
-        Self::from_subset(other)
-    }
-}
-
-impl<T, P> From<T> for Proxy<T, P>
-where
-    T: Float + Primitive,
-    P: Constraint<T>,
-{
-    fn from(inner: T) -> Self {
-        Self::from_inner(inner)
-    }
-}
-
-impl<P> From<Proxy<f32, P>> for f32
-where
-    P: Constraint<f32>,
-{
-    fn from(proxy: Proxy<f32, P>) -> Self {
-        proxy.into()
-    }
-}
-
-impl<P> From<Proxy<f64, P>> for f64
-where
-    P: Constraint<f64>,
-{
-    fn from(proxy: Proxy<f64, P>) -> Self {
-        proxy.into()
-    }
-}
-
 #[cfg(feature = "approx")]
 impl<T, P> AbsDiffEq for Proxy<T, P>
 where
@@ -346,6 +280,16 @@ where
     }
 }
 
+impl<T, P> AsRef<T> for Proxy<T, P>
+where
+    T: Float + Primitive,
+    P: Constraint<T>,
+{
+    fn as_ref(&self) -> &T {
+        &self.inner
+    }
+}
+
 impl<T, P> Bounded for Proxy<T, P>
 where
     T: Float + Primitive,
@@ -359,6 +303,20 @@ where
         Encoding::MAX_FINITE
     }
 }
+
+impl<T, P> Clone for Proxy<T, P>
+where
+    T: Float + Primitive,
+{
+    fn clone(&self) -> Self {
+        Proxy {
+            inner: self.inner,
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<T, P> Copy for Proxy<T, P> where T: Float + Primitive {}
 
 impl<T> Debug for Finite<T>
 where
@@ -487,6 +445,76 @@ where
     T: Float + Primitive,
     P: Constraint<T>,
 {
+}
+
+impl<T, P> FloatConst for Proxy<T, P>
+where
+    T: Float + Primitive,
+    P: Constraint<T>,
+{
+    fn E() -> Self {
+        <Self as Real>::E
+    }
+
+    fn PI() -> Self {
+        <Self as Real>::PI
+    }
+
+    fn SQRT_2() -> Self {
+        <Self as Real>::SQRT_2
+    }
+
+    fn FRAC_1_PI() -> Self {
+        <Self as Real>::FRAC_1_PI
+    }
+
+    fn FRAC_2_PI() -> Self {
+        <Self as Real>::FRAC_2_PI
+    }
+
+    fn FRAC_1_SQRT_2() -> Self {
+        <Self as Real>::FRAC_1_SQRT_2
+    }
+
+    fn FRAC_2_SQRT_PI() -> Self {
+        <Self as Real>::FRAC_2_SQRT_PI
+    }
+
+    fn FRAC_PI_2() -> Self {
+        <Self as Real>::FRAC_PI_2
+    }
+
+    fn FRAC_PI_3() -> Self {
+        <Self as Real>::FRAC_PI_3
+    }
+
+    fn FRAC_PI_4() -> Self {
+        <Self as Real>::FRAC_PI_4
+    }
+
+    fn FRAC_PI_6() -> Self {
+        <Self as Real>::FRAC_PI_6
+    }
+
+    fn FRAC_PI_8() -> Self {
+        <Self as Real>::FRAC_PI_8
+    }
+
+    fn LN_10() -> Self {
+        <Self as Real>::LN_10
+    }
+
+    fn LN_2() -> Self {
+        <Self as Real>::LN_2
+    }
+
+    fn LOG10_E() -> Self {
+        <Self as Real>::LOG10_E
+    }
+
+    fn LOG2_E() -> Self {
+        <Self as Real>::LOG2_E
+    }
 }
 
 impl<T, P> ForeignFloat for Proxy<T, P>
@@ -756,73 +784,58 @@ where
     }
 }
 
-impl<T, P> FloatConst for Proxy<T, P>
+impl<T> From<NotNan<T>> for Total<T>
+where
+    T: Float + Primitive,
+{
+    fn from(other: NotNan<T>) -> Self {
+        Self::from_subset(other)
+    }
+}
+
+impl<T> From<Finite<T>> for Total<T>
+where
+    T: Float + Primitive,
+{
+    fn from(other: Finite<T>) -> Self {
+        Self::from_subset(other)
+    }
+}
+
+impl<T> From<Finite<T>> for NotNan<T>
+where
+    T: Float + Primitive,
+{
+    fn from(other: Finite<T>) -> Self {
+        Self::from_subset(other)
+    }
+}
+
+impl<T, P> From<T> for Proxy<T, P>
 where
     T: Float + Primitive,
     P: Constraint<T>,
 {
-    fn E() -> Self {
-        <Self as Real>::E
+    fn from(inner: T) -> Self {
+        Self::from_inner(inner)
     }
+}
 
-    fn PI() -> Self {
-        <Self as Real>::PI
+impl<P> From<Proxy<f32, P>> for f32
+where
+    P: Constraint<f32>,
+{
+    fn from(proxy: Proxy<f32, P>) -> Self {
+        proxy.into()
     }
+}
 
-    fn SQRT_2() -> Self {
-        <Self as Real>::SQRT_2
-    }
-
-    fn FRAC_1_PI() -> Self {
-        <Self as Real>::FRAC_1_PI
-    }
-
-    fn FRAC_2_PI() -> Self {
-        <Self as Real>::FRAC_2_PI
-    }
-
-    fn FRAC_1_SQRT_2() -> Self {
-        <Self as Real>::FRAC_1_SQRT_2
-    }
-
-    fn FRAC_2_SQRT_PI() -> Self {
-        <Self as Real>::FRAC_2_SQRT_PI
-    }
-
-    fn FRAC_PI_2() -> Self {
-        <Self as Real>::FRAC_PI_2
-    }
-
-    fn FRAC_PI_3() -> Self {
-        <Self as Real>::FRAC_PI_3
-    }
-
-    fn FRAC_PI_4() -> Self {
-        <Self as Real>::FRAC_PI_4
-    }
-
-    fn FRAC_PI_6() -> Self {
-        <Self as Real>::FRAC_PI_6
-    }
-
-    fn FRAC_PI_8() -> Self {
-        <Self as Real>::FRAC_PI_8
-    }
-
-    fn LN_10() -> Self {
-        <Self as Real>::LN_10
-    }
-
-    fn LN_2() -> Self {
-        <Self as Real>::LN_2
-    }
-
-    fn LOG10_E() -> Self {
-        <Self as Real>::LOG10_E
-    }
-
-    fn LOG2_E() -> Self {
-        <Self as Real>::LOG2_E
+impl<P> From<Proxy<f64, P>> for f64
+where
+    P: Constraint<f64>,
+{
+    fn from(proxy: Proxy<f64, P>) -> Self {
+        proxy.into()
     }
 }
 
