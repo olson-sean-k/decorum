@@ -33,6 +33,45 @@ use crate::{
     Total,
 };
 
+// TODO: By default, Serde serializes floating-point primitives representing
+//       `NaN` and infinities as `"null"`. Moreover, Serde cannot deserialize
+//       `"null"` as a floating-point primitive. This means that information is
+//       lost when serializing and deserializing is impossible for non-real
+//       values.
+/// Serialization container.
+///
+/// This type is represented and serialized transparently as its inner type `T`.
+/// `Proxy` uses this type for its own serialization and deserialization.
+/// Importantly, this uses a conversion when deserializing that upholds the
+/// constraints on proxy types, so it is not possible to deserialize a
+/// floating-point value into a proxy type that does not support that value.
+///
+/// See the following for more context and details:
+///
+/// - https://github.com/serde-rs/serde/issues/642
+/// - https://github.com/serde-rs/serde/issues/939
+#[cfg(feature = "serialize-serde")]
+#[derive(Deserialize, Serialize)]
+#[serde(transparent)]
+#[derive(Clone, Copy)]
+#[repr(transparent)]
+struct SerdeContainer<T> {
+    inner: T,
+}
+
+#[cfg(feature = "serialize-serde")]
+impl<T, P> From<Proxy<T, P>> for SerdeContainer<T>
+where
+    T: Float + Primitive,
+    P: Constraint<T>,
+{
+    fn from(proxy: Proxy<T, P>) -> Self {
+        SerdeContainer {
+            inner: proxy.into_inner(),
+        }
+    }
+}
+
 /// Floating-point proxy that provides a total ordering, equivalence, hashing,
 /// and constraints.
 ///
@@ -66,6 +105,20 @@ use crate::{
 /// `Finite` type definitions. Note that `Total` uses a unit constraint, which
 /// enforces no constraints at all and never panics.
 #[cfg_attr(feature = "serialize-serde", derive(Deserialize, Serialize))]
+#[cfg_attr(
+    feature = "serialize-serde",
+    serde(
+        bound(
+            deserialize = "T: serde::Deserialize<'de> + Float + Primitive, \
+                           P: Constraint<T>, \
+                           P::Error: Display",
+            serialize = "T: Float + Primitive + serde::Serialize, \
+                         P: Constraint<T>"
+        ),
+        try_from = "SerdeContainer<T>",
+        into = "SerdeContainer<T>"
+    )
+)]
 #[repr(transparent)]
 pub struct Proxy<T, P> {
     inner: T,
@@ -1578,6 +1631,19 @@ where
     }
 }
 
+#[cfg(feature = "serialize-serde")]
+impl<T, P> TryFrom<SerdeContainer<T>> for Proxy<T, P>
+where
+    T: Float + Primitive,
+    P: Constraint<T>,
+{
+    type Error = P::Error;
+
+    fn try_from(container: SerdeContainer<T>) -> Result<Self, Self::Error> {
+        Self::new(container.inner)
+    }
+}
+
 #[cfg(feature = "approx")]
 impl<T, P> UlpsEq for Proxy<T, P>
 where
@@ -2018,5 +2084,32 @@ mod tests {
         format_args!("{0} {0:e} {0:E} {0:?} {0:#?}", y);
         let z: Finite<f32> = 1.0.try_into().unwrap();
         format_args!("{0} {0:e} {0:E} {0:?} {0:#?}", z);
+    }
+
+    #[cfg(feature = "serialize-serde")]
+    #[test]
+    fn deserialize() {
+        assert_eq!(
+            R32::assert(1.0),
+            serde_json::from_str::<R32>("1.0").unwrap()
+        );
+    }
+
+    #[cfg(feature = "serialize-serde")]
+    #[test]
+    #[should_panic]
+    fn deserialize_panic_on_violation() {
+        // TODO: See `SerdeContainer`. This does not test a value that violates
+        //       `N32`'s constraints; instead, this simply fails to deserialize
+        //       `f32` from `"null"`.
+        let _: N32 = serde_json::from_str("null").unwrap();
+    }
+
+    #[cfg(feature = "serialize-serde")]
+    #[test]
+    fn serialize() {
+        assert_eq!("1.0", serde_json::to_string(&N32::assert(1.0)).unwrap());
+        // TODO: See `SerdeContainer`.
+        assert_eq!("null", serde_json::to_string(&N32::INFINITY).unwrap());
     }
 }

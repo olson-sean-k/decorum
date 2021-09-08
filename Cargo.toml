@@ -31,7 +31,7 @@ rustdoc-args = [
 [features]
 default = ["approx", "serialize-serde", "std"]
 serialize-serde = ["serde", "serde_derive"]
-std = ["approx/std", "num-traits/std", "thiserror"]
+std = ["approx/std", "num-traits/std", "serde/std", "thiserror"]
 
 [dependencies.approx]
 version = "^0.5.0"
@@ -62,3 +62,4 @@ optional = true
 
 [dev-dependencies]
 num = "^0.4.0"
+serde_json = "1.0"

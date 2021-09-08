@@ -3,16 +3,29 @@
 
 use core::convert::Infallible;
 use core::fmt::Debug;
+#[cfg(not(feature = "std"))]
+use core::fmt::{self, Display, Formatter};
 use core::marker::PhantomData;
 #[cfg(feature = "std")]
 use thiserror::Error;
 
 use crate::{Float, Primitive};
 
+const VIOLATION_MESSAGE: &str = "floating-point constraint violated";
+
 #[cfg_attr(feature = "std", derive(Error))]
-#[cfg_attr(feature = "std", error("floating-point constraint violated"))]
+#[cfg_attr(feature = "std", error("{}", VIOLATION_MESSAGE))]
 #[derive(Clone, Copy, Debug)]
 pub struct ConstraintViolation;
+
+// When the `std` feature is enabled, the `thiserror` crate is used to implement
+// `Display`.
+#[cfg(not(feature = "std"))]
+impl Display for ConstraintViolation {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", VIOLATION_MESSAGE)
+    }
+}
 
 pub trait ExpectConstrained<T>: Sized {
     fn expect_constrained(self) -> T;
@@ -24,13 +37,14 @@ where
 {
     #[cfg(not(feature = "std"))]
     fn expect_constrained(self) -> T {
-        self.expect("floating-point constraint violated")
+        self.expect(VIOLATION_MESSAGE)
     }
 
     #[cfg(feature = "std")]
     fn expect_constrained(self) -> T {
-        // In `std` environments, `ConstraintViolation` implements `Error` and
-        // an appropriate error message is displayed.
+        // When the `std` feature is enabled, `ConstraintViolation` implements
+        // `Error` and an appropriate error message is displayed when
+        // unwrapping.
         self.unwrap()
     }
 }
