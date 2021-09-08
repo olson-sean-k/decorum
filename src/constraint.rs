@@ -17,13 +17,15 @@ pub trait SubsetOf<P> {}
 
 impl<P, Q> SubsetOf<Q> for P where Q: SupersetOf<P> {}
 
+pub trait Sealed {}
+
 /// Describes constraints on the set of floating-point values that a proxy type
 /// may represent.
 ///
 /// This trait expresses a constraint by filter-mapping values. Note that
 /// constraints require `Member<RealSet>`, meaning that the set of real numbers
 /// must always be supported and is implied.
-pub trait Constraint<T>: Member<RealSet>
+pub trait Constraint<T>: Member<RealSet> + Sealed
 where
     T: Float + Primitive,
 {
@@ -52,6 +54,8 @@ where
     }
 }
 
+impl<T> Sealed for UnitConstraint<T> where T: Float + Primitive {}
+
 impl<T> Member<InfiniteSet> for UnitConstraint<T> where T: Float + Primitive {}
 
 impl<T> Member<NanSet> for UnitConstraint<T> where T: Float + Primitive {}
@@ -78,12 +82,13 @@ where
     fn filter_map(value: T) -> Option<T> {
         if value.is_nan() {
             None
-        }
-        else {
+        } else {
             Some(value)
         }
     }
 }
+
+impl<T> Sealed for NotNanConstraint<T> where T: Float + Primitive {}
 
 impl<T> Member<InfiniteSet> for NotNanConstraint<T> where T: Float + Primitive {}
 
@@ -107,11 +112,12 @@ where
     fn filter_map(value: T) -> Option<T> {
         if value.is_nan() || value.is_infinite() {
             None
-        }
-        else {
+        } else {
             Some(value)
         }
     }
 }
+
+impl<T> Sealed for FiniteConstraint<T> where T: Float + Primitive {}
 
 impl<T> Member<RealSet> for FiniteConstraint<T> where T: Float + Primitive {}

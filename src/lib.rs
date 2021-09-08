@@ -98,6 +98,7 @@ mod proxy;
 use crate::cmp::IntrinsicOrd;
 use crate::constraint::{FiniteConstraint, NotNanConstraint, UnitConstraint};
 
+pub use crate::constraint::Constraint;
 pub use crate::proxy::Proxy;
 
 /// Floating-point representation with total ordering.
@@ -167,13 +168,11 @@ where
 
         if self.is_nan() {
             CANONICAL_NAN_BITS
-        }
-        else {
+        } else {
             let (mantissa, exponent, sign) = self.integer_decode();
             if mantissa == 0 {
                 CANONICAL_ZERO_BITS
-            }
-            else {
+            } else {
                 let exponent = u64::from(unsafe { mem::transmute::<i16, u16>(exponent) });
                 let sign = if sign > 0 { 1u64 } else { 0u64 };
                 (mantissa & MANTISSA_MASK)
@@ -252,8 +251,7 @@ impl Encoding for f32 {
         let exponent: i16 = ((bits >> 23) & 0xff) as i16;
         let mantissa = if exponent == 0 {
             (bits & 0x7f_ffff) << 1
-        }
-        else {
+        } else {
             (bits & 0x7f_ffff) | 0x80_0000
         };
         (mantissa as u64, exponent - (127 + 23), sign)
@@ -288,8 +286,7 @@ impl Encoding for f64 {
         let exponent: i16 = ((bits >> 52) & 0x7ff) as i16;
         let mantissa = if exponent == 0 {
             (bits & 0xf_ffff_ffff_ffff) << 1
-        }
-        else {
+        } else {
             (bits & 0xf_ffff_ffff_ffff) | 0x10_0000_0000_0000
         };
         (mantissa, exponent - (1023 + 52), sign)
