@@ -98,6 +98,7 @@ mod proxy;
 use crate::cmp::IntrinsicOrd;
 use crate::constraint::{FiniteConstraint, NotNanConstraint, UnitConstraint};
 
+pub use crate::constraint::ConstraintViolation;
 pub use crate::proxy::Proxy;
 
 /// Floating-point representation with total ordering.

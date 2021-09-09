@@ -283,11 +283,11 @@ where
         let (min, max) = a.min_max_or_undefined(&b);
         // Both `min` and `max` are `NaN` if `a` and `b` are incomparable.
         if min.is_nan() {
-            let nan = T::NAN.into();
+            let nan = Proxy::assert(T::NAN);
             (nan, nan)
         }
         else {
-            (min.into(), max.into())
+            (Proxy::assert(min), Proxy::assert(max))
         }
     }
 }

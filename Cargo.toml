@@ -31,7 +31,7 @@ rustdoc-args = [
 [features]
 default = ["approx", "serialize-serde", "std"]
 serialize-serde = ["serde", "serde_derive"]
-std = ["approx/std", "num-traits/std"]
+std = ["approx/std", "num-traits/std", "thiserror"]
 
 [dependencies.approx]
 version = "^0.5.0"
@@ -52,6 +52,12 @@ optional = true
 [dependencies.serde_derive]
 version = "1.0"
 default-features = false
+optional = true
+
+# TODO: Use `thiserror` in `no_std` environments when support lands.
+#       See https://github.com/dtolnay/thiserror/pull/64
+[dependencies.thiserror]
+version = "^1.0.0"
 optional = true
 
 [dev-dependencies]

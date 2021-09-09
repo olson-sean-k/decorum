@@ -49,10 +49,10 @@ types also implement numeric traits from the [`num-traits`] crate (such as
 `Float`, `Num`, `NumCast`, etc.), in addition to more targeted traits like
 `Real` and `Nan` provided by Decorum.
 
-Constraint violations cause panics. For example, `NotNan` is useful for avoiding
-or tracing sources of `NaN`s in computation, while `Total` provides useful
-features without introducing any panics at all, because it allows any IEEE-754
-floating-point values.
+Constraint violations cause panics in numeric operations. For example, `NotNan`
+is useful for avoiding or tracing sources of `NaN`s in computation, while
+`Total` provides useful features without introducing any panics at all, because
+it allows any IEEE-754 floating-point values.
 
 Proxy types should work as a drop-in replacement for primitive types in most
 applications with the most common exception being initialization (because it
@@ -98,49 +98,77 @@ are somewhat different and are not always interchangeable. Traits from both
 crates are implemented by Decorum where possible. For example, `Total`
 implements `Float` from both Decorum and [`num-traits`].
 
-## Conversions
+## Construction and Conversions
 
-Proxy types are used via conversions to and from primitive floating-point
-types and other proxy types.
+Proxy types are used via constructors and conversions from and into primitive
+floating-point types and other compatible proxy types. Unlike numeric
+operations, these functions do not necessarily panic if a constraint is
+violated.
 
-| Conversion      | Input     | Output    | Violation |
+| Method          | Input     | Output    | Violation |
 |-----------------|-----------|-----------|-----------|
-| `from_inner`    | primitive | proxy     | panic     |
+| `new`           | primitive | proxy     | error     |
+| `assert`        | primitive | proxy     | panic     |
 | `into_inner`    | proxy     | primitive | n/a       |
 | `from_subset`   | proxy     | proxy     | n/a       |
 | `into_superset` | proxy     | proxy     | n/a       |
 
-The `from_inner` and `into_inner` conversions move primitive floating-point
-values into and out of proxies. The `into_superset` and `from_subset`
-conversions provide an inexpensive way to convert between proxy types with
-different but compatible constraints. All conversions also support the standard
-`From` and `Into` traits, which can also be applied to literals:
+The `new` constructor and `into_inner` conversion move primitive floating-point
+values into and out of proxies and are the most basic way to construct and
+deconstruct proxies. Note that for `Total`, which has no constraints, the error
+type is `Infallible`.
+
+The `assert` constructor panics if the given primitive floating-point value
+violates the proxy's constraints. This is equivalent to unwrapping the output of
+`new`.
+
+Finally, the `into_superset` and `from_subset` conversions provide an
+inexpensive way to convert between proxy types with different but compatible
+constraints.
 
 ```rust
-use decorum::R32;
+use decorum::R64;
 
-fn f(x: R32) -> R32 {
+fn f(x: R64) -> R64 {
+    x * 3.0
+}
+
+let y = R64::assert(3.1459);
+let z = f(R64::new(2.7182).unwrap());
+let w = z.into_inner();
+```
+
+All conversions also support the standard `From`/`Into` and `TryFrom`/`TryInto`
+traits, which can also be applied to primitives and literals.
+
+```rust
+use core::convert::{TryFrom, TryInto};
+use decorum::R64;
+
+fn f(x: R64) -> R64 {
     x * 2.0
 }
-let y: R32 = 3.1459.into();
-let z = f(2.7182.into());
+
+let y: R64 = 3.1459.try_into().unwrap();
+let z = f(R64::try_from(2.7182).unwrap());
 let w: f32 = z.into();
 ```
 
-## Primitives
+## Hashing and Comparing Primitives
 
-Proxy types implement `Eq`, `Hash`, and `Ord`, but sometimes it is not
-possible or ergonomic to use such a type. Traits can be used with primitive
+Proxy types implement `Eq`, `Hash`, and `Ord`, but sometimes it is not possible
+or ergonomic to use such a type. Traits can be used with primitive
 floating-point values for ordering, equivalence, and hashing instead.
 
-| Floating-Point Trait | General Trait    |
+| Floating-Point Trait | Standard Trait   |
 |----------------------|------------------|
 | `FloatEq`            | `Eq`             |
 | `FloatHash`          | `Hash`           |
 | `FloatOrd`           | `Ord`            |
 
 These traits use the same total ordering and equivalence rules that proxy types
-do. They are implemented for base types as well as slices:
+do. They are implemented for primitive types like `f64` as well as slices like
+`[f64]`.
 
 ```rust
 use decorum::cmp::FloatEq;
