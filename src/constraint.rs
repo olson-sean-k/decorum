@@ -50,19 +50,23 @@ impl<P, Q> SubsetOf<Q> for P where Q: SupersetOf<P> {}
 /// Describes constraints on the set of floating-point values that a proxy type
 /// may represent.
 ///
-/// This trait expresses a constraint by filter-mapping values. Note that
-/// constraints require `Member<RealSet>`, meaning that the set of real numbers
-/// must always be supported and is implied.
+/// This trait expresses a constraint by defining an error and emitting that
+/// error from its `check` function if a primitive floating-point value violates
+/// the constraint. Note that constraints require `Member<RealSet>`, meaning
+/// that the set of real numbers must always be supported and is implied.
 pub trait Constraint<T>: Member<RealSet>
 where
     T: Float + Primitive,
 {
     type Error: Debug;
 
-    /// Filter-maps a primitive floating-point value based on some constraints.
+    /// Determines if a primitive floating-point value satisfies the constraint.
     ///
-    /// Returns `Err` for values that cannot satify constraints.
-    fn filter_map(inner: T) -> Result<T, Self::Error>;
+    /// # Errors
+    ///
+    /// Returns `Self::Error` if the primitive floating-point value violates the
+    /// constraint.
+    fn check(inner: &T) -> Result<(), Self::Error>;
 }
 
 #[derive(Debug)]
@@ -73,16 +77,14 @@ where
     phantom: PhantomData<fn() -> T>,
 }
 
-// TODO: Should implementations map values like zero and `NaN` to canonical
-//       forms?
 impl<T> Constraint<T> for UnitConstraint<T>
 where
     T: Float + Primitive,
 {
     type Error = Infallible;
 
-    fn filter_map(inner: T) -> Result<T, Self::Error> {
-        Ok(inner)
+    fn check(_: &T) -> Result<(), Self::Error> {
+        Ok(())
     }
 }
 
@@ -111,12 +113,12 @@ where
 {
     type Error = ConstraintViolation;
 
-    fn filter_map(inner: T) -> Result<T, Self::Error> {
+    fn check(inner: &T) -> Result<(), Self::Error> {
         if inner.is_nan() {
             Err(ConstraintViolation)
         }
         else {
-            Ok(inner)
+            Ok(())
         }
     }
 }
@@ -142,12 +144,12 @@ where
 {
     type Error = ConstraintViolation;
 
-    fn filter_map(inner: T) -> Result<T, Self::Error> {
+    fn check(inner: &T) -> Result<(), Self::Error> {
         if inner.is_nan() || inner.is_infinite() {
             Err(ConstraintViolation)
         }
         else {
-            Ok(inner)
+            Ok(())
         }
     }
 }

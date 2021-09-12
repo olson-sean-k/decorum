@@ -125,7 +125,7 @@ where
     /// let x = R64::new(0.0 / 0.0).unwrap(); // Panics.
     /// ```
     pub fn new(inner: T) -> Result<Self, P::Error> {
-        P::filter_map(inner).map(|inner| Proxy {
+        P::check(&inner).map(move |_| Proxy {
             inner,
             phantom: PhantomData,
         })
