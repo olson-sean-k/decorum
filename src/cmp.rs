@@ -71,8 +71,8 @@ use crate::{Float, Nan, Primitive, ToCanonicalBits};
 /// Equivalence relation for floating-point primitives.
 ///
 /// `FloatEq` agrees with the total ordering provided by `FloatOrd`. See the
-/// module documentation for more. Importantly, given the set of `NaN`
-/// representations $N$, `FloatEq` expresses:
+/// module documentation for more. Given the set of `NaN` representations $N$,
+/// `FloatEq` expresses:
 ///
 /// $$
 /// \begin{aligned}
@@ -175,19 +175,26 @@ where
     }
 }
 
-/// Partial ordering of types with intrinsic representations for undefined
-/// comparisons.
+/// Pairwise ordering of types with intrinsic representations for undefined
+/// comparisons (or total ordering).
 ///
-/// `IntrinsicOrd` provides similar functionality to [`PartialOrd`], but exposes
-/// a pairwise minimum-maximum API that is closed with respect to type and, for
-/// types without a total ordering, is only implemented for types that
-/// additionally have intrinsic representations for _undefined_, such as the
-/// `None` variant of [`Option`] and `NaN`s for floating-point primitives.
+/// `IntrinsicOrd` compares two values of the same type to produce a pairwise
+/// minimum and maximum. This contrasts [`PartialOrd`], which expresses
+/// comparisons via the extrinsic type [`Option<Ordering>`].
 ///
-/// This trait is also implemented for numeric types with total orderings, and
-/// can be used for comparisons that propagate `NaN`s for floating-point
-/// primitives (unlike [`PartialOrd`], which expresses comparisons of types `T`
-/// and `U` with the extrinsic type [`Option<Ordering>`]).
+/// Some types have intrinsic representations for _undefined_, such as the
+/// `None` variant of [`Option`] and `NaN`s for floating-point primitives. For
+/// these types, **regardless of having only a partial ordering or a total
+/// ordering**, comparisons wherein any of the input values are undefined also
+/// yield a value that represents undefined. For types with total ordering and
+/// no representation for undefined, such as integer primitives, comparisons
+/// have no error conditions and always yield a valid ordering.
+///
+/// This trait can be used in generic APIs to peform comparisons while
+/// ergonomically propogating `NaN`s or other undefined values when a comparison
+/// cannot be performed. For floating-point primitives, this mirrors the
+/// behavior of mathematical operations like addition, multiplication, etc. with
+/// respect to `NaN`s.
 ///
 /// See the [`min_or_undefined`] and [`max_or_undefined`] functions.
 ///
@@ -207,9 +214,13 @@ pub trait IntrinsicOrd: Copy + PartialOrd + Sized {
     /// Compares two values and returns their pairwise minimum and maximum.
     ///
     /// This function returns a representation of _undefined_ for both the
-    /// minimum and maximum if either of the inputs are _undefined_ or the
-    /// inputs cannot be compared, **even if undefined values are ordered or the
-    /// type has a total ordering**. Undefined values are always propagated.
+    /// minimum and maximum if either of the inputs are undefined or the inputs
+    /// cannot be compared, **even if undefined values are ordered and the type
+    /// has a total ordering**. Undefined values are always propagated.
+    ///
+    /// Some types have multiple representations of _undefined_. The
+    /// representation returned by this function for undefined comparisons is
+    /// arbitrary.
     ///
     /// # Examples
     ///
