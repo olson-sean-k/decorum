@@ -105,13 +105,15 @@ floating-point types and other compatible proxy types. Unlike numeric
 operations, these functions do not necessarily panic if a constraint is
 violated.
 
-| Method          | Input     | Output    | Violation |
-|-----------------|-----------|-----------|-----------|
-| `new`           | primitive | proxy     | error     |
-| `assert`        | primitive | proxy     | panic     |
-| `into_inner`    | proxy     | primitive | n/a       |
-| `from_subset`   | proxy     | proxy     | n/a       |
-| `into_superset` | proxy     | proxy     | n/a       |
+| Method           | Input     | Output    | Violation |
+|------------------|-----------|-----------|-----------|
+| `new`            | primitive | proxy     | error     |
+| `assert`         | primitive | proxy     | panic     |
+| `into_inner`     | proxy     | primitive | n/a       |
+| `from_subset`    | proxy     | proxy     | n/a       |
+| `into_superset`  | proxy     | proxy     | n/a       |
+| `try_from_slice` | primitive | proxy     | error     |
+| `from_slice`     | primitive | proxy     | n/a       |
 
 The `new` constructor and `into_inner` conversion move primitive floating-point
 values into and out of proxies and are the most basic way to construct and
@@ -122,9 +124,12 @@ The `assert` constructor panics if the given primitive floating-point value
 violates the proxy's constraints. This is equivalent to unwrapping the output of
 `new`.
 
-Finally, the `into_superset` and `from_subset` conversions provide an
-inexpensive way to convert between proxy types with different but compatible
-constraints.
+The `into_superset` and `from_subset` conversions provide an inexpensive way to
+convert between proxy types with different but compatible constraints.
+
+Finally, the `try_from_slice` and `Total::from_slice` conversions coerce slices
+of primitive floating-point values into slices of proxies, which have the same
+representation.
 
 ```rust
 use decorum::R64;
@@ -136,10 +141,15 @@ fn f(x: R64) -> R64 {
 let y = R64::assert(3.1459);
 let z = f(R64::new(2.7182).unwrap());
 let w = z.into_inner();
+
+let xs = [0.0f64, 1.0, 2.0];
+let ys = R64::try_from_slice(&xs).unwrap();
 ```
 
 All conversions also support the standard `From`/`Into` and `TryFrom`/`TryInto`
-traits, which can also be applied to primitives and literals.
+traits, which can also be applied to primitives and literals. Reference
+coercions are supported only via these standard traits; there are no such
+inherent functions.
 
 ```rust
 use core::convert::{TryFrom, TryInto};
@@ -151,7 +161,8 @@ fn f(x: R64) -> R64 {
 
 let y: R64 = 3.1459.try_into().unwrap();
 let z = f(R64::try_from(2.7182).unwrap());
-let w: f32 = z.into();
+let w: f64 = z.into();
+let r: &R64 = (&w).try_into().unwrap();
 ```
 
 ## Hashing and Comparing Primitives

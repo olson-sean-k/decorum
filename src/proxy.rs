@@ -9,6 +9,7 @@ use core::fmt::{self, Debug, Display, Formatter, LowerExp, UpperExp};
 use core::hash::{Hash, Hasher};
 use core::iter::{Product, Sum};
 use core::marker::PhantomData;
+use core::mem;
 use core::num::FpCategory;
 use core::ops::{
     Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
@@ -32,6 +33,18 @@ use crate::{
     Encoding, Finite, Float, ForeignFloat, Infinite, Nan, NotNan, Primitive, Real, ToCanonicalBits,
     Total,
 };
+
+/// A `Proxy` type that is closed over its `Constraint`.
+trait ClosedConstraint<T>
+where
+    T: Float + Primitive,
+{
+    type Constraint: Constraint<T>;
+
+    fn check(inner: &T) -> Result<(), <Self::Constraint as Constraint<T>>::Error> {
+        <Self::Constraint as Constraint<T>>::check(inner)
+    }
+}
 
 // TODO: By default, Serde serializes floating-point primitives representing
 //       `NaN` and infinities as `"null"`. Moreover, Serde cannot deserialize
@@ -283,6 +296,42 @@ where
         Proxy::new_unchecked(self.into_inner())
     }
 
+    /// Converts a slice of primitive floating-point values into a slice of
+    /// proxies.
+    ///
+    /// This conversion must check the constraints of the proxy against each
+    /// floating-point value and so has `O(N)` time complexity.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any of the primitive floating-point values in the
+    /// slice do not satisfy the constraints of the proxy.
+    pub fn try_from_slice<'a>(slice: &'a [T]) -> Result<&'a [Self], P::Error> {
+        slice.iter().try_for_each(|inner| P::check(inner))?;
+        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary
+        //         representation as its input type `T`. This means that it is
+        //         safe to transmute `T` to `Proxy<T>`.
+        Ok(unsafe { mem::transmute::<&'a [T], &'a [Self]>(slice) })
+    }
+
+    /// Converts a mutable slice of primitive floating-point values into a
+    /// mutable slice of proxies.
+    ///
+    /// This conversion must check the constraints of the proxy against each
+    /// floating-point value and so has `O(N)` time complexity.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any of the primitive floating-point values in the
+    /// slice do not satisfy the constraints of the proxy.
+    pub fn try_from_mut_slice<'a>(slice: &'a mut [T]) -> Result<&'a mut [Self], P::Error> {
+        slice.iter().try_for_each(|inner| P::check(inner))?;
+        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary
+        //         representation as its input type `T`. This means that it is
+        //         safe to transmute `T` to `Proxy<T>`.
+        Ok(unsafe { mem::transmute::<&'a mut [T], &'a mut [Self]>(slice) })
+    }
+
     fn map_assert<F>(self, f: F) -> Self
     where
         F: Fn(T) -> T,
@@ -302,6 +351,35 @@ where
         F: Fn(T, T) -> T,
     {
         Proxy::assert(f(self.into_inner(), other.into_inner()))
+    }
+}
+
+impl<T> Total<T>
+where
+    T: Float + Primitive,
+{
+    /// Converts a slice of primitive floating-point values into a slice of
+    /// `Total`s.
+    ///
+    /// Unlike `Proxy::try_from_slice`, this conversion is infallible and
+    /// trivial and so has `O(1)` time complexity.
+    pub fn from_slice<'a>(slice: &'a [T]) -> &'a [Self] {
+        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary
+        //         representation as its input type `T`. This means that it is
+        //         safe to transmute `T` to `Proxy<T>`.
+        unsafe { mem::transmute::<&'a [T], &'a [Self]>(slice) }
+    }
+
+    /// Converts a mutable slice of primitive floating-point values into a
+    /// mutable slice of `Total`s.
+    ///
+    /// Unlike `Proxy::try_from_mut_slice`, this conversion is infallible and
+    /// trivial and so has `O(1)` time complexity.
+    pub fn from_mut_slice<'a>(slice: &'a mut [T]) -> &'a mut [Self] {
+        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary
+        //         representation as its input type `T`. This means that it is
+        //         safe to transmute `T` to `Proxy<T>`.
+        unsafe { mem::transmute::<&'a mut [T], &'a mut [Self]>(slice) }
     }
 }
 
@@ -401,6 +479,14 @@ where
             phantom: PhantomData,
         }
     }
+}
+
+impl<T, P> ClosedConstraint<T> for Proxy<T, P>
+where
+    T: Float + Primitive,
+    P: Constraint<T>,
+{
+    type Constraint = P;
 }
 
 impl<T, P> Copy for Proxy<T, P> where T: Float + Primitive {}
@@ -878,6 +964,30 @@ where
 {
     fn from(other: Finite<T>) -> Self {
         Self::from_subset(other)
+    }
+}
+
+impl<'a, T> From<&'a T> for &'a Total<T>
+where
+    T: Float + Primitive,
+{
+    fn from(inner: &'a T) -> Self {
+        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary
+        //         representation as its input type `T`. This means that it is
+        //         safe to transmute `T` to `Proxy<T>`.
+        unsafe { &*(inner as *const T as *const Total<T>) }
+    }
+}
+
+impl<'a, T> From<&'a mut T> for &'a mut Total<T>
+where
+    T: Float + Primitive,
+{
+    fn from(inner: &'a mut T) -> Self {
+        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary
+        //         representation as its input type `T`. This means that it is
+        //         safe to transmute `T` to `Proxy<T>`.
+        unsafe { &mut *(inner as *mut T as *mut Total<T>) }
     }
 }
 
@@ -1916,6 +2026,34 @@ macro_rules! impl_try_from {
                 Self::new(inner)
             }
         }
+
+        impl<'a> TryFrom<&'a $t> for &'a $p<$t> {
+            type Error = ConstraintViolation;
+
+            fn try_from(inner: &'a $t) -> Result<Self, Self::Error> {
+                <$p<$t> as ClosedConstraint<$t>>::check(inner).map(|_| {
+                    // SAFETY: `Proxy<T>` is `repr(transparent)` and has the
+                    //         same binary representation as its input type `T`.
+                    //         This means that it is safe to transmute `T` to
+                    //         `Proxy<T>`.
+                    unsafe { mem::transmute::<&'a $t, Self>(inner) }
+                })
+            }
+        }
+
+        impl<'a> TryFrom<&'a mut $t> for &'a mut $p<$t> {
+            type Error = ConstraintViolation;
+
+            fn try_from(inner: &'a mut $t) -> Result<Self, Self::Error> {
+                <$p<$t> as ClosedConstraint<$t>>::check(inner).map(move |_| {
+                    // SAFETY: `Proxy<T>` is `repr(transparent)` and has the
+                    //         same binary representation as its input type `T`.
+                    //         This means that it is safe to transmute `T` to
+                    //         `Proxy<T>`.
+                    unsafe { mem::transmute::<&'a mut $t, Self>(inner) }
+                })
+            }
+        }
     };
 }
 impl_try_from!(proxy => Finite);
@@ -1941,6 +2079,33 @@ mod tests {
         assert!(Nan::is_nan(y));
     }
 
+    // This is the most comprehensive and general test of reference conversions,
+    // as there are no failure conditions. Other similar tests focus solely on
+    // success or failure, not completeness of the APIs under test. This test is
+    // an ideal Miri target.
+    #[test]
+    #[allow(clippy::eq_op)]
+    #[allow(clippy::float_cmp)]
+    #[allow(clippy::zero_divided_by_zero)]
+    fn total_no_panic_from_ref_slice() {
+        let x = 0.0f64 / 0.0;
+        let y: &Total<_> = (&x).into();
+        assert!(y.is_nan());
+
+        let mut x = 0.0f64;
+        let y: &mut Total<_> = (&mut x).into();
+        *y = (0.0f64 / 0.0).into();
+        assert!(y.is_nan());
+
+        let xs = [0.0f64, 1.0];
+        let ys = Total::from_slice(&xs);
+        assert_eq!(ys, &[0.0f64, 1.0]);
+
+        let xs = [0.0f64, 1.0];
+        let ys = Total::from_slice(&xs);
+        assert_eq!(ys, &[0.0f64, 1.0]);
+    }
+
     #[test]
     fn notnan_no_panic_on_inf() {
         let x: N32 = 1.0.try_into().unwrap();
@@ -1953,6 +2118,35 @@ mod tests {
     fn notnan_panic_on_nan() {
         let x: N32 = 0.0.try_into().unwrap();
         let _ = x / 0.0;
+    }
+
+    #[test]
+    #[allow(clippy::eq_op)]
+    #[allow(clippy::float_cmp)]
+    fn notnan_no_panic_from_inf_ref_slice() {
+        let x = 1.0f64 / 0.0;
+        let y: &NotNan<_> = (&x).try_into().unwrap();
+        assert!(y.is_infinite());
+
+        let xs = [0.0f64, 1.0 / 0.0];
+        let ys = NotNan::try_from_slice(&xs).unwrap();
+        assert_eq!(ys, &[0.0f64, Infinite::INFINITY]);
+    }
+
+    #[test]
+    #[should_panic]
+    #[allow(clippy::zero_divided_by_zero)]
+    fn notnan_panic_from_nan_ref() {
+        let x = 0.0f64 / 0.0;
+        let _: &NotNan<_> = (&x).try_into().unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    #[allow(clippy::zero_divided_by_zero)]
+    fn notnan_panic_from_nan_slice() {
+        let xs = [1.0f64, 0.0f64 / 0.0];
+        let _ = NotNan::try_from_slice(&xs).unwrap();
     }
 
     #[test]
@@ -1974,6 +2168,20 @@ mod tests {
     fn finite_panic_on_neg_inf() {
         let x: R32 = (-1.0).try_into().unwrap();
         let _ = x / 0.0;
+    }
+
+    #[test]
+    #[should_panic]
+    fn finite_panic_from_inf_ref() {
+        let x = 1.0f64 / 0.0;
+        let _: &Finite<_> = (&x).try_into().unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn finite_panic_from_inf_slice() {
+        let xs = [1.0f64, 1.0f64 / 0.0];
+        let _ = Finite::try_from_slice(&xs).unwrap();
     }
 
     #[test]
