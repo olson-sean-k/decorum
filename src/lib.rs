@@ -84,11 +84,11 @@ use core::ops::Neg;
 use num_traits::{Num, PrimInt, Signed, Unsigned};
 
 #[cfg(not(feature = "std"))]
-pub(in crate) use num_traits::float::FloatCore as ForeignFloat;
+pub(crate) use num_traits::float::FloatCore as ForeignFloat;
 #[cfg(feature = "std")]
-pub(in crate) use num_traits::real::Real as ForeignReal;
+pub(crate) use num_traits::real::Real as ForeignReal;
 #[cfg(feature = "std")]
-pub(in crate) use num_traits::Float as ForeignFloat;
+pub(crate) use num_traits::Float as ForeignFloat;
 
 pub mod cmp;
 mod constraint;
