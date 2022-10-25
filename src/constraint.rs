@@ -50,7 +50,7 @@ where
 }
 
 pub enum RealSet {}
-pub enum InfiniteSet {}
+pub enum InfinitySet {}
 pub enum NanSet {}
 
 pub trait Member<T> {}
@@ -102,7 +102,7 @@ where
     }
 }
 
-impl<T> Member<InfiniteSet> for UnitConstraint<T> where T: Float + Primitive {}
+impl<T> Member<InfinitySet> for UnitConstraint<T> where T: Float + Primitive {}
 
 impl<T> Member<NanSet> for UnitConstraint<T> where T: Float + Primitive {}
 
@@ -137,7 +137,7 @@ where
     }
 }
 
-impl<T> Member<InfiniteSet> for NotNanConstraint<T> where T: Float + Primitive {}
+impl<T> Member<InfinitySet> for NotNanConstraint<T> where T: Float + Primitive {}
 
 impl<T> Member<RealSet> for NotNanConstraint<T> where T: Float + Primitive {}
 

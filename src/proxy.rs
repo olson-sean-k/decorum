@@ -23,7 +23,7 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::cmp::{self, FloatEq, FloatOrd, IntrinsicOrd};
 use crate::constraint::{
-    Constraint, ConstraintViolation, ExpectConstrained, InfiniteSet, Member, NanSet, SubsetOf,
+    Constraint, ConstraintViolation, ExpectConstrained, InfinitySet, Member, NanSet, SubsetOf,
     SupersetOf,
 };
 use crate::hash::FloatHash;
@@ -694,7 +694,7 @@ where
 impl<T, P> ForeignFloat for Proxy<T, P>
 where
     T: Float + ForeignFloat + IntrinsicOrd + Primitive,
-    P: Constraint<T> + Member<InfiniteSet> + Member<NanSet>,
+    P: Constraint<T> + Member<InfinitySet> + Member<NanSet>,
 {
     fn infinity() -> Self {
         Infinite::INFINITY
@@ -1118,7 +1118,7 @@ where
 impl<T, P> Infinite for Proxy<T, P>
 where
     T: Float + Primitive,
-    P: Constraint<T> + Member<InfiniteSet>,
+    P: Constraint<T> + Member<InfinitySet>,
 {
     const INFINITY: Self = Proxy::new_unchecked(T::INFINITY);
     const NEG_INFINITY: Self = Proxy::new_unchecked(T::NEG_INFINITY);
