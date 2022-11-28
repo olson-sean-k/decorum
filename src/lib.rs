@@ -1,71 +1,140 @@
-//! Making floating-point behave: ordering, equivalence, hashing, and
-//! constraints for floating-point types.
+//! Making floating-point behave: total ordering, equivalence, hashing, constraints, error
+//! handling, and more for IEEE 754 floating-point representations.
 //!
-//! Decorum provides traits that describe types using floating-point
-//! representations and provides proxy types that wrap primitive floating-point
-//! types. Proxy types implement a total ordering and constraints on the sets of
-//! values that they may represent.
+//! Decorum provides APIs for extending IEEE 754 floating-point. This is primarily accomplished
+//! with [proxy types][`proxy`] that wrap primitive floating-point types and compose
+//! [constraints][`constraint`] and [divergence] to configure behavior. Decorum also provides
+//! numerous traits describing real numerics and IEEE 754 encoding.
 //!
-//! Decorum requires Rust 1.43.0 or higher.
-//!
-//! # Floating-Point Classes
-//!
-//! Traits, proxy types, and constraints are based on three classes or subsets
-//! of floating-point values:
-//!
-//! | Set          | Trait        |
-//! |--------------|--------------|
-//! | real number  | [`Real`]     |
-//! | infinity     | [`Infinite`] |
-//! | not-a-number | [`Nan`]      |
-//!
-//! Primitive floating-point values directly expose IEEE-754 and therefore the
-//! complete set of values (and traits). Proxy types implement traits that are
-//! compatible with their constraints, so types that disallow `NaN`s do not
-//! implement the `Nan` trait, for example.
+//! Decorum requires Rust 1.65.0 or higher.
 //!
 //! # Proxy Types
 //!
-//! Proxy types wrap primitive floating-point types and constrain the sets of
-//! values that they can represent:
+//! [`Proxy`] types wrap primitive floating-point types and constrain the set of values that they
+//! can represent. These types use the same representation as primitives and in many cases can be
+//! used as drop-in replacements, in particular the [`Total`] type. [`Proxy`] supports numerous
+//! traits and APIs (including third-party integrations) and always provides a complete API for
+//! real numbers.
 //!
-//! | Type       | Aliases      | Trait Implementations                      | Disallowed Values     |
-//! |------------|--------------|--------------------------------------------|-----------------------|
-//! | [`Total`]  |              | `Encoding + Real + Infinite + Nan + Float` |                       |
-//! | [`NotNan`] | `N32`, `N64` | `Encoding + Real + Infinite`               | `NaN`                 |
-//! | [`Finite`] | `R32`, `R64` | `Encoding + Real`                          | `NaN`, `-INF`, `+INF` |
+//! Proxy types and their [constraints][`constraint`] operate on three subsets of IEEE 754
+//! floating-point values:
 //!
-//! The [`NotNan`] and [`Finite`] types disallow values that represent `NaN`,
-//! $\infin$, and $-\infin$. **Operations that emit values that violate these
-//! constraints will panic**. The [`Total`] type applies no constraints and
-//! exposes all classes of floating-point values.
+//! | Subset       | Example Member |
+//! |--------------|----------------|
+//! | real numbers | `3.1459`       |
+//! | infinities   | `+Inf`         |
+//! | not-a-number | `NaN`          |
 //!
-//! # Total Ordering
+//! These subsets are reflected throughout APIs, in particular in traits concerning IEEE 754
+//! encoding and constraints. [`Constraint`]s describe which subsets are members of a proxy type
+//! and are composed with a [divergence], which further describes the outputs and error behavior of
+//! operations.
 //!
-//! The following total ordering is implemented by all proxy types and is
-//! provided by traits in the [`cmp`] module:
+//! These types can be configured to, for example, cause a panic in debugging builds whenever a
+//! `NaN` is encountered or enable structured error handling of extended real numbers where any
+//! `NaN` is interpreted as undefined and yields an explicit error value.
+//!
+//! Proxy types and their components are provided by the [`proxy`], [`constraint`], and
+//! [`divergence`] modules. Numerous type definitions are also provided in the crate root:
+//!
+//! | Type Definition | Subsets                                |
+//! |-----------------|----------------------------------------|
+//! | [`Total`]       | real numbers, infinities, not-a-number |
+//! | [`NotNan`]      | real numbers, infinities               |
+//! | [`Finite`]      | real numbers                           |
+//!
+//! # Equivalence and Ordering
+//!
+//! The [`cmp`] module provides APIs for comparing floating-point representations as well as other
+//! partially ordered types. For example, it provides traits for intrinic comparisons of partially
+//! ordered types that propagate `NaN`s when used with floating-point representations. It also
+//! defines a non-standard total ordering for complete floating-point types:
 //!
 //! $$-\infin<\cdots<0<\cdots<\infin<\text{NaN}$$
 //!
-//! Note that all zero and `NaN` representations are considered equivalent. See
-//! the [`cmp`] module documentation for more details.
+//! Note that all `NaN` representations are considered equivalent in this relation. The [`Total`]
+//! proxy type uses this ordering.
 //!
-//! # Equivalence
+//! # Hashing
 //!
-//! Floating-point `NaN`s have numerous representations and are incomparable.
-//! Decorum considers all `NaN` representations equal to all other `NaN`
-//! representations and any and all `NaN` representations are unequal to
-//! non-`NaN` values.
+//! The [`hash`] module provides traits for hashing floating-point representations. Hashing is
+//! consistent with the total ordering defined by the [`cmp`] module. Proxy types implement the
+//! standard [`Hash`] trait via this module and it also provides functions for hashing primitive
+//! floating-point types.
 //!
-//! See the [`cmp`] module documentation for more details.
+//! # Numeric Traits
+//!
+//! The [`real`] module provides traits that describe real numbers and their approximation via
+//! floating-point representations. These traits describe the codomain of operations and respect
+//! the branching behavior of such functions. For example, many functions over real numbers have a
+//! range that includes non-reals (such as undefined). Additionally, these traits feature ergonomic
+//! improvements on similar traits in the crate ecosystem.
+//!
+//! # Expressions
+//!
+//! [`Expression`] types represent the output of computations using constrained [`Proxy`] types.
+//! They provide structured types that directly encode divergence (errors) as values. Unlike other
+//! branch types, [`Expression`] also supports the same numeric operations as [`Proxy`] types, so
+//! they can be used fluently in numeric expressions without matching or trying.
+//!
+//! ```rust
+//! use decorum::constraint::FiniteConstraint;
+//! use decorum::divergence::OrError;
+//! use decorum::proxy::{OutputOf, Proxy};
+//!
+//! type Real = Proxy<f64, FiniteConstraint<OrError>>;
+//! type Expr = OutputOf<Real>;
+//!
+//! fn f(x: Real, y: Real) -> Expr {
+//!     let z = x + y;
+//!     z / x
+//! }
+//!
+//! let z = f(Real::assert(3.0), Real::assert(4.0));
+//! assert!(z.is_defined());
+//! ```
+//!
+//! For finer control, the [`try_expression`] macro can be used to differentiate between
+//! expressions and defined results. When using a nightly Rust toolchain, the `unstable` Cargo
+//! feature also implements the unstable (at time of writing) [`Try`] trait for [`Expression`] so
+//! that the try operator `?` may be used instead.
+//!
+//! ```rust,ignore
+//! use decorum::constraint::FiniteConstraint;
+//! use decorum::divergence::OrError;
+//! use decorum::proxy::{OutputOf, Proxy};
+//! use decorum::real::UnaryReal;
+//!
+//! type Real = Proxy<f64, FiniteConstraint<OrError>>;
+//! type Expr = OutputOf<Real>;
+//!
+//! # fn fallible() -> Expr {
+//! fn f(x: Real, y: Real) -> Expr {
+//!     x / y
+//! }
+//!
+//! let z = f(Real::PI, Real::ONE)?; // OK: `z` is `Real`.
+//! let w = f(Real::PI, Real::ZERO)?; // Error: this returns `Expression::Undefined`.
+//! // ...
+//! # f(Real::PI, Real::ONE)
+//! # }
+//! ```
 //!
 //! [`cmp`]: crate::cmp
+//! [`constraint`]: crate::constraint
+//! [`Constraint`]: crate::constraint::Constraint
+//! [`divergence`]: crate::divergence
+//! [`Expression`]: crate::expression::Expression
 //! [`Finite`]: crate::Finite
-//! [`Infinite`]: crate::Infinite
-//! [`Nan`]: crate::Nan
+//! [`hash`]: crate::hash
+//! [`Hash`]: core::hash::Hash
 //! [`NotNan`]: crate::NotNan
-//! [`Real`]: crate::Real
+//! [`proxy`]: crate::proxy
+//! [`Proxy`]: crate::proxy::Proxy
+//! [`real`]: crate::real
 //! [`Total`]: crate::Total
+//! [`Try`]: core::ops::Try
+//! [`try_expression`]: crate::try_expression
 
 #![doc(
     html_favicon_url = "https://raw.githubusercontent.com/olson-sean-k/decorum/master/doc/decorum-favicon.ico"
@@ -74,14 +143,18 @@
     html_logo_url = "https://raw.githubusercontent.com/olson-sean-k/decorum/master/doc/decorum.svg?sanitize=true"
 )]
 #![no_std]
+#![cfg_attr(all(nightly, feature = "unstable"), feature(try_trait_v2))]
 
 #[cfg(feature = "std")]
 extern crate std;
 
-use core::mem;
-use core::num::FpCategory;
-use core::ops::Neg;
-use num_traits::{Num, PrimInt, Signed, Unsigned};
+pub mod cmp;
+pub mod constraint;
+pub mod divergence;
+pub mod expression;
+pub mod hash;
+pub mod proxy;
+pub mod real;
 
 #[cfg(not(feature = "std"))]
 pub(crate) use num_traits::float::FloatCore as ForeignFloat;
@@ -90,64 +163,83 @@ pub(crate) use num_traits::real::Real as ForeignReal;
 #[cfg(feature = "std")]
 pub(crate) use num_traits::Float as ForeignFloat;
 
-pub mod cmp;
-mod constraint;
-pub mod hash;
-mod proxy;
+use core::mem;
+use core::num::FpCategory;
+use num_traits::{PrimInt, Unsigned};
 
 use crate::cmp::IntrinsicOrd;
 use crate::constraint::{FiniteConstraint, NotNanConstraint, UnitConstraint};
+use crate::divergence::OrPanic;
+use crate::proxy::Proxy;
+use crate::real::{BinaryReal, Function, Real, Sign, UnaryReal};
 
-pub use crate::constraint::ConstraintViolation;
-pub use crate::proxy::Proxy;
+mod sealed {
+    use core::convert::Infallible;
 
-/// Floating-point representation with total ordering.
-pub type Total<T> = Proxy<T, UnitConstraint<T>>;
+    pub trait Sealed {}
 
-/// Floating-point representation that cannot be `NaN`.
+    impl Sealed for Infallible {}
+}
+use crate::sealed::Sealed;
+
+/// IEEE 754 floating-point representation with non-standard total ordering and hashing.
 ///
-/// If an operation emits `NaN`, then a panic will occur. Like [`Total`], this
-/// type implements a total ordering.
+/// This [`Proxy`] type applies no constraints and no divergence. It can trivially replace
+/// primitive floating point types and implements the standard [`Eq`] and [`Ord`] traits. See the
+/// [`cmp`] module for more details about these relations.
 ///
+/// [`cmp`]: crate::cmp
+/// [`Eq`]: core::cmp::Eq
+/// [`Ord`]: core::cmp::Ord
+/// [`Proxy`]: crate::proxy::Proxy
+pub type Total<T> = Proxy<T, UnitConstraint>;
+
+/// IEEE 754 floating-point representation that cannot be `NaN`.
+///
+/// This [`Proxy`] type applies the [`NotNanConstraint`] and [diverges][`divergence`] if a `NaN`
+/// value is encountered. **The default divergence of this definition is [`OrPanic`], which panics
+/// when the constraint is violated.**
+///
+/// Like [`Total`], `NotNan` defines equivalence and total ordering, but need not consider `NaN`
+/// and so uses only standard IEEE 754 floating-point semantics.
+///
+/// [`divergence`]: crate::divergence
+/// [`NotNanConstraint`]: crate::constraint::NotNanConstraint
+/// [`OrPanic`]: crate::divergence::OrPanic
+/// [`Proxy`]: crate::proxy::Proxy
 /// [`Total`]: crate::Total
-pub type NotNan<T> = Proxy<T, NotNanConstraint<T>>;
+pub type NotNan<T, D = OrPanic> = Proxy<T, NotNanConstraint<D>>;
 
-/// 32-bit floating-point representation that cannot be `NaN`.
-pub type N32 = NotNan<f32>;
-/// 64-bit floating-point representation that cannot be `NaN`.
-pub type N64 = NotNan<f64>;
+/// 32-bit IEEE 754 floating-point representation that cannot be `NaN`.
+pub type N32<D = OrPanic> = NotNan<f32, D>;
+/// 64-bit IEEE 754 floating-point representation that cannot be `NaN`.
+pub type N64<D = OrPanic> = NotNan<f64, D>;
 
-/// Floating-point representation that must be a real number.
-///
-/// If an operation emits `NaN` or infinities, then a panic will occur. Like
-/// [`Total`], this type implements a total ordering.
-///
-/// [`Total`]: crate::Total
-pub type Finite<T> = Proxy<T, FiniteConstraint<T>>;
+/// IEEE 754 floating-point representation that must be a real number.
+pub type Finite<T, D = OrPanic> = Proxy<T, FiniteConstraint<D>>;
 
-/// 32-bit floating-point representation that must be a real number.
+/// 32-bit IEEE 754 floating-point representation that must be a real number.
 ///
-/// The prefix "R" for _real_ is used instead of "F" for _finite_, because if
-/// "F" were used, then this name would be very similar to `f32`.
-pub type R32 = Finite<f32>;
-/// 64-bit floating-point representation that must be a real number.
+/// The prefix "R" for _real_ is used instead of "F" for _finite_, because if "F" were used, then
+/// this name would be too similar to `f32`.
+pub type R32<D = OrPanic> = Finite<f32, D>;
+/// 64-bit IEEE 754 floating-point representation that must be a real number.
 ///
-/// The prefix "R" for _real_ is used instead of "F" for _finite_, because if
-/// "F" were used, then this name would be very similar to `f64`.
-pub type R64 = Finite<f64>;
+/// The prefix "R" for _real_ is used instead of "F" for _finite_, because if "F" were used, then
+/// this name would be too similar to `f64`.
+pub type R64<D = OrPanic> = Finite<f64, D>;
 
-// TODO: Inverse the relationship between `Encoding` and `ToCanonicalBits` such
-//       that `Encoding` requires `ToCanonicalBits`.
-/// Converts floating-point values into a canonicalized form.
+// TODO: Inverse the relationship between `Encoding` and `ToCanonicalBits` such that `Encoding`
+//       requires `ToCanonicalBits`.
+/// Converts IEEE 754 floating-point values to a canonicalized form.
 pub trait ToCanonicalBits: Encoding {
     type Bits: PrimInt + Unsigned;
 
     /// Conversion to a canonical representation.
     ///
-    /// Unlike the `to_bits` function provided by `f32` and `f64`, this function
-    /// collapses representations for real numbers, infinities, and `NaN`s into
-    /// a canonical form such that every semantic value has a unique
-    /// representation as canonical bits.
+    /// This function collapses representations for real numbers, zeroes, infinities, and `NaN`s
+    /// into a canonical form such that every semantic value has a unique representation as
+    /// canonical bits.
     fn to_canonical_bits(self) -> Self::Bits;
 }
 
@@ -176,7 +268,7 @@ where
             }
             else {
                 let exponent = u64::from(unsafe { mem::transmute::<i16, u16>(exponent) });
-                let sign = if sign > 0 { 1u64 } else { 0u64 };
+                let sign = u64::from(sign > 0);
                 (mantissa & MANTISSA_MASK)
                     | ((exponent << 52) & EXPONENT_MASK)
                     | ((sign << 63) & SIGN_MASK)
@@ -185,8 +277,10 @@ where
     }
 }
 
-/// Floating-point representations that expose infinities.
-pub trait Infinite: Encoding {
+/// IEEE 754 floating-point representations that expose infinities (`-INF` and `+INF`).
+// This trait is implemented by trivial `Copy` types.
+#[allow(clippy::wrong_self_convention)]
+pub trait Infinite: Sized {
     const INFINITY: Self;
     const NEG_INFINITY: Self;
 
@@ -194,23 +288,26 @@ pub trait Infinite: Encoding {
     fn is_finite(self) -> bool;
 }
 
-/// Floating-point representations that expose `NaN`s.
-pub trait Nan: Encoding {
+/// IEEE 754 floating-point representations that expose `NaN`s.
+// This trait is implemented by trivial `Copy` types.
+#[allow(clippy::wrong_self_convention)]
+pub trait Nan: Sized {
     /// A representation of `NaN`.
     ///
-    /// For primitive floating-point types, `NaN` is incomparable. Therefore,
-    /// prefer the `is_nan` predicate over direct comparisons with `NaN`.
+    /// For primitive floating-point types, `NaN` is incomparable. Therefore, prefer the `is_nan`
+    /// predicate over direct comparisons with `NaN`.
     const NAN: Self;
 
     fn is_nan(self) -> bool;
 }
 
-/// Floating-point encoding.
+/// IEEE 754 floating-point representations that expose general encoding.
 ///
-/// Provides values and operations that describe the encoding of an IEEE-754
-/// floating-point value. Infinities and `NaN`s are described by the `Infinite`
-/// and `NaN` sub-traits.
-pub trait Encoding: Copy {
+/// Provides values and operations that describe the encoding of an IEEE 754 floating-point value.
+/// The specific semantic values for infinities and `NaN`s are described by independent traits.
+// This trait is implemented by trivial `Copy` types.
+#[allow(clippy::wrong_self_convention)]
+pub trait Encoding: Sized {
     const MAX_FINITE: Self;
     const MIN_FINITE: Self;
     const MIN_POSITIVE_NORMAL: Self;
@@ -221,6 +318,8 @@ pub trait Encoding: Copy {
 
     fn is_sign_positive(self) -> bool;
     fn is_sign_negative(self) -> bool;
+    #[cfg(feature = "std")]
+    fn signum(self) -> Self;
 
     fn integer_decode(self) -> (u64, i16, i8);
 }
@@ -245,6 +344,11 @@ impl Encoding for f32 {
 
     fn is_sign_negative(self) -> bool {
         Self::is_sign_negative(self)
+    }
+
+    #[cfg(feature = "std")]
+    fn signum(self) -> Self {
+        Self::signum(self)
     }
 
     fn integer_decode(self) -> (u64, i16, i8) {
@@ -283,6 +387,11 @@ impl Encoding for f64 {
         Self::is_sign_negative(self)
     }
 
+    #[cfg(feature = "std")]
+    fn signum(self) -> Self {
+        Self::signum(self)
+    }
+
     fn integer_decode(self) -> (u64, i16, i8) {
         let bits = self.to_bits();
         let sign: i8 = if bits >> 63 == 0 { 1 } else { -1 };
@@ -297,115 +406,75 @@ impl Encoding for f64 {
     }
 }
 
-/// Types that can represent real numbers.
+/// IEEE 754 floating-point representations.
 ///
-/// Provides values and operations that generally apply to real numbers. As
-/// such, this trait is implemented by types using floating-point
-/// representations, but this trait is a general numeric trait and can be
-/// implemented by other numeric types as well.
-///
-/// Some members of this trait depend on the standard library and the `std`
-/// feature.
-pub trait Real: Copy + Neg<Output = Self> + Num + PartialOrd + Signed {
-    const E: Self;
-    const PI: Self;
-    const FRAC_1_PI: Self;
-    const FRAC_2_PI: Self;
-    const FRAC_2_SQRT_PI: Self;
-    const FRAC_PI_2: Self;
-    const FRAC_PI_3: Self;
-    const FRAC_PI_4: Self;
-    const FRAC_PI_6: Self;
-    const FRAC_PI_8: Self;
-    const SQRT_2: Self;
-    const FRAC_1_SQRT_2: Self;
-    const LN_2: Self;
-    const LN_10: Self;
-    const LOG2_E: Self;
-    const LOG10_E: Self;
+/// Types that implement this trait are represented using IEEE 754 encoding **and directly expose
+/// the complete details of that encoding**, including infinities, `NaN`s, and operations on real
+/// numbers.
+pub trait Float: Encoding + Infinite + IntrinsicOrd + Nan + Real<Codomain = Self> {}
 
-    fn floor(self) -> Self;
-    fn ceil(self) -> Self;
-    fn round(self) -> Self;
-    fn trunc(self) -> Self;
-    fn fract(self) -> Self;
-    fn recip(self) -> Self;
+impl<T> Float for T where T: Encoding + Infinite + IntrinsicOrd + Nan + Real<Codomain = T> {}
 
-    #[cfg(feature = "std")]
-    fn mul_add(self, a: Self, b: Self) -> Self;
+/// A primitive IEEE 754 floating-point type.
+pub trait Primitive: Copy + Sealed {}
 
-    #[cfg(feature = "std")]
-    fn powi(self, n: i32) -> Self;
-    #[cfg(feature = "std")]
-    fn powf(self, n: Self) -> Self;
-    #[cfg(feature = "std")]
-    fn sqrt(self) -> Self;
-    #[cfg(feature = "std")]
-    fn cbrt(self) -> Self;
-    #[cfg(feature = "std")]
-    fn exp(self) -> Self;
-    #[cfg(feature = "std")]
-    fn exp2(self) -> Self;
-    #[cfg(feature = "std")]
-    fn exp_m1(self) -> Self;
-    #[cfg(feature = "std")]
-    fn log(self, base: Self) -> Self;
-    #[cfg(feature = "std")]
-    fn ln(self) -> Self;
-    #[cfg(feature = "std")]
-    fn log2(self) -> Self;
-    #[cfg(feature = "std")]
-    fn log10(self) -> Self;
-    #[cfg(feature = "std")]
-    fn ln_1p(self) -> Self;
+// TODO: Remove this. Of course.
+fn _sanity() {
+    use crate::real::FloatEndoreal;
 
-    #[cfg(feature = "std")]
-    fn hypot(self, other: Self) -> Self;
-    #[cfg(feature = "std")]
-    fn sin(self) -> Self;
-    #[cfg(feature = "std")]
-    fn cos(self) -> Self;
-    #[cfg(feature = "std")]
-    fn tan(self) -> Self;
-    #[cfg(feature = "std")]
-    fn asin(self) -> Self;
-    #[cfg(feature = "std")]
-    fn acos(self) -> Self;
-    #[cfg(feature = "std")]
-    fn atan(self) -> Self;
-    #[cfg(feature = "std")]
-    fn atan2(self, other: Self) -> Self;
-    #[cfg(feature = "std")]
-    fn sin_cos(self) -> (Self, Self);
-    #[cfg(feature = "std")]
-    fn sinh(self) -> Self;
-    #[cfg(feature = "std")]
-    fn cosh(self) -> Self;
-    #[cfg(feature = "std")]
-    fn tanh(self) -> Self;
-    #[cfg(feature = "std")]
-    fn asinh(self) -> Self;
-    #[cfg(feature = "std")]
-    fn acosh(self) -> Self;
-    #[cfg(feature = "std")]
-    fn atanh(self) -> Self;
+    type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
+
+    fn f<T>(x: T) -> T
+    where
+        T: FloatEndoreal<f64>,
+    {
+        -x
+    }
+
+    fn g<T, U>(x: T, y: U) -> T
+    where
+        T: BinaryReal<U> + FloatEndoreal<f64>,
+    {
+        (x + T::ONE) * y
+    }
+
+    fn h<T>(x: T, y: T) -> T
+    where
+        T: FloatEndoreal<f64>,
+    {
+        x + y
+    }
+
+    let x = Real::ONE;
+    let y = g(f(x), 2.0);
+    let z = h(y, Real::assert(1.0));
+    let _ = f(y + z);
 }
 
-/// Floating-point representations.
-///
-/// Types that implement this trait are represented using IEEE-754 encoding and
-/// expose the details of that encoding, including infinities, `NaN`, and
-/// operations on real numbers. This trait is implemented by primitive
-/// floating-point types and the `Total` proxy type.
-pub trait Float: Encoding + Infinite + IntrinsicOrd + Nan + Real {}
+macro_rules! with_primitives {
+    ($f:ident) => {
+        $f!(primitive => f32);
+        $f!(primitive => f64);
+    }
+}
+pub(crate) use with_primitives;
 
-impl<T> Float for T where T: Encoding + Infinite + IntrinsicOrd + Nan + Real {}
-
-/// Primitive floating-point types.
-pub trait Primitive {}
+macro_rules! with_binary_operations {
+    ($f:ident) => {
+        $f!(operation => Add::add);
+        $f!(operation => Div::div);
+        $f!(operation => Mul::mul);
+        $f!(operation => Rem::rem);
+        $f!(operation => Sub::sub);
+    };
+}
+pub(crate) use with_binary_operations;
 
 /// Implements floating-point traits for primitive types.
 macro_rules! impl_primitive {
+    () => {
+        with_primitives!(impl_primitive);
+    };
     (primitive => $t:ident) => {
         impl Infinite for $t {
             const INFINITY: Self = <$t>::INFINITY;
@@ -430,11 +499,18 @@ macro_rules! impl_primitive {
 
         impl Primitive for $t {}
 
-        impl Real for $t {
-            // TODO: The propagation from a constant in a module requires that
-            //       this macro accept an `ident` token rather than a `ty`
-            //       token. Use `ty` if these constants become associated
-            //       constants of the primitive types.
+        impl Function for $t {
+            type Codomain = $t;
+        }
+
+        impl Sealed for $t {}
+
+        impl UnaryReal for $t {
+            // TODO: The propagation from a constant in a module requires that this macro accept an
+            //       `ident` token rather than a `ty` token. Use `ty` if these constants become
+            //       associated constants of the primitive types.
+            const ZERO: Self = 0.0;
+            const ONE: Self = 1.0;
             const E: Self = core::$t::consts::E;
             const PI: Self = core::$t::consts::PI;
             const FRAC_1_PI: Self = core::$t::consts::FRAC_1_PI;
@@ -452,47 +528,67 @@ macro_rules! impl_primitive {
             const LOG2_E: Self = core::$t::consts::LOG2_E;
             const LOG10_E: Self = core::$t::consts::LOG10_E;
 
+            fn is_zero(self) -> bool {
+                self == Self::ZERO
+            }
+
+            fn is_one(self) -> bool {
+                self == Self::ONE
+            }
+
+            fn sign(self) -> Sign {
+                if self.is_nan() || self.is_zero() {
+                    Sign::Zero
+                }
+                else if self > 0.0 {
+                    Sign::Positive
+                }
+                else {
+                    Sign::Negative
+                }
+            }
+
+            #[cfg(feature = "std")]
+            fn abs(self) -> Self {
+                <$t>::abs(self)
+            }
+
+            #[cfg(feature = "std")]
             fn floor(self) -> Self {
                 <$t>::floor(self)
             }
 
+            #[cfg(feature = "std")]
             fn ceil(self) -> Self {
                 <$t>::ceil(self)
             }
 
+            #[cfg(feature = "std")]
             fn round(self) -> Self {
                 <$t>::round(self)
             }
 
+            #[cfg(feature = "std")]
             fn trunc(self) -> Self {
                 <$t>::trunc(self)
             }
 
+            #[cfg(feature = "std")]
             fn fract(self) -> Self {
                 <$t>::fract(self)
             }
 
-            fn recip(self) -> Self {
+            fn recip(self) -> Self::Codomain {
                 <$t>::recip(self)
             }
 
             #[cfg(feature = "std")]
-            fn mul_add(self, a: Self, b: Self) -> Self {
-                <$t>::mul_add(self, a, b)
-            }
-
-            #[cfg(feature = "std")]
-            fn powi(self, n: i32) -> Self {
+            fn powi(self, n: i32) -> Self::Codomain {
                 <$t>::powi(self, n)
             }
 
             #[cfg(feature = "std")]
-            fn powf(self, n: Self) -> Self {
-                <$t>::powf(self, n)
-            }
-
-            #[cfg(feature = "std")]
-            fn sqrt(self) -> Self {
+            fn sqrt(self) -> Self::Codomain {
                 <$t>::sqrt(self)
             }
 
@@ -502,48 +598,48 @@ macro_rules! impl_primitive {
             }
 
             #[cfg(feature = "std")]
-            fn exp(self) -> Self {
+            fn exp(self) -> Self::Codomain {
                 <$t>::exp(self)
             }
 
             #[cfg(feature = "std")]
-            fn exp2(self) -> Self {
+            fn exp2(self) -> Self::Codomain {
                 <$t>::exp2(self)
             }
 
             #[cfg(feature = "std")]
-            fn exp_m1(self) -> Self {
+            fn exp_m1(self) -> Self::Codomain {
                 <$t>::exp_m1(self)
             }
 
             #[cfg(feature = "std")]
-            fn log(self, base: Self) -> Self {
-                <$t>::log(self, base)
-            }
-
-            #[cfg(feature = "std")]
-            fn ln(self) -> Self {
+            fn ln(self) -> Self::Codomain {
                 <$t>::ln(self)
             }
 
             #[cfg(feature = "std")]
-            fn log2(self) -> Self {
+            fn log2(self) -> Self::Codomain {
                 <$t>::log2(self)
             }
 
             #[cfg(feature = "std")]
-            fn log10(self) -> Self {
+            fn log10(self) -> Self::Codomain {
                 <$t>::log10(self)
             }
 
             #[cfg(feature = "std")]
-            fn ln_1p(self) -> Self {
+            fn ln_1p(self) -> Self::Codomain {
                 <$t>::ln_1p(self)
             }
 
             #[cfg(feature = "std")]
-            fn hypot(self, other: Self) -> Self {
-                <$t>::hypot(self, other)
+            fn to_degrees(self) -> Self::Codomain {
+                <$t>::to_degrees(self)
+            }
+
+            #[cfg(feature = "std")]
+            fn to_radians(self) -> Self {
+                <$t>::to_radians(self)
             }
 
             #[cfg(feature = "std")]
@@ -557,28 +653,23 @@ macro_rules! impl_primitive {
             }
 
             #[cfg(feature = "std")]
-            fn tan(self) -> Self {
+            fn tan(self) -> Self::Codomain {
                 <$t>::tan(self)
             }
 
             #[cfg(feature = "std")]
-            fn asin(self) -> Self {
+            fn asin(self) -> Self::Codomain {
                 <$t>::asin(self)
             }
 
             #[cfg(feature = "std")]
-            fn acos(self) -> Self {
+            fn acos(self) -> Self::Codomain {
                 <$t>::acos(self)
             }
 
             #[cfg(feature = "std")]
             fn atan(self) -> Self {
                 <$t>::atan(self)
-            }
-
-            #[cfg(feature = "std")]
-            fn atan2(self, other: Self) -> Self {
-                <$t>::atan2(self, other)
             }
 
             #[cfg(feature = "std")]
@@ -602,21 +693,52 @@ macro_rules! impl_primitive {
             }
 
             #[cfg(feature = "std")]
-            fn asinh(self) -> Self {
+            fn asinh(self) -> Self::Codomain {
                 <$t>::asinh(self)
             }
 
             #[cfg(feature = "std")]
-            fn acosh(self) -> Self {
+            fn acosh(self) -> Self::Codomain {
                 <$t>::acosh(self)
             }
 
             #[cfg(feature = "std")]
-            fn atanh(self) -> Self {
+            fn atanh(self) -> Self::Codomain {
                 <$t>::atanh(self)
+            }
+        }
+
+        impl BinaryReal<$t> for $t {
+            #[cfg(feature = "std")]
+            fn div_euclid(self, n: Self) -> Self::Codomain {
+                <$t>::div_euclid(self, n)
+            }
+
+            #[cfg(feature = "std")]
+            fn rem_euclid(self, n: Self) -> Self::Codomain {
+                <$t>::rem_euclid(self, n)
+            }
+
+            #[cfg(feature = "std")]
+            fn pow(self, n: Self) -> Self::Codomain {
+                <$t>::powf(self, n)
+            }
+
+            #[cfg(feature = "std")]
+            fn log(self, base: Self) -> Self::Codomain {
+                <$t>::log(self, base)
+            }
+
+            #[cfg(feature = "std")]
+            fn hypot(self, other: Self) -> Self::Codomain {
+                <$t>::hypot(self, other)
+            }
+
+            #[cfg(feature = "std")]
+            fn atan2(self, other: Self) -> Self {
+                <$t>::atan2(self, other)
             }
         }
     };
 }
-impl_primitive!(primitive => f32);
-impl_primitive!(primitive => f64);
+impl_primitive!();

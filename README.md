@@ -4,172 +4,230 @@
 <br/>
 
 **Decorum** is a Rust library that provides total ordering, equivalence,
-hashing, and constraints for floating-point representations. Decorum requires
-Rust 1.43.0 or higher and does not require the `std` library.
+hashing, constraints, error handling, and more for IEEE 754 floating-point
+representations. Decorum requires Rust 1.65.0 or higher and, except for specific
+features, does **not** require the `std` nor `alloc` libraries.
 
 [![GitHub](https://img.shields.io/badge/GitHub-olson--sean--k/decorum-8da0cb?logo=github&style=for-the-badge)](https://github.com/olson-sean-k/decorum)
 [![docs.rs](https://img.shields.io/badge/docs.rs-decorum-66c2a5?logo=rust&style=for-the-badge)](https://docs.rs/decorum)
 [![crates.io](https://img.shields.io/crates/v/decorum.svg?logo=rust&style=for-the-badge)](https://crates.io/crates/decorum)
 
-## Total Ordering
+## Basic Usage
 
-The following total ordering is exposed via traits for primitive types and proxy
-types that implement `Ord`:
+Panic when a `NaN` is encountered:
 
+```rust
+use decorum::NotNan;
+
+let x = NotNan::<f64>::assert(0.0);
+let y = NotNan::<f64>::assert(0.0);
+let z = x / y; // Panics.
 ```
-[ -INF < ... < 0 < ... < +INF < NaN ]
+
+Hash totally ordered IEEE 754 floating-point representations:
+
+```rust
+use decorum::real::UnaryReal;
+use decorum::Finite;
+use std::collections::HashMap;
+
+let key = Finite::<f64>::PI;
+let mut xs: HashMap<_, _> = [(key, "pi")].into_iter().collect();
 ```
 
-IEEE-754 floating-point encoding provides multiple representations of zero (`-0`
-and `+0`) and `NaN`. This ordering considers all zero and `NaN` representations
-equal, which differs from the [standard partial
-ordering](https://en.wikipedia.org/wiki/NaN#Comparison_with_NaN).
+Configure the behavior of an IEEE 754 floating-point representation:
 
-Some proxy types disallow unordered `NaN` values and therefore support a total
-ordering based on the ordered subset of non-`NaN` floating-point values (see
-below).
+```rust
+pub mod real {
+    use decorum::constraint::FiniteConstraint;
+    use decorum::divergence::{AsResult, OrError};
+    use decorum::proxy::{OutputOf, Proxy};
+
+    // A 64-bit floating point type that must represent a real number and returns
+    // `Result`s from fallible operations.
+    pub type Real = Proxy<f64, FiniteConstraint<OrError<AsResult>>>;
+    pub type Result = OutputOf<Real>;
+}
+
+use real::Real;
+
+pub fn f(x: Real) -> real::Result { ... }
+
+let x = Real::assert(0.0);
+let y = Real::assert(0.0);
+let z = (x / y)?;
+```
 
 ## Proxy Types
 
-Decorum exposes several proxy (wrapper) types. Proxy types provide two primary
-features: they implement total ordering and equivalence via the `Eq`, `Ord`, and
-`Hash` traits and they constrain the set of floating-point values they can
-represent. Different type definitions apply different constraints, with the
-`Total` type applying no constraints at all.
+The primary API of Decorum is its `Proxy` types, which transparently wrap
+primitive IEEE 754 floating-point types and configure their behavior. `Proxy`
+types support many numeric features and operations and integrate with the
+[`num-traits`] crate and others when [Cargo features](#cargo-features) are
+enabled. Depending on its configuration, a proxy can be used as a drop-in
+replacement for primitive floating-point types.
 
-| Type     | Aliases      | Trait Implementations                      | Disallowed Values     |
-|----------|--------------|--------------------------------------------|-----------------------|
-| `Total`  |              | `Encoding + Real + Infinite + Nan + Float` |                       |
-| `NotNan` | `N32`, `N64` | `Encoding + Real + Infinite`               | `NaN`                 |
-| `Finite` | `R32`, `R64` | `Encoding + Real`                          | `NaN`, `-INF`, `+INF` |
+The following `Proxy` behaviors can be configured:
 
+1. the allowed subset of IEEE 754 floating-point values
+1. the output type of fallibe operations (that may produce non-member values
+   w.r.t. a subset)
+1. what happens when an error occurs (i.e., return an error value or panic)
 
-Proxy types implement common operation traits, such as `Add` and `Mul`. These
-types also implement numeric traits from the [`num-traits`] crate (such as
-`Float`, `Num`, `NumCast`, etc.), in addition to more targeted traits like
-`Real` and `Nan` provided by Decorum.
-
-Constraint violations cause panics in numeric operations. For example, `NotNan`
-is useful for avoiding or tracing sources of `NaN`s in computation, while
-`Total` provides useful features without introducing any panics at all, because
-it allows any IEEE-754 floating-point values.
-
-Proxy types should work as a drop-in replacement for primitive types in most
-applications with the most common exception being initialization (because it
-requires a conversion). Serialization is optionally supported with [`serde`] and
-approximate comparisons are optionally supported with [`approx`] via the
-`serialize-serde` and `approx` features, respectively.
-
-## Traits
-
-Traits are essential for generic programming, but the constraints used by some
-proxy types prevent them from implementing the `Float` trait, because it implies
-the presence of `-INF`, `+INF`, and `NaN` (and their corresponding trait
-implementations).
-
-Decorum provides more granular traits that separate these APIs: `Real`,
-`Infinite`, `Nan`, and `Encoding`. Primitive floating-point types implement all
-of these traits and proxy types implement traits that are consistent with their
-constraints.
-
-For example, code that wishes to be generic over floating-point types
-representing real numbers and infinities can use a bound on the `Infinite` and
-`Real` traits:
+Note that the output type of fallible operations and the error behavior are
+independent. A `Proxy` type may return a `Result` and yet panic if an error
+occurs, which can be useful for conditional compilation and builds wherein
+**behavior** changes but types do not. The behavior of a `Proxy` type is
+configured using two mechanisms: _constraints_ and _divergence_.
 
 ```rust
-use decorum::{Infinite, Real};
+use decorum::constraint::FiniteConstraint;
+use decorum::divergence::OrPanic;
+use decorum::proxy::Proxy;
 
-fn f<T>(x: T, y: T) -> T
-where
-    T: Infinite + Real,
-{
-    let z = x / y;
-    if z.is_infinite() {
-        y
-    }
-    else {
-        z
-    }
-}
+// `Real` must represent a real number and otherwise panics.
+pub type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
 ```
 
-Both Decorum and [`num-traits`] provide `Real` and `Float` traits. These traits
-are somewhat different and are not always interchangeable. Traits from both
-crates are implemented by Decorum where possible. For example, `Total`
-implements `Float` from both Decorum and [`num-traits`].
+Constraints specify a subset of floating-point values that a proxy may
+represent. IEEE 754 floating-point values are divided into three such subsets:
 
-## Construction and Conversions
+| Subset        | Example Member |
+|---------------|----------------|
+| real numbers  | `3.1459`       |
+| infinities    | `+INF`         |
+| not-a-numbers | `NaN`          |
 
-Proxy types are used via constructors and conversions from and into primitive
-floating-point types and other compatible proxy types. Unlike numeric
-operations, these functions do not necessarily panic if a constraint is
-violated.
+Constraints can be used to strictly represent real numbers, extended reals, or
+complete but totally ordered IEEE 754 types (i.e., no constraints). Available
+constraints are summarized below:
 
-| Method           | Input     | Output    | Violation |
-|------------------|-----------|-----------|-----------|
-| `new`            | primitive | proxy     | error     |
-| `assert`         | primitive | proxy     | panic     |
-| `into_inner`     | proxy     | primitive | n/a       |
-| `from_subset`    | proxy     | proxy     | n/a       |
-| `into_superset`  | proxy     | proxy     | n/a       |
-| `try_from_slice` | primitive | proxy     | error     |
-| `from_slice`     | primitive | proxy     | n/a       |
+| Constraint         | Members                                 | Fallible  |
+|--------------------|-----------------------------------------|-----------|
+| `UnitConstraint`   | real numbers, infinities, not-a-numbers | no        |
+| `NotNanConstraint` | real numbers, infinities                | yes       |
+| `FiniteConstraint` | real numbers                            | yes       |
 
-The `new` constructor and `into_inner` conversion move primitive floating-point
-values into and out of proxies and are the most basic way to construct and
-deconstruct proxies. Note that for `Total`, which has no constraints, the error
-type is `Infallible`.
+`UnitConstraint` supports all IEEE 754 floating-point values and so applies no
+constraint at all. As such, it has no fallible operations w.r.t. the constraint
+and does not accept a divergence.
 
-The `assert` constructor panics if the given primitive floating-point value
-violates the proxy's constraints. This is equivalent to unwrapping the output of
-`new`.
+Many operations on members of these subsets may produce values from other
+subsets that are illegal w.r.t. constraints, such as the addition of two real
+numbers resulting in `+INF`. A _divergence type_ determines both the behavior
+when an illegal value is encountered as well as the output type of such fallible
+operations.
 
-The `into_superset` and `from_subset` conversions provide an inexpensive way to
-convert between proxy types with different but compatible constraints.
+| Divergence | OK       | Error     | Default Output Kind |
+|------------|----------|-----------|---------------------|
+| `OrPanic`  | continue | **panic** | `AsSelf`            |
+| `OrError`  | continue | break     | `AsExpression`      |
 
-Finally, the `try_from_slice` and `Total::from_slice` conversions coerce slices
-of primitive floating-point values into slices of proxies, which have the same
-representation.
+In the above table, _continue_ refers to returning a **non**-error value while
+_break_ refers to returning an error value. If an illegal value is encountered,
+then **the `OrPanic` divergence panics** while the `OrError` divergence
+constructs a value that encodes the error. The output type of fallible
+operations is determined by an _output kind_:
+
+| Branch         | Type                  | Continue        | Break          |
+|----------------|-----------------------|-----------------|----------------|
+| `AsSelf`       | `Self`                | `Self`          |                |
+| `AsOption`     | `Option<Self>`        | `Some(Self)`    | `None`         |
+| `AsResult`     | `Result<Self, E>`     | `Ok(Self)`      | `Err(E)`       |
+| `AsExpression` | `Expression<Self, E>` | `Defined(Self)` | `Undefined(E)` |
+
+In the table above, `Self` refers to a `Proxy` type and `E` refers to the
+associated error type of its constraint. Note that only the `OrPanic` divergence
+supports `AsSelf` and can output the same type as its input type for fallible
+operations (just like primitive IEEE 754 floating-point types).
+
+With the sole exception of `AsSelf`, the output type of fallible operations is
+extrinsic: fallible operations produce types that differ from their input types.
+The `Expression` type, which somewhat resembles the standard `Result` type,
+improves the ergonomics of error handling by implementing mathematical traits
+such that it can be used directly in expressions and defer error checking.
 
 ```rust
-use decorum::R64;
+use decorum::constraint::FiniteConstraint;
+use decorum::divergence::{AsExpression, OrError};
+use decorum::proxy::{OutputOf, Proxy};
+use decorum::real::UnaryReal as _;
+use decorum::try_expression;
 
-fn f(x: R64) -> R64 {
-    x * 3.0
+pub type Real = Proxy<f64, FiniteConstraint<OrError<AsExpression>>>;
+pub type Expr = OutputOf<Real>;
+
+pub fn f(x: Real, y: Real) -> Expr {
+    let sum = x + y;
+    sum * g(x)
 }
 
-let y = R64::assert(3.1459);
-let z = f(R64::new(2.7182).unwrap());
-let w = z.into_inner();
+pub fn g(x: Real) -> Expr {
+    x + Real::ONE
+}
 
-let xs = [0.0f64, 1.0, 2.0];
-let ys = R64::try_from_slice(&xs).unwrap();
+let x: Real = try_expression! { f(Real::E, -Real::ONE) };
+// ...
 ```
 
-All conversions also support the standard `From`/`Into` and `TryFrom`/`TryInto`
-traits, which can also be applied to primitives and literals. Reference
-coercions are supported only via these standard traits; there are no such
-inherent functions.
+When using a nightly Rust toolchain with the `unstable` [Cargo
+feature](#cargo-features) enabled, `Expression` also supports the (at time of
+writing) unstable `Try` trait and try operator `?`.
 
 ```rust
-use core::convert::{TryFrom, TryInto};
-use decorum::R64;
-
-fn f(x: R64) -> R64 {
-    x * 2.0
-}
-
-let y: R64 = 3.1459.try_into().unwrap();
-let z = f(R64::try_from(2.7182).unwrap());
-let w: f64 = z.into();
-let r: &R64 = (&w).try_into().unwrap();
+// As above, but using the try operator `?`.
+let x: Real = f(Real::E, -Real::ONE)?;
 ```
 
-## Hashing and Comparing Primitives
+`Proxy` types support numerous constructions and conversions depending on
+configuration, including conversions for references, slices, subsets, supersets,
+and more. Conversions are provided via inherent functions and implementations of
+the standard `From` and `TryFrom` traits. The following inherent functions are
+supported by all `Proxy` types, though some more bespoke constructions are
+available for specific configurations.
 
-Proxy types implement `Eq`, `Hash`, and `Ord`, but sometimes it is not possible
-or ergonomic to use such a type. Traits can be used with primitive
-floating-point values for ordering, equivalence, and hashing instead.
+| Proxy Method           | Input     | Output    | Error         |
+|------------------------|-----------|-----------|---------------|
+| `new`                  | primitive | proxy     | break         |
+| `assert`               | primitive | proxy     | **panic**     |
+| `try_new`              | primitive | proxy     | `Result::Err` |
+| `try_from_{mut_}slice` | primitive | proxy     | `Result::Err` |
+| `into_inner`           | proxy     | primitive |               |
+| `from_subset`          | proxy     | proxy     |               |
+| `into_superset`        | proxy     | proxy     |               |
+
+The following type definitions provide common proxy configurations. Each type
+implements different traits describing components of IEEE 754 floating-point
+based on the constraints of the proxy.
+
+| Type Definition | Sized Aliases | Trait Implementations                      | Illegal Values        |
+|-----------------|---------------|--------------------------------------------|-----------------------|
+| `Total`         |               | `Encoding + Real + Infinite + Nan + Float` |                       |
+| `NotNan`        | `N32`, `N64`  | `Encoding + Real + Infinite`               | `NaN`                 |
+| `Finite`        | `R32`, `R64`  | `Encoding + Real`                          | `NaN`, `-INF`, `+INF` |
+
+## Relations and Total Ordering
+
+Decorum provides the following non-standard total ordering for IEEE 754
+floating-point representations:
+
+```
+-INF < ... < 0 < ... < +INF < NaN
+```
+
+IEEE 754 floating-point encoding has multiple representations of zero (`-0` and
+`+0`) and `NaN`. This ordering and equivalence relations consider all zero and
+`NaN` representations equal, which differs from the [standard partial
+ordering](https://en.wikipedia.org/wiki/NaN#Comparison_with_NaN).
+
+Some proxy types disallow unordered `NaN` values and therefore support a total
+ordering based on the ordered subset of non-`NaN` floating-point values. Proxy
+types that use `UnitConstraint` (such as the `Total` type definition) support
+`NaN` but use the total ordering described above to implement the standard `Eq`,
+`Hash`, and `Ord` traits.
+
+The following traits can be used to compare and hash primitive floating-point
+values (including slices) using this non-standard relation.
 
 | Floating-Point Trait | Standard Trait   |
 |----------------------|------------------|
@@ -177,21 +235,82 @@ floating-point values for ordering, equivalence, and hashing instead.
 | `FloatHash`          | `Hash`           |
 | `FloatOrd`           | `Ord`            |
 
-These traits use the same total ordering and equivalence rules that proxy types
-do. They are implemented for primitive types like `f64` as well as slices like
-`[f64]`.
-
 ```rust
 use decorum::cmp::FloatEq;
 
 let x = 0.0f64 / 0.0f64; // `NaN`.
 let y = f64::INFINITY + f64::NEG_INFINITY; // `NaN`.
 assert!(x.float_eq(&y));
-
-let xs = [1.0f64, f64::NAN, f64::INFINITY];
-let ys = [1.0f64, f64::NAN, f64::INFINITY];
-assert!(xs.float_eq(&ys));
 ```
+
+Decorum also provides the `IntrinsicOrd` trait and the `min_or_undefined` and
+`max_or_undefined` functions. These pairwise comparisons can be used with
+partially ordered types that have an intrinsic representation for undefined,
+such as `Option` (`None`) and IEEE 754 floating-point representations (`NaN`).
+For floating-point representations, this provides an ergonomic method for
+comparison that naturally propogates `NaN`s just like floating-point operations
+do (unlike `f64::max`, etc.).
+
+```rust
+use decorum::cmp;
+use decorum::real::{Endoreal, UnaryReal as _};
+
+pub fn f<T>(x: T, y: T) -> T
+where
+    T: Endoreal,
+{
+    // If the comparison is undefined, then `min` is assigned some
+    // representation of undefined. For floating-point types, `NaN` represents
+    // undefined and cannot be compared, so `min` is `NaN` if `x` or `y` is
+    // `NaN`.
+    let min = cmp::min_or_undefined(x, y);
+    min * T::PI
+}
+```
+
+## Mathematical Traits
+
+The `real` module provides various traits that describe real numbers and
+constructions via IEEE 754 floating-point types. These traits model functions
+and operations on real numbers and specify a codomain for functions where the
+output is not mathematically confined to the reals or a floating-point exception
+may yield a non-real approximation or error. For example, the logarithm of zero
+is undefined and the sum of two very large reals results in an infinity in IEEE
+754. For proxy types, the codomain is the same as the branch type of its
+divergence (see above).
+
+Real number and IEEE 754 encoding traits can both be used for generic
+programming. The following code demonstrates a function that accepts types that
+support floating-point infinities and real functions.
+
+```rust
+use decorum::real::Endoreal;
+use decorum::Infinity;
+
+fn f<T>(x: T, y: T) -> T
+where
+    T: Infinity + Endoreal,
+{
+    let z = x / y;
+    if z.is_infinite() {
+        x + y
+    }
+    else {
+        z + y
+    }
+}
+```
+
+## Cargo Features
+
+Decorum supports the following feature flags.
+
+| Feature           | Default | Description                                                  |
+|-------------------|---------|--------------------------------------------------------------|
+| `approx`          | yes     | Implements traits from [`approx`] for `Proxy` types.         |
+| `serialize-serde` | yes     | Implements traits from [`serde`] for `Proxy` types.          |
+| `std`             | yes     | Integrates the `std` library and enables dependent features. |
+| `unstable`        | no      | Enables features that require an unstable compiler.          |
 
 [`approx`]: https://crates.io/crates/approx
 [`num-traits`]: https://crates.io/crates/num-traits
