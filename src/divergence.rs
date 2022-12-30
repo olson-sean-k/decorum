@@ -337,15 +337,6 @@ where
     }
 }
 
-impl<T, C> Function for ExpressionOf<Proxy<T, C>>
-where
-    ErrorOf<Proxy<T, C>>: UndefinedError,
-    T: Float + Primitive,
-    C: Constraint<Divergence = TryExpression>,
-{
-    type Codomain = Self;
-}
-
 impl<T, C> From<T> for Expression<Proxy<T, C>, ErrorOf<Proxy<T, C>>>
 where
     T: Float + Primitive,
@@ -353,6 +344,28 @@ where
 {
     fn from(inner: T) -> Self {
         Proxy::try_new(inner).into()
+    }
+}
+
+impl<'a, T, C> From<&'a T> for ExpressionOf<Proxy<T, C>>
+where
+    Proxy<T, C>: TryFrom<&'a T, Error = C::Error>,
+    T: Float + Primitive,
+    C: Constraint<Divergence = TryExpression>,
+{
+    fn from(inner: &'a T) -> Self {
+        Proxy::<T, C>::try_from(inner).into()
+    }
+}
+
+impl<'a, T, C> From<&'a mut T> for ExpressionOf<Proxy<T, C>>
+where
+    Proxy<T, C>: TryFrom<&'a mut T, Error = C::Error>,
+    T: Float + Primitive,
+    C: Constraint<Divergence = TryExpression>,
+{
+    fn from(inner: &'a mut T) -> Self {
+        Proxy::<T, C>::try_from(inner).into()
     }
 }
 
@@ -392,6 +405,15 @@ impl<T, E> FromResidual for Expression<T, E> {
             _ => unreachable!(),
         }
     }
+}
+
+impl<T, C> Function for ExpressionOf<Proxy<T, C>>
+where
+    ErrorOf<Proxy<T, C>>: UndefinedError,
+    T: Float + Primitive,
+    C: Constraint<Divergence = TryExpression>,
+{
+    type Codomain = Self;
 }
 
 impl<T, C> Infinite for ExpressionOf<Proxy<T, C>>
