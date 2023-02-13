@@ -136,7 +136,7 @@ where
 pub struct Proxy<T, P> {
     inner: T,
     #[cfg_attr(feature = "serialize-serde", serde(skip))]
-    phantom: PhantomData<*const P>,
+    phantom: PhantomData<fn() -> P>,
 }
 
 impl<T, P> Proxy<T, P> {
