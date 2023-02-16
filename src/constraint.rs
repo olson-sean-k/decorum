@@ -111,7 +111,7 @@ pub trait Constraint: Member<RealSet> {
         F: FnOnce(T) -> U,
     {
         match Self::noncompliance(inner) {
-            Some(error) => Self::Divergence::from_residual(error),
+            Some(error) => Self::Divergence::diverge(error),
             _ => Self::Divergence::from_output(f(inner)),
         }
     }

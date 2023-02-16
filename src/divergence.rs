@@ -34,7 +34,7 @@ pub trait Divergence: Sealed {
 
     fn from_output<T, E>(output: T) -> Self::Branch<T, E>;
 
-    fn from_residual<T, E>(residual: E) -> Self::Branch<T, E>
+    fn diverge<T, E>(error: E) -> Self::Branch<T, E>
     where
         E: Debug;
 }
@@ -46,7 +46,7 @@ impl Divergence for Infallible {
         output
     }
 
-    fn from_residual<T, E>(_residual: E) -> Self::Branch<T, E>
+    fn diverge<T, E>(_residual: E) -> Self::Branch<T, E>
     where
         E: Debug,
     {
@@ -84,11 +84,11 @@ impl Divergence for Assert {
         output
     }
 
-    fn from_residual<T, E>(residual: E) -> Self::Branch<T, E>
+    fn diverge<T, E>(error: E) -> Self::Branch<T, E>
     where
         E: Debug,
     {
-        Err(residual).expect_constrained()
+        Err(error).expect_constrained()
     }
 }
 
@@ -103,11 +103,11 @@ impl Divergence for TryExpression {
         Defined(output)
     }
 
-    fn from_residual<T, E>(residual: E) -> Self::Branch<T, E>
+    fn diverge<T, E>(error: E) -> Self::Branch<T, E>
     where
         E: Debug,
     {
-        Undefined(residual)
+        Undefined(error)
     }
 }
 
@@ -122,7 +122,7 @@ impl Divergence for TryOption {
         Some(output)
     }
 
-    fn from_residual<T, E>(_residual: E) -> Self::Branch<T, E>
+    fn diverge<T, E>(_residual: E) -> Self::Branch<T, E>
     where
         E: Debug,
     {
@@ -141,11 +141,11 @@ impl Divergence for TryResult {
         Ok(output)
     }
 
-    fn from_residual<T, E>(residual: E) -> Self::Branch<T, E>
+    fn diverge<T, E>(error: E) -> Self::Branch<T, E>
     where
         E: Debug,
     {
-        Err(residual)
+        Err(error)
     }
 }
 
