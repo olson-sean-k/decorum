@@ -1,5 +1,30 @@
-//! Proxy types that wrap primitive floating-point types and apply constraints
-//! and a total ordering.
+//! IEEE 754 floating-point proxy types that apply ordering and configurable contraints and
+//! divergence.
+//!
+//! [`Proxy`] types wrap primitive floating-point types and change their behavior with respect to
+//! ordering, equivalence, hashing, supported values, and error behaviors. These types have the
+//! same representation as primitive floating-point types and can often be used as drop-in
+//! replacements.
+//!
+//! [Constraints][`constraint`] configure the behavior of [`Proxy`]s by determining the set of IEEE
+//! 754 floating-point values that can be represented and how to [diverge][`divergence`] if a value
+//! that is not in this set is encountered. The following table summarizes the proxy type
+//! definitions and their constraints:
+//!
+//! | Type Definition | Sized Definitions | Trait Implementations                      | Disallowed Values     |
+//! |-----------------|-------------------|--------------------------------------------|-----------------------|
+//! | [`Total`]       |                   | `Encoding + Real + Infinite + Nan + Float` |                       |
+//! | [`NotNan`]      | `N32`, `N64`      | `Encoding + Real + Infinite`               | `NaN`                 |
+//! | [`Finite`]      | `R32`, `R64`      | `Encoding + Real`                          | `NaN`, `-INF`, `+INF` |
+//!
+//! The [`NotNan`] and [`Finite`] types disallow values that represent `NaN`, $\infin$, and
+//! $-\infin$. These types diverge if such a value is encountered, which may result in an error
+//! encoding output (e.g., a `Result::Err`) or even a panic. Notably, the [`Total`] type applies no
+//! constraints and is infallible (never diverges).
+//!
+//! [`constraint`]: crate::constraint
+//! [`divergence`]: crate::divergence
+//! [`Result::Err`]: core::result::Result::Err
 
 #[cfg(feature = "approx")]
 use approx::{AbsDiffEq, RelativeEq, UlpsEq};
@@ -40,25 +65,24 @@ pub type DivergenceOf<P> = <ConstraintOf<P> as Constraint>::Divergence;
 pub type ErrorOf<P> = <ConstraintOf<P> as Constraint>::Error;
 pub type ExpressionOf<P> = Expression<P, ErrorOf<P>>;
 
-/// A `Proxy` type that is closed over its primitive floating-point type and
-/// constraint.
+/// A [`Proxy`] type that is closed over its primitive floating-point type and constraint.
+///
+/// [`Proxy`]: crate::proxy::Proxy
 pub trait ClosedProxy: Sized {
     type Primitive: Float + Primitive;
     type Constraint: Constraint;
 }
 
-// TODO: By default, Serde serializes floating-point primitives representing
-//       `NaN` and infinities as `"null"`. Moreover, Serde cannot deserialize
-//       `"null"` as a floating-point primitive. This means that information is
-//       lost when serializing and deserializing is impossible for non-real
-//       values.
+// TODO: By default, Serde serializes floating-point primitives representing `NaN` and infinities
+//       as `"null"`. Moreover, Serde cannot deserialize `"null"` as a floating-point primitive.
+//       This means that information is lost when serializing and deserializing is impossible for
+//       non-real values.
 /// Serialization container.
 ///
-/// This type is represented and serialized transparently as its inner type `T`.
-/// `Proxy` uses this type for its own serialization and deserialization.
-/// Importantly, this uses a conversion when deserializing that upholds the
-/// constraints on proxy types, so it is not possible to deserialize a
-/// floating-point value into a proxy type that does not support that value.
+/// This type is represented and serialized transparently as its inner type `T`. `Proxy` uses this
+/// type for its own serialization and deserialization. Importantly, this uses a conversion when
+/// deserializing that upholds the constraints on proxy types, so it is not possible to deserialize
+/// a floating-point value into a proxy type that does not support that value.
 ///
 /// See the following for more context and details:
 ///
@@ -86,38 +110,23 @@ where
     }
 }
 
-/// Floating-point proxy that provides a total ordering, equivalence, hashing,
-/// and constraints.
+/// IEEE 754 floating-point proxy that provides total ordering, equivalence, hashing, constraints,
+/// and error handling.
 ///
-/// `Proxy` wraps primitive floating-point types and provides implementations
-/// for numeric traits using a total ordering, including `Ord`, `Eq`, and
-/// `Hash`. `Proxy` supports various constraints on the set of values that may
-/// be represented and **panics if these constraints are violated in a numeric
-/// operation.**
+/// Proxy types wrap primitive floating-point type and extend their behavior. For example, all
+/// proxy types implement the standard [`Eq`], [`Hash`], and [`Ord`] traits, sometimes via the
+/// non-standard relations described in the [`cmp`] module when `NaN`s must be considered.
+/// Constraints and divergence can be composed to determine the subset of floating-point values
+/// that a proxy supports and how the proxy behaves when those constraints are violated.
 ///
-/// This type is re-exported but should not (and cannot) be used directly. Use
-/// the type aliases `Total`, `NotNan`, and `Finite` instead.
+/// Various type definitions are provided for various useful proxy constructions, such as the
+/// [`Total`] type, which extends floating-point types with a non-standard total ordering.
 ///
-/// # Total Ordering
-///
-/// All proxy types use the following total ordering:
-///
-/// $$-\infin<\cdots<0<\cdots<\infin<\text{NaN}$$
-///
-/// See the `cmp` module for a description of the total ordering used to
-/// implement `Ord` and `Eq`.
-///
-/// # Constraints
-///
-/// Constraints restrict the set of values that a proxy may take by disallowing
-/// certain classes or subsets of those values. If a constraint is violated
-/// (because a proxy type would need to take a value it disallows), the
-/// operation panics.
-///
-/// Constraints may disallow two broad classes of floating-point values:
-/// infinities and `NaN`s. Constraints are exposed by the `Total`, `NotNan`, and
-/// `Finite` type definitions. Note that `Total` uses a unit constraint, which
-/// enforces no constraints at all and never panics.
+/// [`cmp`]: crate::cmp
+/// [`Eq`]: core::cmp::Eq
+/// [`Hash`]: core::hash::Hash
+/// [`Ord`]: core::cmp::Ord
+/// [`Total`]: crate::Total
 #[cfg_attr(feature = "serialize-serde", derive(Deserialize, Serialize))]
 #[cfg_attr(
     feature = "serialize-serde",
@@ -148,7 +157,7 @@ impl<T, C> Proxy<T, C> {
         }
     }
 
-    /// Converts a proxy into a primitive floating-point value.
+    /// Converts a proxy into its underlying primitive floating-point type.
     ///
     /// # Examples
     ///
@@ -156,29 +165,29 @@ impl<T, C> Proxy<T, C> {
     /// use decorum::R64;
     ///
     /// fn f() -> R64 {
-    /// #    use num_traits::Zero;
-    /// #    R64::zero()
+    /// #    use decorum::real::UnaryReal;
+    /// #    R64::ZERO
     ///     // ...
     /// }
     ///
     /// let x: f64 = f().into_inner();
-    /// // The `From` and `Into` traits can also be used.
+    /// // The standard `From` and `Into` traits can also be used.
     /// let y: f64 = f().into();
     /// ```
     pub fn into_inner(self) -> T {
         self.inner
     }
 
-    pub(crate) fn map_unchecked<F>(self, mut f: F) -> Self
+    pub(crate) fn map_unchecked<F>(self, f: F) -> Self
     where
-        F: FnMut(T) -> T,
+        F: FnOnce(T) -> T,
     {
         Proxy::unchecked(f(self.into_inner()))
     }
 
-    pub(crate) fn with_inner<U, F>(self, mut f: F) -> U
+    pub(crate) fn with_inner<U, F>(self, f: F) -> U
     where
-        F: FnMut(T) -> U,
+        F: FnOnce(T) -> U,
     {
         f(self.inner)
     }
@@ -189,43 +198,55 @@ where
     T: Float + Primitive,
     C: Constraint,
 {
-    // TODO: Update documentation for rename from `new` to `try_new`.
-    /// Creates a proxy from a primitive floating-point value.
+    /// Fallibly constructs a proxy from a primitive IEEE 754 floating-point value.
     ///
-    /// This construction is also provided via `TryFrom`, but `new` must be used
-    /// in generic code if the primitive floating-point type is unknown.
+    /// This construction mirrors the [`TryFrom`] implementation and is independent of the
+    /// [divergence][`divergence`] of the proxy; it always outputs a [`Result`] and never panics.
     ///
     /// # Errors
     ///
-    /// Returns a `ConstraintViolation` error if the primitive floating-point
-    /// value violates the constraints of the proxy. For `Total`, which has no
-    /// constraints, the error type is `Infallible` and the construction cannot
-    /// fail.
+    /// Returns an error if the primitive floating-point value does not satisfy the constraints of
+    /// the proxy. Note that the error type of [`UnitConstraint`] is [`Infallible`] and the
+    /// construction of [`Total`]s cannot fail here.
     ///
     /// # Examples
     ///
-    /// Creating proxies from primitive floating-point values:
+    /// Constructing proxies from primitive floating-point values:
     ///
     /// ```rust
-    /// use decorum::R64;
+    /// use decorum::constraint::FiniteConstraint;
+    /// use decorum::divergence::Assert;
+    /// use decorum::proxy::Proxy;
     ///
-    /// fn f(x: R64) -> R64 {
+    /// type Real = Proxy<f64, FiniteConstraint<Assert>>;
+    ///
+    /// fn f(x: Real) -> Real {
     ///     x * 2.0
     /// }
     ///
-    /// let y = f(R64::new(2.0).unwrap());
-    /// // The `TryFrom` and `TryInto` traits can also be used in some contexts.
+    /// let y = f(Real::try_new(2.0).unwrap());
+    /// // The `TryFrom` and `TryInto` traits can also be used.
     /// let z = f(2.0.try_into().unwrap());
     /// ```
     ///
-    /// Creating a proxy with a failure:
+    /// A proxy construction that fails:
     ///
     /// ```rust,should_panic
-    /// use decorum::R64;
+    /// use decorum::constraint::FiniteConstraint;
+    /// use decorum::divergence::Assert;
+    /// use decorum::proxy::Proxy;
     ///
-    /// // `R64` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
-    /// let x = R64::new(0.0 / 0.0).unwrap(); // Panics.
+    /// type Real = Proxy<f64, FiniteConstraint<Assert>>;
+    ///
+    /// // `FiniteConstraint` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
+    /// let x = Real::try_new(0.0 / 0.0).unwrap(); // Panics when unwrapping.
     /// ```
+    ///
+    /// [`divergence`]: crate::divergence
+    /// [`Infallible`]: core::convert::Infallible
+    /// [`Result`]: core::result::Result
+    /// [`Total`]: crate::Total
+    /// [`UnitConstraint`]: crate::constraint::UnitConstraint
     pub fn try_new(inner: T) -> Result<Self, C::Error> {
         C::compliance(inner).map(|inner| Proxy {
             inner,
@@ -233,55 +254,67 @@ where
         })
     }
 
-    /// Creates a proxy from a primitive floating-point value and asserts that
-    /// constraints are not violated.
+    /// Constructs a proxy from a primitive IEEE 754 floating-point value and asserts that its
+    /// constraints are satisfied.
     ///
-    /// For `Total`, which has no constraints, this function never fails.
+    /// This construction is independent of the [divergence][`divergence`] of the proxy and always
+    /// asserts constraints (even when the divergence is fallible). Note that this function never
+    /// fails (panics) for [`Total`], which has no constraints.
     ///
     /// # Panics
     ///
-    /// This construction panics if the primitive floating-point value violates
-    /// the constraints of the proxy.
+    /// **This construction panics if the primitive floating-point value does not satisfy the
+    /// constraints of the proxy.**
     ///
     /// # Examples
     ///
-    /// Creating proxies from primitive floating-point values:
+    /// Constructing proxies from primitive floating-point values:
     ///
     /// ```rust
-    /// use decorum::R64;
+    /// use decorum::constraint::FiniteConstraint;
+    /// use decorum::divergence::Assert;
+    /// use decorum::proxy::Proxy;
     ///
-    /// fn f(x: R64) -> R64 {
+    /// type Real = Proxy<f64, FiniteConstraint<Assert>>;
+    ///
+    /// fn f(x: Real) -> Real {
     ///     x * 2.0
     /// }
     ///
-    /// let y = f(R64::assert(2.0));
+    /// let y = f(Real::assert(2.0));
     /// ```
     ///
-    /// Creating a proxy with a failure:
+    /// A proxy construction that fails:
     ///
     /// ```rust,should_panic
-    /// use decorum::R64;
+    /// use decorum::constraint::FiniteConstraint;
+    /// use decorum::divergence::Assert;
+    /// use decorum::proxy::Proxy;
     ///
-    /// // `R64` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
-    /// let x = R64::assert(0.0 / 0.0); // Panics.
+    /// type Real = Proxy<f64, FiniteConstraint<Assert>>;
+    ///
+    /// // `FiniteConstraint` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
+    /// let x = Real::assert(0.0 / 0.0); // Panics.
     /// ```
+    ///
+    /// [`divergence`]: crate::divergence
+    /// [`Total`]: crate::Total
     pub fn assert(inner: T) -> Self {
         Self::try_new(inner).expect_constrained()
     }
 
-    /// Converts a proxy into another proxy that is capable of representing a
-    /// superset of the values that are members of its constraint.
+    /// Converts a proxy into another proxy that is capable of representing a superset of its
+    /// values per its constraint.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// # extern crate decorum;
-    /// # extern crate num;
+    /// use decorum::divergence::Assert;
+    /// use decorum::real::UnaryReal;
     /// use decorum::{N64, R64};
-    /// use num::Zero;
     ///
-    /// let x = R64::zero();
-    /// let y = N64::from_subset(x);
+    /// let x = R64::<Assert>::ZERO;
+    /// let y = N64::from_subset(x); // `N64` allows a superset of the values of `R64`.
     /// ```
     pub fn from_subset<C2>(other: Proxy<T, C2>) -> Self
     where
@@ -290,19 +323,17 @@ where
         Self::unchecked(other.into_inner())
     }
 
-    /// Converts a proxy into another proxy that is capable of representing a
-    /// superset of the values that are members of its constraint.
+    /// Converts a proxy into another proxy that is capable of representing a superset of its
+    /// values per its constraint.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// # extern crate decorum;
-    /// # extern crate num;
+    /// use decorum::real::UnaryReal;
     /// use decorum::{N64, R64};
-    /// use num::Zero;
     ///
-    /// let x = R64::zero();
-    /// let y: N64 = x.into_superset();
+    /// let x = R64::ZERO;
+    /// let y: N64 = x.into_superset(); // `N64` allows a superset of the values of `R64`.
     /// ```
     pub fn into_superset<C2>(self) -> Proxy<T, C2>
     where
@@ -311,47 +342,58 @@ where
         Proxy::unchecked(self.into_inner())
     }
 
+    /// Converts a proxy into its corresponding [`Expression`].
+    ///
+    /// The output of this function is always the [`Defined`] variant.
+    ///
+    /// [`Defined`]: crate::divergence::Expression::Defined
+    /// [`Expression`]: crate::divergence::Expression
     pub fn into_expression(self) -> ExpressionOf<Self> {
         Expression::from(self)
     }
 
-    /// Converts a slice of primitive floating-point values into a slice of
-    /// proxies.
+    /// Converts a slice of primitive IEEE 754 floating-point values into a slice of proxies.
     ///
-    /// This conversion must check the constraints of the proxy against each
-    /// floating-point value and so has `O(N)` time complexity.
+    /// This conversion must check the constraints of the proxy against each floating-point value
+    /// and so has `O(N)` time complexity. **When using [`UnitConstraint`], prefer the infallible
+    /// and `O(1)` [`from_slice`] function.**
     ///
     /// # Errors
     ///
-    /// Returns an error if any of the primitive floating-point values in the
-    /// slice do not satisfy the constraints of the proxy.
+    /// Returns an error if any of the primitive floating-point values in the slice do not satisfy
+    /// the constraints of the proxy.
+    ///
+    /// [`from_slice`]: crate::Total::from_slice
+    /// [`UnitConstraint`]: crate::constraint::UnitConstraint
     pub fn try_from_slice<'a>(slice: &'a [T]) -> Result<&'a [Self], C::Error> {
         slice
             .iter()
             .try_for_each(|inner| C::compliance(*inner).map(|_| ()))?;
-        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary
-        //         representation as its input type `T`. This means that it is
-        //         safe to transmute `T` to `Proxy<T>`.
+        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
+        //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
         Ok(unsafe { mem::transmute::<&'a [T], &'a [Self]>(slice) })
     }
 
-    /// Converts a mutable slice of primitive floating-point values into a
-    /// mutable slice of proxies.
+    /// Converts a mutable slice of primitive IEEE 754 floating-point values into a mutable slice
+    /// of proxies.
     ///
-    /// This conversion must check the constraints of the proxy against each
-    /// floating-point value and so has `O(N)` time complexity.
+    /// This conversion must check the constraints of the proxy against each floating-point value
+    /// and so has `O(N)` time complexity. **When using [`UnitConstraint`], prefer the infallible
+    /// and `O(1)` [`from_mut_slice`] function.**
     ///
     /// # Errors
     ///
     /// Returns an error if any of the primitive floating-point values in the
     /// slice do not satisfy the constraints of the proxy.
+    ///
+    /// [`from_mut_slice`]: crate::Total::from_mut_slice
+    /// [`UnitConstraint`]: crate::constraint::UnitConstraint
     pub fn try_from_mut_slice<'a>(slice: &'a mut [T]) -> Result<&'a mut [Self], C::Error> {
         slice
             .iter()
             .try_for_each(|inner| C::compliance(*inner).map(|_| ()))?;
-        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary
-        //         representation as its input type `T`. This means that it is
-        //         safe to transmute `T` to `Proxy<T>`.
+        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
+        //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
         Ok(unsafe { mem::transmute::<&'a mut [T], &'a mut [Self]>(slice) })
     }
 }
@@ -361,6 +403,63 @@ where
     T: Float + Primitive,
     C: Constraint,
 {
+    /// Constructs a proxy from a primitive IEEE 754 floating-point value.
+    ///
+    /// This construction outputs the branch type of the [divergence][`divergence`] of the proxy
+    /// and invokes its divergence behavior if the floating-point value does not satisfy
+    /// constraints. Note that this function never fails for [`Total`], which has no constraints.
+    ///
+    /// The distinctions in output and behavior are static and are determined by the type
+    /// parameters of the `Proxy` type constructor.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if the primitive floating-point value does not satisfy the constraints
+    /// of the proxy **and** the [divergence][`divergence`] of the proxy panics. For example, the
+    /// [`Assert`] divergence asserts constraints and panics.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the primitive floating-point value does not satisfy the constraints of
+    /// the proxy **and** the [divergence][`divergence`] of the proxy encodes errors in its branch
+    /// type. For example, the branch type of the [`TryExpression`] divergence is [`Expression`]
+    /// and this function returns the [`Undefined`] variant if the constraint is violated.
+    ///
+    /// # Examples
+    ///
+    /// Fallibly constructing proxies from primitive floating-point values:
+    ///
+    /// ```rust
+    /// use decorum::constraint::FiniteConstraint;
+    /// use decorum::divergence::TryResult;
+    /// use decorum::proxy::Proxy;
+    ///
+    /// // The branch type of `TryResult` is `Result`.
+    /// type Real = Proxy<f64, FiniteConstraint<TryResult>>;
+    ///
+    /// let x = Real::new(2.0).unwrap(); // The output type of `new` is `Result` per `TryResult`.
+    /// ```
+    ///
+    /// Asserting proxy construction from primitive floating-point values:
+    ///
+    /// ```rust,should_panic
+    /// use decorum::constraint::FiniteConstraint;
+    /// use decorum::divergence::Assert;
+    /// use decorum::proxy::Proxy;
+    ///
+    /// // The branch type of `Assert` is `Real`.
+    /// type Real = Proxy<f64, FiniteConstraint<Assert>>;
+    ///
+    /// let x = Real::new(2.0); // The output type of `new` is `Real` per `Assert`.
+    /// let y = Real::new(0.0 / 0.0); // Panics.
+    /// ```
+    ///
+    /// [`Assert`]: crate::divergence::Assert
+    /// [`divergence`]: crate::divergence
+    /// [`Expression`]: crate::divergence::Expression
+    /// [`Total`]: crate::Total
+    /// [`TryExpression`]: crate::divergence::TryExpression
+    /// [`Undefined`]: crate::divergence::Expression::Undefined
     pub fn new(inner: T) -> BranchOf<Self> {
         C::branch(inner, |inner| Proxy {
             inner,
@@ -368,17 +467,17 @@ where
         })
     }
 
-    pub(crate) fn map<F>(self, mut f: F) -> BranchOf<Self>
+    pub(crate) fn map<F>(self, f: F) -> BranchOf<Self>
     where
-        F: FnMut(T) -> T,
+        F: FnOnce(T) -> T,
     {
         Self::new(f(self.into_inner()))
     }
 
-    pub(crate) fn zip_map<C2, F>(self, other: Proxy<T, C2>, mut f: F) -> BranchOf<Self>
+    pub(crate) fn zip_map<C2, F>(self, other: Proxy<T, C2>, f: F) -> BranchOf<Self>
     where
         C2: Constraint,
-        F: FnMut(T, T) -> T,
+        F: FnOnce(T, T) -> T,
     {
         Self::new(f(self.into_inner(), other.into_inner()))
     }
@@ -388,27 +487,28 @@ impl<T> Total<T>
 where
     T: Float + Primitive,
 {
-    /// Converts a slice of primitive floating-point values into a slice of
-    /// `Total`s.
+    /// Converts a slice of primitive IEEE 754 floating-point values into a slice of `Total`s.
     ///
-    /// Unlike `Proxy::try_from_slice`, this conversion is infallible and
-    /// trivial and so has `O(1)` time complexity.
+    /// Unlike [`try_from_slice`], this conversion is infallible and trivial and so has `O(1)` time
+    /// complexity.
+    ///
+    /// [`try_from_slice`]: crate::proxy::Proxy::try_from_slice
     pub fn from_slice<'a>(slice: &'a [T]) -> &'a [Self] {
-        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary
-        //         representation as its input type `T`. This means that it is
-        //         safe to transmute `T` to `Proxy<T>`.
+        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
+        //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
         unsafe { mem::transmute::<&'a [T], &'a [Self]>(slice) }
     }
 
-    /// Converts a mutable slice of primitive floating-point values into a
-    /// mutable slice of `Total`s.
+    /// Converts a mutable slice of primitive floating-point values into a mutable slice of
+    /// `Total`s.
     ///
-    /// Unlike `Proxy::try_from_mut_slice`, this conversion is infallible and
-    /// trivial and so has `O(1)` time complexity.
+    /// Unlike [`try_from_mut_slice`], this conversion is infallible and trivial and so has `O(1)`
+    /// time complexity.
+    ///
+    /// [`try_from_mut_slice`]: crate::proxy::Proxy::try_from_mut_slice
     pub fn from_mut_slice<'a>(slice: &'a mut [T]) -> &'a mut [Self] {
-        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary
-        //         representation as its input type `T`. This means that it is
-        //         safe to transmute `T` to `Proxy<T>`.
+        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
+        //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
         unsafe { mem::transmute::<&'a mut [T], &'a mut [Self]>(slice) }
     }
 }
@@ -454,35 +554,6 @@ where
         self.map(|inner| inner + other)
     }
 }
-
-// TODO:
-//#[cfg(all(nightly, feature = "unstable"))]
-//impl<T, C> Add<BranchOf<Self>> for Proxy<T, C>
-//where
-//    BranchOf<Self>: Try,
-//    T: Float + Primitive,
-//    C: Constraint,
-//{
-//    type Output = BranchOf<Self>;
-//
-//    fn add(self, other: BranchOf<Self>) -> Self::Output {
-//        self.zip_map(other?, Add::add)
-//    }
-//}
-//
-//#[cfg(all(nightly, feature = "unstable"))]
-//impl<T, C> Add<Proxy<T, C>> for BranchOf<Proxy<T, C>>
-//where
-//    Self: Try,
-//    T: Float + Primitive,
-//    C: Constraint,
-//{
-//    type Output = Self;
-//
-//    fn add(self, other: Proxy<T, C>) -> Self::Output {
-//        self?.zip_map(other, Add::add)
-//    }
-//}
 
 impl<T, C> AddAssign for Proxy<T, C>
 where
@@ -938,10 +1009,9 @@ where
     fn mul_add(self, a: Self, b: Self) -> Self {
         let a = a.into_inner();
         let b = b.into_inner();
-        // TODO: This implementation requires a `ForeignFloat` bound and
-        //       forwards to its `mul_add`. Consider supporting `mul_add` via a
-        //       trait that is more specific to floating-point encoding than
-        //       `BinaryReal` and friends.
+        // TODO: This implementation requires a `ForeignFloat` bound and forwards to its `mul_add`.
+        //       Consider supporting `mul_add` via a trait that is more specific to floating-point
+        //       encoding than `BinaryReal` and friends.
         self.map(|inner| ForeignFloat::mul_add(inner, a, b))
     }
 
@@ -1111,9 +1181,8 @@ where
     T: Float + Primitive,
 {
     fn from(inner: &'a T) -> Self {
-        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary
-        //         representation as its input type `T`. This means that it is
-        //         safe to transmute `T` to `Proxy<T>`.
+        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
+        //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
         unsafe { &*(inner as *const T as *const Total<T>) }
     }
 }
@@ -1123,9 +1192,8 @@ where
     T: Float + Primitive,
 {
     fn from(inner: &'a mut T) -> Self {
-        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary
-        //         representation as its input type `T`. This means that it is
-        //         safe to transmute `T` to `Proxy<T>`.
+        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
+        //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
         unsafe { &mut *(inner as *mut T as *mut Total<T>) }
     }
 }
@@ -1983,14 +2051,12 @@ macro_rules! impl_binary_operation {
 }
 impl_binary_operation!();
 
-/// Implements the `Real` trait from
-/// [`num-traits`](https://crates.io/crates/num-traits) in terms of Decorum's
-/// numeric traits. Does nothing if the `std` feature is disabled.
+/// Implements the `Real` trait from [`num-traits`](https://crates.io/crates/num-traits) in terms
+/// of Decorum's numeric traits. Does nothing if the `std` feature is disabled.
 ///
-/// This is not generic, because the blanket implementation provided by
-/// `num-traits` prevents a constraint-based implementation. Instead, this macro
-/// must be applied manually to each proxy type exported by Decorum that is
-/// `Real` but not `Float`.
+/// This is not generic, because the blanket implementation provided by `num-traits` prevents a
+/// constraint-based implementation. Instead, this macro must be applied manually to each proxy
+/// type exported by Decorum that is `Real` but not `Float`.
 ///
 /// See the following issues:
 ///
@@ -2205,9 +2271,8 @@ macro_rules! impl_foreign_real {
 }
 impl_foreign_real!();
 
-// `TryFrom` cannot be implemented over an open type `T` and cannot be
-// implemented for general constraints, because it would conflict with the
-// `From` implementation for `Total`.
+// `TryFrom` cannot be implemented over an open type `T` and cannot be implemented for general
+// constraints, because it would conflict with the `From` implementation for `Total`.
 macro_rules! impl_try_from {
     () => {
         with_primitives!(impl_try_from);
@@ -2236,10 +2301,9 @@ macro_rules! impl_try_from {
 
             fn try_from(inner: &'a $t) -> Result<Self, Self::Error> {
                 ConstraintOf::<$p<$t, D>>::compliance(*inner).map(|_| {
-                    // SAFETY: `Proxy<T>` is `repr(transparent)` and has the
-                    //         same binary representation as its input type `T`.
-                    //         This means that it is safe to transmute `T` to
-                    //         `Proxy<T>`.
+                    // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary
+                    //         representation as its input type `T`. This means that it is safe to
+                    //         transmute `T` to `Proxy<T>`.
                     unsafe { mem::transmute::<&'a $t, Self>(inner) }
                 })
             }
@@ -2253,10 +2317,9 @@ macro_rules! impl_try_from {
 
             fn try_from(inner: &'a mut $t) -> Result<Self, Self::Error> {
                 ConstraintOf::<$p<$t, D>>::compliance(*inner).map(move |_| {
-                    // SAFETY: `Proxy<T>` is `repr(transparent)` and has the
-                    //         same binary representation as its input type `T`.
-                    //         This means that it is safe to transmute `T` to
-                    //         `Proxy<T>`.
+                    // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary
+                    //         representation as its input type `T`. This means that it is safe to
+                    //         transmute `T` to `Proxy<T>`.
                     unsafe { mem::transmute::<&'a mut $t, Self>(inner) }
                 })
             }
@@ -2267,6 +2330,7 @@ impl_try_from!();
 
 #[cfg(test)]
 mod tests {
+    use crate::divergence::Assert;
     use crate::{Finite, Float, Infinite, Nan, NotNan, Real, Total, UnaryReal, N32, R32};
 
     #[test]
@@ -2283,10 +2347,9 @@ mod tests {
         assert!(Nan::is_nan(y));
     }
 
-    // This is the most comprehensive and general test of reference conversions,
-    // as there are no failure conditions. Other similar tests focus solely on
-    // success or failure, not completeness of the APIs under test. This test is
-    // an ideal Miri target.
+    // This is the most comprehensive and general test of reference conversions, as there are no
+    // failure conditions. Other similar tests focus solely on success or failure, not completeness
+    // of the APIs under test. This test is an ideal Miri target.
     #[test]
     #[allow(clippy::eq_op)]
     #[allow(clippy::float_cmp)]
@@ -2413,8 +2476,7 @@ mod tests {
     #[allow(clippy::float_cmp)]
     #[allow(clippy::zero_divided_by_zero)]
     fn cmp_proxy_primitive() {
-        // Compare a canonicalized `NaN` with a primitive `NaN` with a
-        // different representation.
+        // Compare a canonicalized `NaN` with a primitive `NaN` with a different representation.
         let x: Total<f32> = (0.0 / 0.0).into();
         assert_eq!(x, f32::sqrt(-1.0));
 
@@ -2511,17 +2573,22 @@ mod tests {
     #[test]
     #[should_panic]
     fn deserialize_panic_on_violation() {
-        // TODO: See `SerdeContainer`. This does not test a value that violates
-        //       `N32`'s constraints; instead, this simply fails to deserialize
-        //       `f32` from `"null"`.
+        // TODO: See `SerdeContainer`. This does not test a value that violates `N32`'s
+        //       constraints; instead, this simply fails to deserialize `f32` from `"null"`.
         let _: N32 = serde_json::from_str("null").unwrap();
     }
 
     #[cfg(feature = "serialize-serde")]
     #[test]
     fn serialize() {
-        assert_eq!("1.0", serde_json::to_string(&N32::assert(1.0)).unwrap());
+        assert_eq!(
+            "1.0",
+            serde_json::to_string(&N32::<Assert>::assert(1.0)).unwrap()
+        );
         // TODO: See `SerdeContainer`.
-        assert_eq!("null", serde_json::to_string(&N32::INFINITY).unwrap());
+        assert_eq!(
+            "null",
+            serde_json::to_string(&N32::<Assert>::INFINITY).unwrap()
+        );
     }
 }

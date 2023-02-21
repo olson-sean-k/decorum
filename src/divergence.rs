@@ -1,3 +1,38 @@
+//! Constraint divergence types and behaviors (error handling).
+//!
+//! # Error Behaviors
+//!
+//! This module provides marker types that express the behavior of [`Proxy`]s when a disallowed
+//! IEEE 754 floating-point value is encountered. These types and behaviors are summarized in the
+//! following table:
+//!
+//! | Divergence        | Branch Type        | Error Output   |
+//! |-------------------|--------------------|----------------|
+//! | [`Assert`]        | `T`                | **panic**      |
+//! | [`TryOption`]     | `Option<T>`        | `None`         |
+//! | [`TryResult`]     | `Result<T, E>`     | `Err(E)`       |
+//! | [`TryExpression`] | `Expression<T, E>` | `Undefined(E)` |
+//!
+//! Note that [`Assert`] is the only intrinsic divergence where the output type of fallible
+//! operations is the same as the input type. **However, this divergence panics when encountering a
+//! value that violates a [constraint][`constraint`].** The remaining divergence types instead use
+//! an extrinsic type to encode errors as values.
+//!
+//! # Expressions
+//!
+//! The [`Expression`] type represents the result of an arithmetic expression that may or may not
+//! be defined (as determined by [constraints][`constraint`]). It resembles [`Result`], but is
+//! additionally a numeric type that can be used fluently in fallible arithmetic expressions
+//! involving constrained proxy types.
+//!
+//! [`constraint`]: crate::constraint
+//! [`Assert`]: crate::divergence::Assert
+//! [`Proxy`]: crate::proxy::Proxy
+//! [`Result`]: core::result::Result
+//! [`TryExpression`]: crate::divergence::TryExpression
+//! [`TryOption`]: crate::divergence::TryOption
+//! [`TryResult`]: crate::divergence::TryResult
+
 use core::cmp::Ordering;
 use core::convert::Infallible;
 use core::fmt::Debug;
@@ -17,18 +52,36 @@ use crate::{
 pub use Expression::Defined;
 pub use Expression::Undefined;
 
+/// Unwraps an [`Expression`] or propagates its error.
+///
+/// This macro mirrors the standard [`try`] macro but operates on [`Expression`]s rather than
+/// [`Result`]s. If the given [`Expression`] is the `Defined` variant, then the expression (of the
+/// macro) is the accompanying value. Otherwise, the error in the `Undefined` variant is converted
+/// via [`From`] and returned in the constructed [`Expression`].
+///
+/// [`Expression`]: crate::divergence::Expression
+/// [`From`]: core::convert::From
+/// [`Result`]: core::result::Result
+/// [`try`]: core::try
 #[macro_export]
 macro_rules! try_expression {
     ($x:expr) => {
         match $x {
-            Expression::Defined(inner) => inner,
-            _ => {
-                return $x;
+            $crate::divergence::Expression::Defined(inner) => inner,
+            $crate::divergence::Expression::Undefined(error) => {
+                return $crate::divergence::Expression::Undefined(core::convert::From::from(error));
             }
         }
     };
 }
 
+/// Determines the output type and behavior of a [`Proxy`] when it is fallibly constructed.
+///
+/// This trait defines a branch type and behavior when that type is constructed from an error. In
+/// the error case, this may or may not yield a value and may instead diverge by panicking. When
+/// constructed from an output, the branch type is always constructed and returned.
+///
+/// [`Proxy`]: crate::proxy::Proxy
 pub trait Divergence: Sealed {
     type Branch<T, E>;
 
@@ -46,7 +99,7 @@ impl Divergence for Infallible {
         output
     }
 
-    fn diverge<T, E>(_residual: E) -> Self::Branch<T, E>
+    fn diverge<T, E>(_error: E) -> Self::Branch<T, E>
     where
         E: Debug,
     {
@@ -54,6 +107,9 @@ impl Divergence for Infallible {
     }
 }
 
+/// A [`Divergence`] with a branch type that is the same as its output type.
+///
+/// [`Divergence`]: crate::divergence::Divergence
 pub trait NonResidual<P>: Divergence<Branch<P, ErrorOf<P>> = P>
 where
     P: ClosedProxy,
@@ -67,14 +123,10 @@ where
 {
 }
 
-pub trait ResidualBranch {}
-
-impl<T, E> ResidualBranch for Expression<T, E> {}
-
-impl<T> ResidualBranch for Option<T> {}
-
-impl<T, E> ResidualBranch for Result<T, E> {}
-
+/// Divergence that panics when an error is encountered.
+///
+/// This divergence is always intrinsic, so its branch type is the same as the type involved in the
+/// fallible construction.
 pub enum Assert {}
 
 impl Divergence for Assert {
@@ -94,6 +146,12 @@ impl Divergence for Assert {
 
 impl Sealed for Assert {}
 
+/// Divergence that constructs an [`Undefined`] when an error is encountered.
+///
+/// This divergence is intrinsic with respect to [`Expression`]. For all other types, it is
+/// extrinsic.
+///
+/// [`Undefined`]: crate::divergence::Expression::Undefined
 pub enum TryExpression {}
 
 impl Divergence for TryExpression {
@@ -113,6 +171,12 @@ impl Divergence for TryExpression {
 
 impl Sealed for TryExpression {}
 
+/// Divergence that constructs a [`None`] when an error is encountered.
+///
+/// This divergence is always extrinsic, so its branch type differs from the type involved in the
+/// fallible construction.
+///
+/// [`None`]: core::option::Option::None
 pub enum TryOption {}
 
 impl Divergence for TryOption {
@@ -132,6 +196,12 @@ impl Divergence for TryOption {
 
 impl Sealed for TryOption {}
 
+/// Divergence that constructs an [`Err`] when an error is encountered.
+///
+/// This divergence is always extrinsic, so its branch type differs from the type involved in the
+/// fallible construction.
+///
+/// [`Err`]: core::result::Result::Err
 pub enum TryResult {}
 
 impl Divergence for TryResult {
@@ -151,6 +221,99 @@ impl Divergence for TryResult {
 
 impl Sealed for TryResult {}
 
+/// The result of an arithmetic expression that may or may not be defined.
+///
+/// `Expression` is a fallible output of arithmetic expressions over [`Proxy`] types. It resembles
+/// [`Result`], but `Expression` crucially implements numeric traits and can be used in arithmetic
+/// expressions. This allows complex expressions to defer matching or trying for more fluent
+/// syntax.
+///
+/// When the `unstable` Cargo feature is enabled with a nightly Rust toolchain, [`Expression`] also
+/// implements the unstable (at time of writing) [`Try`] trait and supports the try operator `?`.
+///
+/// # Examples
+///
+/// The following two examples contrast deferred matching and trying of `Expression`s versus
+/// immediate matching and trying of `Result`s.
+///
+/// ```rust
+/// use decorum::constraint::FiniteConstraint;
+/// use decorum::divergence::TryExpression;
+/// use decorum::proxy::{BranchOf, Proxy};
+/// use decorum::real::UnaryReal;
+/// use decorum::try_expression;
+///
+/// pub type Real = Proxy<f64, FiniteConstraint<TryExpression>>;
+/// pub type Expr = BranchOf<Real>;
+///
+/// # fn fallible() -> Expr {
+/// fn f(x: Real, y: Real, z: Real) -> Expr {
+///     let w = (x + y + z);
+///     w / Real::ONE
+/// }
+///
+/// let x = Real::ONE;
+/// let y: Real = try_expression!(f(x, x, x));
+/// // ...
+/// # f(x, x, x)
+/// # }
+/// ```
+///
+/// ```rust
+/// use decorum::constraint::FiniteConstraint;
+/// use decorum::divergence::TryResult;
+/// use decorum::proxy::{BranchOf, Proxy};
+/// use decorum::real::UnaryReal;
+///
+/// pub type Real = Proxy<f64, FiniteConstraint<TryResult>>;
+/// pub type RealResult = BranchOf<Real>;
+///
+/// # fn fallible() -> RealResult {
+/// fn f(x: Real, y: Real, z: Real) -> RealResult {
+///     // The expression `x + y` outputs a `Result`, which cannot be used in a mathematical
+///     // expression, so it must be tried first.
+///     let w = ((x + y)? + z)?;
+///     w / Real::ONE
+/// }
+///
+/// let x = Real::ONE;
+/// let y: Real = f(x, x, x)?;
+/// // ...
+/// # f(x, x, x)
+/// # }
+/// ```
+///
+/// When the `unstable` Cargo feature is enabled with a nightly Rust toolchain, `Expression`
+/// supports the try operator `?`.
+///
+/// ```rust,ignore
+/// use decorum::constraint::FiniteConstraint;
+/// use decorum::divergence::TryExpression;
+/// use decorum::proxy::{BranchOf, Proxy};
+/// use decorum::real::UnaryReal;
+///
+/// pub type Real = Proxy<f64, FiniteConstraint<TryExpression>>;
+/// pub type Expr = BranchOf<Real>;
+///
+/// # fn fallible() -> Expr {
+/// fn f(x: Real, y: Real, z: Real) -> Expr {
+///     let w = (x + y + z)?; // Try.
+///     eprintln!("x + y + z => defined!");
+///     w / Real::ONE
+/// }
+///
+/// let x = Real::ONE;
+/// let y = Real::ZERO;
+/// let z = f(x, y, x)?; // Try.
+/// eprintln!("f(x, y, x) => defined!");
+/// // ...
+/// # f(x, y, x)
+/// # }
+/// ```
+///
+/// [`Proxy`]: crate::proxy::Proxy
+/// [`Result`]: core::result::Result
+/// [`Try`]: core::ops::Try
 #[derive(Clone, Copy, Debug)]
 pub enum Expression<T, E = ()> {
     Defined(T),
@@ -165,9 +328,9 @@ impl<T, E> Expression<T, E> {
         }
     }
 
-    pub fn map<U, F>(self, mut f: F) -> Expression<U, E>
+    pub fn map<U, F>(self, f: F) -> Expression<U, E>
     where
-        F: FnMut(T) -> U,
+        F: FnOnce(T) -> U,
     {
         match self {
             Defined(defined) => Defined(f(defined)),
@@ -175,9 +338,9 @@ impl<T, E> Expression<T, E> {
         }
     }
 
-    pub fn and_then<U, F>(self, mut f: F) -> Expression<U, E>
+    pub fn and_then<U, F>(self, f: F) -> Expression<U, E>
     where
-        F: FnMut(T) -> Expression<U, E>,
+        F: FnOnce(T) -> Expression<U, E>,
     {
         match self {
             Defined(defined) => f(defined),
@@ -334,6 +497,43 @@ where
     #[cfg(feature = "std")]
     fn atan2(self, other: Proxy<T, C>) -> Self::Codomain {
         BinaryReal::atan2(try_expression!(self), other)
+    }
+}
+
+impl<T, C> BinaryReal<ExpressionOf<Proxy<T, C>>> for Proxy<T, C>
+where
+    ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
+    T: Float + Primitive,
+    C: Constraint<Divergence = TryExpression>,
+{
+    #[cfg(feature = "std")]
+    fn div_euclid(self, n: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
+        BinaryReal::div_euclid(self, try_expression!(n))
+    }
+
+    #[cfg(feature = "std")]
+    fn rem_euclid(self, n: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
+        BinaryReal::rem_euclid(self, try_expression!(n))
+    }
+
+    #[cfg(feature = "std")]
+    fn pow(self, n: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
+        BinaryReal::pow(self, try_expression!(n))
+    }
+
+    #[cfg(feature = "std")]
+    fn log(self, base: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
+        BinaryReal::log(self, try_expression!(base))
+    }
+
+    #[cfg(feature = "std")]
+    fn hypot(self, other: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
+        BinaryReal::hypot(self, try_expression!(other))
+    }
+
+    #[cfg(feature = "std")]
+    fn atan2(self, other: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
+        BinaryReal::atan2(self, try_expression!(other))
     }
 }
 

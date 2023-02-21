@@ -1,3 +1,5 @@
+//! APIs describing real numbers and interactions with IEEE 754 floating-point types.
+
 use core::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 use crate::cmp::IntrinsicOrd;
@@ -57,31 +59,31 @@ pub trait UnaryReal:
     fn round(self) -> Self;
     fn trunc(self) -> Self;
     fn fract(self) -> Self;
-    fn recip(self) -> Self::Codomain; // Undefined or infinity.
+    fn recip(self) -> Self::Codomain; // Undefined.
 
     #[cfg(feature = "std")]
-    fn powi(self, n: i32) -> Self::Codomain; // Overflow, undefined, or infinity.
+    fn powi(self, n: i32) -> Self::Codomain; // Floating-point exception or undefined.
     #[cfg(feature = "std")]
-    fn sqrt(self) -> Self::Codomain; // Undefined or infinity.
+    fn sqrt(self) -> Self::Codomain; // Undefined.
     #[cfg(feature = "std")]
     fn cbrt(self) -> Self;
     #[cfg(feature = "std")]
-    fn exp(self) -> Self::Codomain; // Overflow.
+    fn exp(self) -> Self::Codomain; // Floating-point exception.
     #[cfg(feature = "std")]
-    fn exp2(self) -> Self::Codomain; // Overflow.
+    fn exp2(self) -> Self::Codomain; // Floating-point exception.
     #[cfg(feature = "std")]
-    fn exp_m1(self) -> Self::Codomain; // Overflow.
+    fn exp_m1(self) -> Self::Codomain; // Floating-point exception.
     #[cfg(feature = "std")]
-    fn ln(self) -> Self::Codomain; // Undefined or infinity.
+    fn ln(self) -> Self::Codomain; // Undefined.
     #[cfg(feature = "std")]
-    fn log2(self) -> Self::Codomain; // Undefined or infinity.
+    fn log2(self) -> Self::Codomain; // Undefined.
     #[cfg(feature = "std")]
-    fn log10(self) -> Self::Codomain; // Undefined or infinity.
+    fn log10(self) -> Self::Codomain; // Undefined.
     #[cfg(feature = "std")]
-    fn ln_1p(self) -> Self::Codomain; // Undefined or infinity.
+    fn ln_1p(self) -> Self::Codomain; // Undefined.
 
     #[cfg(feature = "std")]
-    fn to_degrees(self) -> Self::Codomain; // Overflow.
+    fn to_degrees(self) -> Self::Codomain; // Floating-point exception.
     #[cfg(feature = "std")]
     fn to_radians(self) -> Self;
     #[cfg(feature = "std")]
@@ -89,11 +91,11 @@ pub trait UnaryReal:
     #[cfg(feature = "std")]
     fn cos(self) -> Self;
     #[cfg(feature = "std")]
-    fn tan(self) -> Self::Codomain; // Undefined or infinity.
+    fn tan(self) -> Self::Codomain; // Undefined.
     #[cfg(feature = "std")]
-    fn asin(self) -> Self::Codomain; // Undefined or infinity.
+    fn asin(self) -> Self::Codomain; // Undefined.
     #[cfg(feature = "std")]
-    fn acos(self) -> Self::Codomain; // Undefined or infinity.
+    fn acos(self) -> Self::Codomain; // Undefined.
     #[cfg(feature = "std")]
     fn atan(self) -> Self;
     #[cfg(feature = "std")]
@@ -105,16 +107,16 @@ pub trait UnaryReal:
     #[cfg(feature = "std")]
     fn tanh(self) -> Self;
     #[cfg(feature = "std")]
-    fn asinh(self) -> Self::Codomain; // Undefined or infinity.
+    fn asinh(self) -> Self::Codomain; // Undefined.
     #[cfg(feature = "std")]
-    fn acosh(self) -> Self::Codomain; // Undefined or infinity.
+    fn acosh(self) -> Self::Codomain; // Undefined.
     #[cfg(feature = "std")]
-    fn atanh(self) -> Self::Codomain; // Undefined or infinity.
+    fn atanh(self) -> Self::Codomain; // Undefined.
 }
 
-// NOTE: Because `T` is not constrained, it isn't possible for functions that
-//       always map reals to reals to express their output as `Self`. The `T`
-//       input may not be real and that may result in a non-real output.
+// NOTE: Because `T` is not constrained, it isn't possible for functions that always map reals to
+//       reals to express their output as `Self`. The `T` input may not be real and that may result
+//       in a non-real output.
 pub trait BinaryReal<T = Self>:
     Add<T, Output = Self::Codomain>
     + Div<T, Output = Self::Codomain>
@@ -124,17 +126,17 @@ pub trait BinaryReal<T = Self>:
     + UnaryReal
 {
     #[cfg(feature = "std")]
-    fn div_euclid(self, n: T) -> Self::Codomain; // Undefined or infinity.
+    fn div_euclid(self, n: T) -> Self::Codomain; // Undefined.
     #[cfg(feature = "std")]
-    fn rem_euclid(self, n: T) -> Self::Codomain; // Undefined or infinity.
+    fn rem_euclid(self, n: T) -> Self::Codomain; // Undefined.
 
     #[cfg(feature = "std")]
-    fn pow(self, n: T) -> Self::Codomain; // Overflow, undefined, or infinity.
+    fn pow(self, n: T) -> Self::Codomain; // Floating-point exception or undefined.
     #[cfg(feature = "std")]
-    fn log(self, base: T) -> Self::Codomain; // Undefined or infinity.
+    fn log(self, base: T) -> Self::Codomain; // Undefined.
 
     #[cfg(feature = "std")]
-    fn hypot(self, other: T) -> Self::Codomain; // Overflow.
+    fn hypot(self, other: T) -> Self::Codomain; // Floating-point exception.
     #[cfg(feature = "std")]
     fn atan2(self, other: T) -> Self::Codomain;
 }

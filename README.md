@@ -4,8 +4,8 @@
 <br/>
 
 **Decorum** is a Rust library that provides total ordering, equivalence,
-hashing, and constraints for floating-point representations. Decorum requires
-Rust 1.65.0 or higher and does not require the `std` library.
+hashing, constraints, and more for IEEE 754 floating-point types. Decorum
+requires Rust 1.65.0 or higher and does **not** require the `std` library.
 
 [![GitHub](https://img.shields.io/badge/GitHub-olson--sean--k/decorum-8da0cb?logo=github&style=for-the-badge)](https://github.com/olson-sean-k/decorum)
 [![docs.rs](https://img.shields.io/badge/docs.rs-decorum-66c2a5?logo=rust&style=for-the-badge)](https://docs.rs/decorum)
@@ -20,7 +20,7 @@ types that implement `Ord`:
 [ -INF < ... < 0 < ... < +INF < NaN ]
 ```
 
-IEEE-754 floating-point encoding provides multiple representations of zero (`-0`
+IEEE 754 floating-point encoding provides multiple representations of zero (`-0`
 and `+0`) and `NaN`. This ordering considers all zero and `NaN` representations
 equal, which differs from the [standard partial
 ordering](https://en.wikipedia.org/wiki/NaN#Comparison_with_NaN).
@@ -52,7 +52,7 @@ types also implement numeric traits from the [`num-traits`] crate (such as
 Constraint violations cause panics in numeric operations. For example, `NotNan`
 is useful for avoiding or tracing sources of `NaN`s in computation, while
 `Total` provides useful features without introducing any panics at all, because
-it allows any IEEE-754 floating-point values.
+it allows any IEEE 754 floating-point values.
 
 Proxy types should work as a drop-in replacement for primitive types in most
 applications with the most common exception being initialization (because it

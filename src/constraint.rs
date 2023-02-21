@@ -1,5 +1,37 @@
-//! Constraints on the members of floating-point values that proxy types may
-//! represent.
+//! Constraints on the set of IEEE 754 floating-point values that [`Proxy`] types may represent.
+//!
+//! This module provides traits and marker types that define the error conditions of [`Proxy`]s.
+//! Constraints determine when, if ever, a particular floating-point value is considered an error
+//! and must [diverge][`divergence`]. Constraints are defined in terms of subsets of IEEE 754
+//! floating-point values and each constraint has associated [`Proxy`] type definitions:
+//!
+//! | Constraint           | Divergent | Type Definition | Disallowed Values     |
+//! |----------------------|-----------|-----------------|-----------------------|
+//! | [`UnitConstraint`]   | no        | [`Total`]       |                       |
+//! | [`NotNanConstraint`] | yes       | [`NotNan`]      | `NaN`                 |
+//! | [`FiniteConstraint`] | yes       | [`Finite`]      | `NaN`, `+INF`, `-INF` |
+//!
+//! [`UnitConstraint`] and [`Total`] apply no constraints on floating-point values. Unlike
+//! primitive floating-point types however, [`Total`] defines equivalence and total ordering to
+//! `NaN`, which allows it to implement numerous standard traits like `Eq`, `Hash`, and `Ord`.
+//!
+//! [`NotNan`], [`Finite`], and their corresponding constraints disallow certain IEEE 754 values.
+//! Because the output of some floating-point operations may yield these values (even when the
+//! inputs are real numbers), these constraints must specify a [`Divergence`], which determines the
+//! behavior of [`Proxy`]s when such a value is encountered. These proxy type definitions specify
+//! the [`Assert`] divergence by default, **which panics when a disallowed value is encountered.**
+//!
+//! [`Assert`]: crate::divergence::Assert
+//! [`cmp`]: crate::cmp
+//! [`divergence`]: crate::divergence
+//! [`Divergence`]: crate::divergence::Divergence
+//! [`Finite`]: crate::Finite
+//! [`FiniteConstraint`]: crate::constraint::FiniteConstraint
+//! [`NotNan`]: crate::NotNan
+//! [`NotNanConstraint`]: crate::constraint::NotNanConstraint
+//! [`Proxy`]: crate::proxy::Proxy
+//! [`Total`]: crate::Total
+//! [`UnitConstraint`]: crate::constraint::UnitConstraint
 
 use core::convert::Infallible;
 use core::fmt::Debug;
@@ -21,8 +53,7 @@ const VIOLATION_MESSAGE: &str = "floating-point constraint violated";
 #[derive(Clone, Copy, Debug)]
 pub struct ConstraintViolation;
 
-// When the `std` feature is enabled, the `thiserror` crate is used to implement
-// `Display`.
+// When the `std` feature is enabled, the `thiserror` crate is used to implement `Display`.
 #[cfg(not(feature = "std"))]
 impl Display for ConstraintViolation {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -51,9 +82,8 @@ where
 
     #[cfg(feature = "std")]
     fn expect_constrained(self) -> T {
-        // When the `std` feature is enabled, `ConstraintViolation` implements
-        // `Error` and an appropriate error message is displayed when
-        // unwrapping.
+        // When the `std` feature is enabled, `ConstraintViolation` implements `Error` and an
+        // appropriate error message is displayed when unwrapping.
         self.unwrap()
     }
 }
@@ -77,23 +107,23 @@ where
 {
 }
 
-/// Describes constraints on the set of floating-point values that a proxy type
-/// may represent.
+/// Describes constraints on the set of floating-point values that a [`Proxy`] may represent.
 ///
-/// This trait expresses a constraint by defining an error and emitting that
-/// error from its `check` function if a primitive floating-point value violates
-/// the constraint. Note that constraints require `Member<RealSet>`, meaning
-/// that the set of real numbers must always be supported and is implied.
+/// Note that constraints require [`Member<RealSet>`][`Member`], meaning that the set of real
+/// numbers must always be supported and is implied where ever a `Constraint` bound is used.
+///
+/// [`Member`]: crate::constraint::Member
+/// [`Proxy`]: crate::proxy::Proxy
 pub trait Constraint: Member<RealSet> {
     type Divergence: Divergence;
     type Error: Debug;
 
-    /// Determines if a primitive floating-point value satisfies the constraint.
+    /// Determines if a primitive IEEE 754 floating-point value satisfies the constraint.
     ///
     /// # Errors
     ///
-    /// Returns `Self::Error` if the primitive floating-point value violates the
-    /// constraint.
+    /// Returns a `Self::Error` if the floating-point value violates the constraint, otherwise
+    /// `None`.
     fn noncompliance<T>(inner: T) -> Option<Self::Error>
     where
         T: Float + Primitive;
@@ -117,6 +147,7 @@ pub trait Constraint: Member<RealSet> {
     }
 }
 
+/// Constraint that disallows **no** IEEE 754 floating-point values.
 #[derive(Debug)]
 pub enum UnitConstraint {}
 
@@ -144,7 +175,7 @@ impl<D> SupersetOf<FiniteConstraint<D>> for UnitConstraint {}
 
 impl<D> SupersetOf<NotNanConstraint<D>> for UnitConstraint {}
 
-/// Disallows `NaN`s.
+/// Constraint that disallows IEEE 754 `NaN` values.
 #[derive(Debug)]
 pub struct NotNanConstraint<D> {
     phantom: PhantomData<fn() -> D>,
@@ -173,7 +204,7 @@ impl<D> Sealed for NotNanConstraint<D> {}
 
 impl<D> SupersetOf<FiniteConstraint<D>> for NotNanConstraint<D> {}
 
-/// Disallows `NaN`s and infinities.
+/// Constraint that disallows IEEE 754 `NaN`, `+INF`, and `-INF` values.
 #[derive(Debug)]
 pub struct FiniteConstraint<D> {
     phantom: PhantomData<fn() -> D>,
