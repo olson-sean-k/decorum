@@ -1,12 +1,10 @@
 //! Making floating-point behave: total ordering, equivalence, hashing, constraints, error
 //! handling, and more for IEEE 754 floating-point representations.
 //!
-//! Decorum provides APIs for extending IEEE 754 floating-point as well as approximating extended
-//! real numbers and real numbers with structured error handling. This is primarily accomplished
+//! Decorum provides APIs for extending IEEE 754 floating-point. This is primarily accomplished
 //! with [proxy types][`proxy`] that wrap primitive floating-point types and compose
-//! [constraints][`constraint`] and [divergence][`divergence`] to customize behavior. Decorum also
-//! provides numerous traits describing real numerics and IEEE 754 encoding and various tools for
-//! interacting with primitives.
+//! [constraints][`constraint`] and [divergence][`divergence`] to configure behavior. Decorum also
+//! provides numerous traits describing real numerics and IEEE 754 encoding.
 //!
 //! Decorum requires Rust 1.65.0 or higher.
 //!
@@ -81,17 +79,18 @@
 //!
 //! ```rust
 //! use decorum::constraint::FiniteConstraint;
-//! use decorum::divergence::TryExpression;
-//! use decorum::proxy::{ExpressionOf, Proxy};
+//! use decorum::divergence::Try;
+//! use decorum::proxy::{BranchOf, Proxy};
 //!
-//! type Real = Proxy<f64, FiniteConstraint<TryExpression>>;
-//! type Expr = ExpressionOf<Real>;
+//! type Real = Proxy<f64, FiniteConstraint<Try>>;
+//! type Expr = BranchOf<Real>;
 //!
-//! fn f(x: Expr, y: Expr) -> Expr {
-//!     x + y
+//! fn f(x: Real, y: Real) -> Expr {
+//!     let z = x + y;
+//!     z / x
 //! }
 //!
-//! let z = f(1.0.into(), 2.0.into());
+//! let z = f(Real::assert(3.0), Real::assert(4.0));
 //! assert!(z.is_defined());
 //! ```
 //!
@@ -102,21 +101,22 @@
 //!
 //! ```rust,ignore
 //! use decorum::constraint::FiniteConstraint;
-//! use decorum::divergence::TryExpression;
-//! use decorum::proxy::{ExpressionOf, Proxy};
+//! use decorum::divergence::Try;
+//! use decorum::proxy::{BranchOf, Proxy};
+//! use decorum::real::UnaryReal;
 //!
-//! type Real = Proxy<f64, FiniteConstraint<TryExpression>>;
-//! type Expr = ExpressionOf<Real>;
+//! type Real = Proxy<f64, FiniteConstraint<Try>>;
+//! type Expr = BranchOf<Real>;
 //!
 //! # fn fallible() -> Expr {
 //! fn f(x: Real, y: Real) -> Expr {
 //!     x / y
 //! }
 //!
-//! let z = f(1.0.into(), 2.0.into())?; // OK: `z` is `Real`.
-//! let w = f(0.0.into(), 0.0.into())?; // Error: this returns `Expression::Undefined`.
+//! let z = f(Real::PI, Real::ONE)?; // OK: `z` is `Real`.
+//! let w = f(Real::PI, Real::ZERO)?; // Error: this returns `Expression::Undefined`.
 //! // ...
-//! # f(1.0.into(), 1.0.into())
+//! # f(Real::PI, Real::ONE)
 //! # }
 //! ```
 //!
@@ -168,8 +168,8 @@ pub(crate) use num_traits::Float as ForeignFloat;
 
 use crate::cmp::IntrinsicOrd;
 use crate::constraint::{FiniteConstraint, NotNanConstraint, UnitConstraint};
-use crate::divergence::{Assert, TryExpression};
-use crate::proxy::{ExpressionOf, Proxy};
+use crate::divergence::Assert;
+use crate::proxy::Proxy;
 use crate::real::{BinaryReal, Function, Real, UnaryReal};
 
 mod sealed {
@@ -208,7 +208,6 @@ pub type Total<T> = Proxy<T, UnitConstraint>;
 /// [`Proxy`]: crate::proxy::Proxy
 /// [`Total`]: crate::Total
 pub type NotNan<T, D = Assert> = Proxy<T, NotNanConstraint<D>>;
-pub type NotNanExpression<T> = ExpressionOf<NotNan<T, TryExpression>>;
 
 /// 32-bit IEEE 754 floating-point representation that cannot be `NaN`.
 pub type N32<D = Assert> = NotNan<f32, D>;
@@ -217,7 +216,6 @@ pub type N64<D = Assert> = NotNan<f64, D>;
 
 /// IEEE 754 floating-point representation that must be a real number.
 pub type Finite<T, D = Assert> = Proxy<T, FiniteConstraint<D>>;
-pub type FiniteExpression<T> = ExpressionOf<Finite<T, TryExpression>>;
 
 /// 32-bit IEEE 754 floating-point representation that must be a real number.
 ///
@@ -411,7 +409,7 @@ pub trait Primitive: Copy + Sealed {}
 fn _sanity() {
     use crate::real::FloatEndoreal;
 
-    type R64 = FiniteExpression<f64>;
+    type Real = Proxy<f64, FiniteConstraint<Assert>>;
 
     fn f<T>(x: T) -> T
     where
@@ -434,10 +432,10 @@ fn _sanity() {
         x + y
     }
 
-    let x = R64::ONE;
+    let x = Real::ONE;
     let y = g(f(x), 2.0);
-    let z = h(y, 1.0.into());
-    let _w = f(y + z);
+    let z = h(y, Real::assert(1.0));
+    let _ = f(y + z);
 }
 
 macro_rules! with_primitives {

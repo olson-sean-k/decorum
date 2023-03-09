@@ -42,7 +42,8 @@ use core::marker::PhantomData;
 use thiserror::Error;
 
 use crate::cmp::UndefinedError;
-use crate::divergence::Divergence;
+use crate::divergence::Diverge;
+use crate::proxy::ClosedProxy;
 use crate::sealed::Sealed;
 use crate::{Float, Primitive};
 
@@ -115,35 +116,20 @@ where
 /// [`Member`]: crate::constraint::Member
 /// [`Proxy`]: crate::proxy::Proxy
 pub trait Constraint: Member<RealSet> {
-    type Divergence: Divergence;
+    type Divergence: Diverge;
     type Error: Debug;
 
-    /// Determines if a primitive IEEE 754 floating-point value satisfies the constraint.
-    ///
-    /// # Errors
-    ///
-    /// Returns a `Self::Error` if the floating-point value violates the constraint, otherwise
-    /// `None`.
-    fn noncompliance<T>(inner: T) -> Option<Self::Error>
+    fn check<T>(inner: T) -> Result<T, Self::Error>
     where
         T: Float + Primitive;
 
-    fn compliance<T>(inner: T) -> Result<T, Self::Error>
+    fn diverge<T, U, F>(inner: T, f: F) -> <Self::Divergence as Diverge>::Branch<U, Self::Error>
     where
         T: Float + Primitive,
-    {
-        Self::noncompliance(inner).map_or(Ok(inner), |error| Err(error))
-    }
-
-    fn branch<T, U, F>(inner: T, f: F) -> <Self::Divergence as Divergence>::Branch<U, Self::Error>
-    where
-        T: Float + Primitive,
+        U: ClosedProxy<Constraint = Self, Primitive = T>,
         F: FnOnce(T) -> U,
     {
-        match Self::noncompliance(inner) {
-            Some(error) => Self::Divergence::diverge(error),
-            _ => Self::Divergence::from_output(f(inner)),
-        }
+        Self::Divergence::diverge(Self::check(inner).map(f))
     }
 }
 
@@ -155,11 +141,11 @@ impl Constraint for UnitConstraint {
     type Divergence = Infallible;
     type Error = Infallible;
 
-    fn noncompliance<T>(_inner: T) -> Option<Self::Error>
+    fn check<T>(inner: T) -> Result<T, Self::Error>
     where
         T: Float + Primitive,
     {
-        None
+        Ok(inner)
     }
 }
 
@@ -177,22 +163,25 @@ impl<D> SupersetOf<NotNanConstraint<D>> for UnitConstraint {}
 
 /// Constraint that disallows IEEE 754 `NaN` values.
 #[derive(Debug)]
-pub struct NotNanConstraint<D> {
-    phantom: PhantomData<fn() -> D>,
-}
+pub struct NotNanConstraint<D>(PhantomData<fn() -> D>, Infallible);
 
 impl<D> Constraint for NotNanConstraint<D>
 where
-    D: Divergence,
+    D: Diverge,
 {
     type Divergence = D;
     type Error = ConstraintViolation;
 
-    fn noncompliance<T>(inner: T) -> Option<Self::Error>
+    fn check<T>(inner: T) -> Result<T, Self::Error>
     where
         T: Float + Primitive,
     {
-        inner.is_nan().then_some(ConstraintViolation)
+        if inner.is_nan() {
+            Err(ConstraintViolation)
+        }
+        else {
+            Ok(inner)
+        }
     }
 }
 
@@ -206,22 +195,25 @@ impl<D> SupersetOf<FiniteConstraint<D>> for NotNanConstraint<D> {}
 
 /// Constraint that disallows IEEE 754 `NaN`, `+INF`, and `-INF` values.
 #[derive(Debug)]
-pub struct FiniteConstraint<D> {
-    phantom: PhantomData<fn() -> D>,
-}
+pub struct FiniteConstraint<D>(PhantomData<fn() -> D>, Infallible);
 
 impl<D> Constraint for FiniteConstraint<D>
 where
-    D: Divergence,
+    D: Diverge,
 {
     type Divergence = D;
     type Error = ConstraintViolation;
 
-    fn noncompliance<T>(inner: T) -> Option<Self::Error>
+    fn check<T>(inner: T) -> Result<T, Self::Error>
     where
         T: Float + Primitive,
     {
-        (inner.is_nan() || inner.is_infinite()).then_some(ConstraintViolation)
+        if inner.is_nan() || inner.is_infinite() {
+            Err(ConstraintViolation)
+        }
+        else {
+            Ok(inner)
+        }
     }
 }
 

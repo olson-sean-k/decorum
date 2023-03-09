@@ -36,9 +36,10 @@
 use core::cmp::Ordering;
 use core::convert::Infallible;
 use core::fmt::Debug;
-use core::ops::{Add, Div, Mul, Rem, Sub};
+use core::marker::PhantomData;
 #[cfg(all(nightly, feature = "unstable"))]
-use core::ops::{ControlFlow, FromResidual, Try};
+use core::ops::{self, ControlFlow, FromResidual};
+use core::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 use crate::cmp::UndefinedError;
 use crate::constraint::{Constraint, ExpectConstrained as _};
@@ -65,15 +66,96 @@ pub use Expression::Undefined;
 /// [`try`]: core::try
 #[macro_export]
 macro_rules! try_expression {
-    ($x:expr) => {
-        match $x {
+    ($x:expr $(,)?) => {{
+        let expression: $crate::divergence::Expression<_, _> = $x;
+        match expression {
             $crate::divergence::Expression::Defined(inner) => inner,
             $crate::divergence::Expression::Undefined(error) => {
                 return $crate::divergence::Expression::Undefined(core::convert::From::from(error));
             }
         }
+    }};
+    ($x:block $(,)?) => {
+        let expression: $crate::divergence::Expression<_, _> = $x;
+        try_expression!(expression);
     };
 }
+
+pub trait Continue: Sealed {
+    type Branch<T, E>;
+
+    fn continue_with_output<T, E>(output: T) -> Self::Branch<T, E>;
+}
+
+pub trait Break: Continue {
+    fn break_with_error<T, E>(error: E) -> Self::Branch<T, E>;
+}
+
+pub enum ExpressionBranch {}
+
+impl Break for ExpressionBranch {
+    fn break_with_error<T, E>(error: E) -> Self::Branch<T, E> {
+        Expression::Undefined(error)
+    }
+}
+
+impl Continue for ExpressionBranch {
+    type Branch<T, E> = Expression<T, E>;
+
+    fn continue_with_output<T, E>(output: T) -> Self::Branch<T, E> {
+        Expression::Defined(output)
+    }
+}
+
+impl Sealed for ExpressionBranch {}
+
+pub enum OptionBranch {}
+
+impl Break for OptionBranch {
+    fn break_with_error<T, E>(_: E) -> Self::Branch<T, E> {
+        None
+    }
+}
+
+impl Continue for OptionBranch {
+    type Branch<T, E> = Option<T>;
+
+    fn continue_with_output<T, E>(output: T) -> Self::Branch<T, E> {
+        Some(output)
+    }
+}
+
+impl Sealed for OptionBranch {}
+
+pub enum OutputBranch {}
+
+impl Continue for OutputBranch {
+    type Branch<T, E> = T;
+
+    fn continue_with_output<T, E>(output: T) -> Self::Branch<T, E> {
+        output
+    }
+}
+
+impl Sealed for OutputBranch {}
+
+pub enum ResultBranch {}
+
+impl Break for ResultBranch {
+    fn break_with_error<T, E>(error: E) -> Self::Branch<T, E> {
+        Err(error)
+    }
+}
+
+impl Continue for ResultBranch {
+    type Branch<T, E> = Result<T, E>;
+
+    fn continue_with_output<T, E>(output: T) -> Self::Branch<T, E> {
+        Ok(output)
+    }
+}
+
+impl Sealed for ResultBranch {}
 
 /// Determines the output type and behavior of a [`Proxy`] when it is fallibly constructed.
 ///
@@ -82,35 +164,32 @@ macro_rules! try_expression {
 /// constructed from an output, the branch type is always constructed and returned.
 ///
 /// [`Proxy`]: crate::proxy::Proxy
-pub trait Divergence: Sealed {
+pub trait Diverge: Sealed {
     type Branch<T, E>;
 
-    fn from_output<T, E>(output: T) -> Self::Branch<T, E>;
-
-    fn diverge<T, E>(error: E) -> Self::Branch<T, E>
+    fn diverge<T, E>(result: Result<T, E>) -> Self::Branch<T, E>
     where
         E: Debug;
 }
 
-impl Divergence for Infallible {
+impl Diverge for Infallible {
     type Branch<T, E> = T;
 
-    fn from_output<T, E>(output: T) -> Self::Branch<T, E> {
-        output
-    }
-
-    fn diverge<T, E>(_error: E) -> Self::Branch<T, E>
+    fn diverge<T, E>(result: Result<T, E>) -> Self::Branch<T, E>
     where
         E: Debug,
     {
-        unreachable!()
+        match result {
+            Ok(output) => output,
+            _ => unreachable!(),
+        }
     }
 }
 
 /// A [`Divergence`] with a branch type that is the same as its output type.
 ///
 /// [`Divergence`]: crate::divergence::Divergence
-pub trait NonResidual<P>: Divergence<Branch<P, ErrorOf<P>> = P>
+pub trait NonResidual<P>: Diverge<Branch<P, ErrorOf<P>> = P>
 where
     P: ClosedProxy,
 {
@@ -119,7 +198,7 @@ where
 impl<P, D> NonResidual<P> for D
 where
     P: ClosedProxy,
-    D: Divergence<Branch<P, ErrorOf<P>> = P>,
+    D: Diverge<Branch<P, ErrorOf<P>> = P>,
 {
 }
 
@@ -127,24 +206,23 @@ where
 ///
 /// This divergence is always intrinsic, so its branch type is the same as the type involved in the
 /// fallible construction.
-pub enum Assert {}
+pub struct Assert<C = OutputBranch>(PhantomData<fn() -> C>, Infallible);
 
-impl Divergence for Assert {
-    type Branch<T, E> = T;
+impl<C> Diverge for Assert<C>
+where
+    C: Continue,
+{
+    type Branch<T, E> = C::Branch<T, E>;
 
-    fn from_output<T, E>(output: T) -> Self::Branch<T, E> {
-        output
-    }
-
-    fn diverge<T, E>(error: E) -> Self::Branch<T, E>
+    fn diverge<T, E>(result: Result<T, E>) -> Self::Branch<T, E>
     where
         E: Debug,
     {
-        Err(error).expect_constrained()
+        C::continue_with_output(result.expect_constrained())
     }
 }
 
-impl Sealed for Assert {}
+impl<C> Sealed for Assert<C> {}
 
 /// Divergence that constructs an [`Undefined`] when an error is encountered.
 ///
@@ -152,74 +230,26 @@ impl Sealed for Assert {}
 /// extrinsic.
 ///
 /// [`Undefined`]: crate::divergence::Expression::Undefined
-pub enum TryExpression {}
+pub struct Try<C = ExpressionBranch>(PhantomData<fn() -> C>, Infallible);
 
-impl Divergence for TryExpression {
-    type Branch<T, E> = Expression<T, E>;
+impl<C> Diverge for Try<C>
+where
+    C: Break,
+{
+    type Branch<T, E> = C::Branch<T, E>;
 
-    fn from_output<T, E>(output: T) -> Self::Branch<T, E> {
-        Defined(output)
-    }
-
-    fn diverge<T, E>(error: E) -> Self::Branch<T, E>
+    fn diverge<T, E>(result: Result<T, E>) -> Self::Branch<T, E>
     where
         E: Debug,
     {
-        Undefined(error)
+        match result {
+            Ok(output) => C::continue_with_output(output),
+            Err(error) => C::break_with_error(error),
+        }
     }
 }
 
-impl Sealed for TryExpression {}
-
-/// Divergence that constructs a [`None`] when an error is encountered.
-///
-/// This divergence is always extrinsic, so its branch type differs from the type involved in the
-/// fallible construction.
-///
-/// [`None`]: core::option::Option::None
-pub enum TryOption {}
-
-impl Divergence for TryOption {
-    type Branch<T, E> = Option<T>;
-
-    fn from_output<T, E>(output: T) -> Self::Branch<T, E> {
-        Some(output)
-    }
-
-    fn diverge<T, E>(_residual: E) -> Self::Branch<T, E>
-    where
-        E: Debug,
-    {
-        None
-    }
-}
-
-impl Sealed for TryOption {}
-
-/// Divergence that constructs an [`Err`] when an error is encountered.
-///
-/// This divergence is always extrinsic, so its branch type differs from the type involved in the
-/// fallible construction.
-///
-/// [`Err`]: core::result::Result::Err
-pub enum TryResult {}
-
-impl Divergence for TryResult {
-    type Branch<T, E> = Result<T, E>;
-
-    fn from_output<T, E>(output: T) -> Self::Branch<T, E> {
-        Ok(output)
-    }
-
-    fn diverge<T, E>(error: E) -> Self::Branch<T, E>
-    where
-        E: Debug,
-    {
-        Err(error)
-    }
-}
-
-impl Sealed for TryResult {}
+impl<C> Sealed for Try<C> {}
 
 /// The result of an arithmetic expression that may or may not be defined.
 ///
@@ -238,12 +268,12 @@ impl Sealed for TryResult {}
 ///
 /// ```rust
 /// use decorum::constraint::FiniteConstraint;
-/// use decorum::divergence::TryExpression;
+/// use decorum::divergence::Try;
 /// use decorum::proxy::{BranchOf, Proxy};
 /// use decorum::real::UnaryReal;
 /// use decorum::try_expression;
 ///
-/// pub type Real = Proxy<f64, FiniteConstraint<TryExpression>>;
+/// pub type Real = Proxy<f64, FiniteConstraint<Try>>;
 /// pub type Expr = BranchOf<Real>;
 ///
 /// # fn fallible() -> Expr {
@@ -261,11 +291,11 @@ impl Sealed for TryResult {}
 ///
 /// ```rust
 /// use decorum::constraint::FiniteConstraint;
-/// use decorum::divergence::TryResult;
+/// use decorum::divergence::{ResultBranch, Try};
 /// use decorum::proxy::{BranchOf, Proxy};
 /// use decorum::real::UnaryReal;
 ///
-/// pub type Real = Proxy<f64, FiniteConstraint<TryResult>>;
+/// pub type Real = Proxy<f64, FiniteConstraint<Try<ResultBranch>>>;
 /// pub type RealResult = BranchOf<Real>;
 ///
 /// # fn fallible() -> RealResult {
@@ -288,11 +318,11 @@ impl Sealed for TryResult {}
 ///
 /// ```rust,ignore
 /// use decorum::constraint::FiniteConstraint;
-/// use decorum::divergence::TryExpression;
+/// use decorum::divergence::{ExpressionBranch, Try};
 /// use decorum::proxy::{BranchOf, Proxy};
 /// use decorum::real::UnaryReal;
 ///
-/// pub type Real = Proxy<f64, FiniteConstraint<TryExpression>>;
+/// pub type Real = Proxy<f64, FiniteConstraint<Try<ExpressionBranch>>>;
 /// pub type Expr = BranchOf<Real>;
 ///
 /// # fn fallible() -> Expr {
@@ -375,7 +405,7 @@ impl<T, C> BinaryReal for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
     T: Float + Primitive,
-    C: Constraint<Divergence = TryExpression>,
+    C: Constraint<Divergence = Try<ExpressionBranch>>,
 {
     #[cfg(feature = "std")]
     fn div_euclid(self, n: Self) -> Self::Codomain {
@@ -412,7 +442,7 @@ impl<T, C> BinaryReal<T> for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
     T: Float + Primitive,
-    C: Constraint<Divergence = TryExpression>,
+    C: Constraint<Divergence = Try<ExpressionBranch>>,
 {
     #[cfg(feature = "std")]
     fn div_euclid(self, n: T) -> Self::Codomain {
@@ -467,7 +497,7 @@ impl<T, C> BinaryReal<Proxy<T, C>> for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
     T: Float + Primitive,
-    C: Constraint<Divergence = TryExpression>,
+    C: Constraint<Divergence = Try<ExpressionBranch>>,
 {
     #[cfg(feature = "std")]
     fn div_euclid(self, n: Proxy<T, C>) -> Self::Codomain {
@@ -504,7 +534,7 @@ impl<T, C> BinaryReal<ExpressionOf<Proxy<T, C>>> for Proxy<T, C>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
     T: Float + Primitive,
-    C: Constraint<Divergence = TryExpression>,
+    C: Constraint<Divergence = Try<ExpressionBranch>>,
 {
     #[cfg(feature = "std")]
     fn div_euclid(self, n: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
@@ -551,7 +581,7 @@ impl<'a, T, C> From<&'a T> for ExpressionOf<Proxy<T, C>>
 where
     Proxy<T, C>: TryFrom<&'a T, Error = C::Error>,
     T: Float + Primitive,
-    C: Constraint<Divergence = TryExpression>,
+    C: Constraint<Divergence = Try<ExpressionBranch>>,
 {
     fn from(inner: &'a T) -> Self {
         Proxy::<T, C>::try_from(inner).into()
@@ -562,7 +592,7 @@ impl<'a, T, C> From<&'a mut T> for ExpressionOf<Proxy<T, C>>
 where
     Proxy<T, C>: TryFrom<&'a mut T, Error = C::Error>,
     T: Float + Primitive,
-    C: Constraint<Divergence = TryExpression>,
+    C: Constraint<Divergence = Try<ExpressionBranch>>,
 {
     fn from(inner: &'a mut T) -> Self {
         Proxy::<T, C>::try_from(inner).into()
@@ -599,8 +629,8 @@ impl<T, E> From<Expression<T, E>> for Result<T, E> {
 
 #[cfg(all(nightly, feature = "unstable"))]
 impl<T, E> FromResidual for Expression<T, E> {
-    fn from_residual(expression: Expression<Infallible, E>) -> Self {
-        match expression {
+    fn from_residual(residual: Expression<Infallible, E>) -> Self {
+        match residual {
             Undefined(undefined) => Undefined(undefined),
             _ => unreachable!(),
         }
@@ -611,7 +641,7 @@ impl<T, C> Function for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: UndefinedError,
     T: Float + Primitive,
-    C: Constraint<Divergence = TryExpression>,
+    C: Constraint<Divergence = Try<ExpressionBranch>>,
 {
     type Codomain = Self;
 }
@@ -621,7 +651,7 @@ where
     ErrorOf<Proxy<T, C>>: Copy,
     Proxy<T, C>: Infinite,
     T: Float + Primitive,
-    C: Constraint<Divergence = TryExpression>,
+    C: Constraint<Divergence = Try<ExpressionBranch>>,
 {
     const INFINITY: Self = Defined(Infinite::INFINITY);
     const NEG_INFINITY: Self = Defined(Infinite::NEG_INFINITY);
@@ -633,6 +663,18 @@ where
 
     fn is_finite(self) -> bool {
         self.defined().map_or(false, |defined| defined.is_finite())
+    }
+}
+
+impl<T, C> Neg for ExpressionOf<Proxy<T, C>>
+where
+    T: Float + Primitive,
+    C: Constraint<Divergence = Try<ExpressionBranch>>,
+{
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        self.map(|defined| -defined)
     }
 }
 
@@ -659,7 +701,7 @@ where
 }
 
 #[cfg(all(nightly, feature = "unstable"))]
-impl<T, E> Try for Expression<T, E> {
+impl<T, E> ops::Try for Expression<T, E> {
     type Output = T;
     type Residual = Expression<Infallible, E>;
 
@@ -679,7 +721,7 @@ impl<T, C> UnaryReal for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
     T: Float + Primitive,
-    C: Constraint<Divergence = TryExpression>,
+    C: Constraint<Divergence = Try<ExpressionBranch>>,
 {
     const ZERO: Self = Defined(UnaryReal::ZERO);
     const ONE: Self = Defined(UnaryReal::ONE);
@@ -901,7 +943,7 @@ macro_rules! impl_binary_operation {
             (primitive => $t:ty) => {
                 impl<C> $trait<ExpressionOf<Proxy<$t, C>>> for $t
                 where
-                    C: Constraint<Divergence = TryExpression>,
+                    C: Constraint<Divergence = Try<ExpressionBranch>>,
                 {
                     type Output = ExpressionOf<Proxy<$t, C>>;
 
@@ -918,7 +960,7 @@ macro_rules! impl_binary_operation {
         impl<T, C> $trait<ExpressionOf<Self>> for Proxy<T, C>
         where
             T: Float + Primitive,
-            C: Constraint<Divergence = TryExpression>,
+            C: Constraint<Divergence = Try<ExpressionBranch>>,
         {
             type Output = ExpressionOf<Self>;
 
@@ -932,7 +974,7 @@ macro_rules! impl_binary_operation {
         impl<T, C> $trait<Proxy<T, C>> for ExpressionOf<Proxy<T, C>>
         where
             T: Float + Primitive,
-            C: Constraint<Divergence = TryExpression>,
+            C: Constraint<Divergence = Try<ExpressionBranch>>,
         {
             type Output = Self;
 
@@ -946,7 +988,7 @@ macro_rules! impl_binary_operation {
         impl<T, C> $trait<ExpressionOf<Proxy<T, C>>> for ExpressionOf<Proxy<T, C>>
         where
             T: Float + Primitive,
-            C: Constraint<Divergence = TryExpression>,
+            C: Constraint<Divergence = Try<ExpressionBranch>>,
         {
             type Output = Self;
 
@@ -960,7 +1002,7 @@ macro_rules! impl_binary_operation {
         impl<T, C> $trait<T> for ExpressionOf<Proxy<T, C>>
         where
             T: Float + Primitive,
-            C: Constraint<Divergence = TryExpression>,
+            C: Constraint<Divergence = Try<ExpressionBranch>>,
         {
             type Output = Self;
 

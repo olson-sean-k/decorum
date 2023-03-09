@@ -166,7 +166,7 @@ where
 {
 }
 
-pub trait FloatEndoreal<T>: Endoreal + FloatReal<T> + From<T>
+pub trait FloatEndoreal<T>: Endoreal + FloatReal<T>
 where
     T: Float + Primitive,
 {
@@ -175,6 +175,6 @@ where
 impl<T, U> FloatEndoreal<T> for U
 where
     T: Float + Primitive,
-    U: Endofunction + FloatReal<T> + From<T>,
+    U: Endofunction + FloatReal<T>,
 {
 }

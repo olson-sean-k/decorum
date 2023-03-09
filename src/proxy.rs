@@ -50,7 +50,7 @@ use crate::constraint::{
     Constraint, ConstraintViolation, ExpectConstrained, InfinitySet, Member, NanSet, SubsetOf,
     SupersetOf,
 };
-use crate::divergence::{Divergence, Expression, NonResidual, TryExpression};
+use crate::divergence::{Diverge, Expression, NonResidual};
 use crate::hash::FloatHash;
 #[cfg(feature = "std")]
 use crate::ForeignReal;
@@ -59,7 +59,7 @@ use crate::{
     Function, Infinite, Nan, NotNan, Primitive, ToCanonicalBits, Total, UnaryReal,
 };
 
-pub type BranchOf<P> = <DivergenceOf<P> as Divergence>::Branch<P, ErrorOf<P>>;
+pub type BranchOf<P> = <DivergenceOf<P> as Diverge>::Branch<P, ErrorOf<P>>;
 pub type ConstraintOf<P> = <P as ClosedProxy>::Constraint;
 pub type DivergenceOf<P> = <ConstraintOf<P> as Constraint>::Divergence;
 pub type ErrorOf<P> = <ConstraintOf<P> as Constraint>::Error;
@@ -248,7 +248,7 @@ where
     /// [`Total`]: crate::Total
     /// [`UnitConstraint`]: crate::constraint::UnitConstraint
     pub fn try_new(inner: T) -> Result<Self, C::Error> {
-        C::compliance(inner).map(|inner| Proxy {
+        C::check(inner).map(|inner| Proxy {
             inner,
             phantom: PhantomData,
         })
@@ -368,7 +368,7 @@ where
     pub fn try_from_slice<'a>(slice: &'a [T]) -> Result<&'a [Self], C::Error> {
         slice
             .iter()
-            .try_for_each(|inner| C::compliance(*inner).map(|_| ()))?;
+            .try_for_each(|inner| C::check(*inner).map(|_| ()))?;
         // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
         //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
         Ok(unsafe { mem::transmute::<&'a [T], &'a [Self]>(slice) })
@@ -391,7 +391,7 @@ where
     pub fn try_from_mut_slice<'a>(slice: &'a mut [T]) -> Result<&'a mut [Self], C::Error> {
         slice
             .iter()
-            .try_for_each(|inner| C::compliance(*inner).map(|_| ()))?;
+            .try_for_each(|inner| C::check(*inner).map(|_| ()))?;
         // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
         //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
         Ok(unsafe { mem::transmute::<&'a mut [T], &'a mut [Self]>(slice) })
@@ -431,11 +431,11 @@ where
     ///
     /// ```rust
     /// use decorum::constraint::FiniteConstraint;
-    /// use decorum::divergence::TryResult;
+    /// use decorum::divergence::{ResultBranch, Try};
     /// use decorum::proxy::Proxy;
     ///
-    /// // The branch type of `TryResult` is `Result`.
-    /// type Real = Proxy<f64, FiniteConstraint<TryResult>>;
+    /// // The branch type of `Real` is `Result`.
+    /// type Real = Proxy<f64, FiniteConstraint<Try<ResultBranch>>>;
     ///
     /// let x = Real::new(2.0).unwrap(); // The output type of `new` is `Result` per `TryResult`.
     /// ```
@@ -461,7 +461,7 @@ where
     /// [`TryExpression`]: crate::divergence::TryExpression
     /// [`Undefined`]: crate::divergence::Expression::Undefined
     pub fn new(inner: T) -> BranchOf<Self> {
-        C::branch(inner, |inner| Proxy {
+        C::diverge(inner, |inner| Proxy {
             inner,
             phantom: PhantomData,
         })
@@ -1420,18 +1420,6 @@ where
     }
 }
 
-impl<T, C> Neg for ExpressionOf<Proxy<T, C>>
-where
-    T: Float + Primitive,
-    C: Constraint<Divergence = TryExpression>,
-{
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        self.map(|defined| -defined)
-    }
-}
-
 impl<T, C> Num for Proxy<T, C>
 where
     T: Float + Primitive + Num,
@@ -2284,7 +2272,7 @@ macro_rules! impl_try_from {
     (proxy => $p:ident, primitive => $t:ty) => {
         impl<D> TryFrom<$t> for $p<$t, D>
         where
-            D: Divergence,
+            D: Diverge,
         {
             type Error = ConstraintViolation;
 
@@ -2295,12 +2283,12 @@ macro_rules! impl_try_from {
 
         impl<'a, D> TryFrom<&'a $t> for &'a $p<$t, D>
         where
-            D: Divergence,
+            D: Diverge,
         {
             type Error = ConstraintViolation;
 
             fn try_from(inner: &'a $t) -> Result<Self, Self::Error> {
-                ConstraintOf::<$p<$t, D>>::compliance(*inner).map(|_| {
+                ConstraintOf::<$p<$t, D>>::check(*inner).map(|_| {
                     // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary
                     //         representation as its input type `T`. This means that it is safe to
                     //         transmute `T` to `Proxy<T>`.
@@ -2311,12 +2299,12 @@ macro_rules! impl_try_from {
 
         impl<'a, D> TryFrom<&'a mut $t> for &'a mut $p<$t, D>
         where
-            D: Divergence,
+            D: Diverge,
         {
             type Error = ConstraintViolation;
 
             fn try_from(inner: &'a mut $t) -> Result<Self, Self::Error> {
-                ConstraintOf::<$p<$t, D>>::compliance(*inner).map(move |_| {
+                ConstraintOf::<$p<$t, D>>::check(*inner).map(move |_| {
                     // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary
                     //         representation as its input type `T`. This means that it is safe to
                     //         transmute `T` to `Proxy<T>`.
