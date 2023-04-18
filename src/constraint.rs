@@ -145,11 +145,23 @@ impl Constraint for UnitConstraint {
     type Divergence = Infallible;
     type Error = Infallible;
 
+    #[inline(always)]
     fn check<T>(_inner: T) -> Result<(), Self::Error>
     where
         T: Float + Primitive,
     {
         Ok(())
+    }
+
+    #[inline(always)]
+    fn diverge<T, U, F>(inner: T, f: F) -> U
+    where
+        T: Float + Primitive,
+        U: ClosedProxy<Constraint = Self, Primitive = T>,
+        F: FnOnce(T) -> U,
+    {
+        // Bypass branches and constructions in the default implementation.
+        f(inner)
     }
 }
 
