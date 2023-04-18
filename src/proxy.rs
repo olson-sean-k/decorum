@@ -50,7 +50,8 @@ use crate::constraint::{
     Constraint, ConstraintViolation, ExpectConstrained, InfinitySet, Member, NanSet, SubsetOf,
     SupersetOf,
 };
-use crate::divergence::{Diverge, Expression, NonResidual};
+use crate::divergence::{Diverge, NonResidual};
+use crate::expression::Expression;
 use crate::hash::FloatHash;
 #[cfg(feature = "std")]
 use crate::ForeignReal;

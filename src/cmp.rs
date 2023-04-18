@@ -62,7 +62,7 @@
 use core::cmp::Ordering;
 
 use crate::constraint::Constraint;
-use crate::divergence::{Defined, Expression, Undefined};
+use crate::expression::{Defined, Expression, Undefined};
 use crate::proxy::Proxy;
 use crate::{with_primitives, Float, Nan, Primitive, ToCanonicalBits};
 
