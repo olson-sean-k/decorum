@@ -248,7 +248,7 @@ where
     /// [`Total`]: crate::Total
     /// [`UnitConstraint`]: crate::constraint::UnitConstraint
     pub fn try_new(inner: T) -> Result<Self, C::Error> {
-        C::check(inner).map(|inner| Proxy {
+        C::check(inner).map(|_| Proxy {
             inner,
             phantom: PhantomData,
         })
@@ -366,9 +366,7 @@ where
     /// [`from_slice`]: crate::Total::from_slice
     /// [`UnitConstraint`]: crate::constraint::UnitConstraint
     pub fn try_from_slice<'a>(slice: &'a [T]) -> Result<&'a [Self], C::Error> {
-        slice
-            .iter()
-            .try_for_each(|inner| C::check(*inner).map(|_| ()))?;
+        slice.iter().try_for_each(|inner| C::check(*inner))?;
         // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
         //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
         Ok(unsafe { mem::transmute::<&'a [T], &'a [Self]>(slice) })
@@ -389,9 +387,7 @@ where
     /// [`from_mut_slice`]: crate::Total::from_mut_slice
     /// [`UnitConstraint`]: crate::constraint::UnitConstraint
     pub fn try_from_mut_slice<'a>(slice: &'a mut [T]) -> Result<&'a mut [Self], C::Error> {
-        slice
-            .iter()
-            .try_for_each(|inner| C::check(*inner).map(|_| ()))?;
+        slice.iter().try_for_each(|inner| C::check(*inner))?;
         // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
         //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
         Ok(unsafe { mem::transmute::<&'a mut [T], &'a mut [Self]>(slice) })

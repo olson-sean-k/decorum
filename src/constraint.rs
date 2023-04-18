@@ -119,7 +119,11 @@ pub trait Constraint: Member<RealSet> {
     type Divergence: Diverge;
     type Error: Debug;
 
-    fn check<T>(inner: T) -> Result<T, Self::Error>
+    // NOTE: It is not possible for constraints to map accepted values because of reference
+    //       conversions, so the successful output is the unit type and primitive values must be
+    //       used as-is. That is, this function only expresses the membership of the given value
+    //       and no other.
+    fn check<T>(inner: T) -> Result<(), Self::Error>
     where
         T: Float + Primitive;
 
@@ -129,7 +133,7 @@ pub trait Constraint: Member<RealSet> {
         U: ClosedProxy<Constraint = Self, Primitive = T>,
         F: FnOnce(T) -> U,
     {
-        Self::Divergence::diverge(Self::check(inner).map(f))
+        Self::Divergence::diverge(Self::check(inner).map(|_| f(inner)))
     }
 }
 
@@ -141,11 +145,11 @@ impl Constraint for UnitConstraint {
     type Divergence = Infallible;
     type Error = Infallible;
 
-    fn check<T>(inner: T) -> Result<T, Self::Error>
+    fn check<T>(_inner: T) -> Result<(), Self::Error>
     where
         T: Float + Primitive,
     {
-        Ok(inner)
+        Ok(())
     }
 }
 
@@ -172,7 +176,7 @@ where
     type Divergence = D;
     type Error = ConstraintViolation;
 
-    fn check<T>(inner: T) -> Result<T, Self::Error>
+    fn check<T>(inner: T) -> Result<(), Self::Error>
     where
         T: Float + Primitive,
     {
@@ -180,7 +184,7 @@ where
             Err(ConstraintViolation)
         }
         else {
-            Ok(inner)
+            Ok(())
         }
     }
 }
@@ -204,7 +208,7 @@ where
     type Divergence = D;
     type Error = ConstraintViolation;
 
-    fn check<T>(inner: T) -> Result<T, Self::Error>
+    fn check<T>(inner: T) -> Result<(), Self::Error>
     where
         T: Float + Primitive,
     {
@@ -212,7 +216,7 @@ where
             Err(ConstraintViolation)
         }
         else {
-            Ok(inner)
+            Ok(())
         }
     }
 }
