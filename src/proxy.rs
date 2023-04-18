@@ -347,8 +347,8 @@ where
     ///
     /// The output of this function is always the [`Defined`] variant.
     ///
-    /// [`Defined`]: crate::divergence::Expression::Defined
-    /// [`Expression`]: crate::divergence::Expression
+    /// [`Defined`]: crate::expression::Expression::Defined
+    /// [`Expression`]: crate::expression::Expression
     pub fn into_expression(self) -> ExpressionOf<Self> {
         Expression::from(self)
     }
@@ -453,10 +453,10 @@ where
     ///
     /// [`Assert`]: crate::divergence::Assert
     /// [`divergence`]: crate::divergence
-    /// [`Expression`]: crate::divergence::Expression
+    /// [`Expression`]: crate::expression::Expression
     /// [`Total`]: crate::Total
     /// [`TryExpression`]: crate::divergence::TryExpression
-    /// [`Undefined`]: crate::divergence::Expression::Undefined
+    /// [`Undefined`]: crate::expression::Expression::Undefined
     pub fn new(inner: T) -> BranchOf<Self> {
         C::diverge(inner, |inner| Proxy {
             inner,

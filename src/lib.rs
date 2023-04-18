@@ -124,7 +124,7 @@
 //! [`constraint`]: crate::constraint
 //! [`Constraint`]: crate::constraint::Constraint
 //! [`divergence`]: crate::divergence
-//! [`Expression`]: crate::divergence::Expression
+//! [`Expression`]: crate::expression::Expression
 //! [`Finite`]: crate::Finite
 //! [`hash`]: crate::hash
 //! [`Hash`]: core::hash::Hash
@@ -151,11 +151,10 @@ extern crate std;
 pub mod cmp;
 pub mod constraint;
 pub mod divergence;
+pub mod expression;
 pub mod hash;
 pub mod proxy;
 pub mod real;
-
-mod expression;
 
 #[cfg(not(feature = "std"))]
 pub(crate) use num_traits::float::FloatCore as ForeignFloat;
@@ -167,9 +166,6 @@ pub(crate) use num_traits::Float as ForeignFloat;
 use core::mem;
 use core::num::FpCategory;
 use num_traits::{PrimInt, Unsigned};
-
-// The `expression` module only provides `Expression`, so it is re-exported here.
-pub use crate::expression::{Defined, Expression, Undefined};
 
 use crate::cmp::IntrinsicOrd;
 use crate::constraint::{FiniteConstraint, NotNanConstraint, UnitConstraint};

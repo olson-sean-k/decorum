@@ -16,8 +16,6 @@ use crate::{with_binary_operations, with_primitives, Float, Infinite, Primitive}
 pub use Expression::Defined;
 pub use Expression::Undefined;
 
-// NOTE: This module is re-exported at the crate root, so this macro fully qualifies `Expression`
-//       from the root and not this module.
 /// Unwraps an [`Expression`] or propagates its error.
 ///
 /// This macro mirrors the standard [`try`] macro but operates on [`Expression`]s rather than
@@ -32,16 +30,16 @@ pub use Expression::Undefined;
 #[macro_export]
 macro_rules! try_expression {
     ($x:expr $(,)?) => {{
-        let expression: $crate::Expression<_, _> = $x;
+        let expression: $crate::expression::Expression<_, _> = $x;
         match expression {
-            $crate::Expression::Defined(inner) => inner,
-            $crate::Expression::Undefined(error) => {
-                return $crate::Expression::Undefined(core::convert::From::from(error));
+            $crate::expression::Expression::Defined(inner) => inner,
+            $crate::expression::Expression::Undefined(error) => {
+                return $crate::expression::Expression::Undefined(core::convert::From::from(error));
             }
         }
     }};
     ($x:block $(,)?) => {
-        let expression: $crate::Expression<_, _> = $x;
+        let expression: $crate::expression::Expression<_, _> = $x;
         try_expression!(expression);
     };
 }

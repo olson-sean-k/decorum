@@ -175,7 +175,7 @@ impl<C> Sealed for Assert<C> {}
 /// This divergence is intrinsic with respect to [`Expression`]. For all other types, it is
 /// extrinsic.
 ///
-/// [`Undefined`]: crate::divergence::Expression::Undefined
+/// [`Undefined`]: crate::expression::Expression::Undefined
 pub struct Try<C = ExpressionBranch>(PhantomData<fn() -> C>, Infallible);
 
 impl<C> Diverge for Try<C>
