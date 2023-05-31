@@ -148,7 +148,7 @@ pub trait Endoreal: Endofunction + Real {}
 
 impl<T> Endoreal for T where T: Endofunction + Real {}
 
-pub trait FloatReal<T>: BinaryReal<T> + Real + TryFrom<T> + TryInto<T>
+pub trait FloatReal<T>: BinaryReal<T> + Into<T> + Real + TryFrom<T>
 where
     T: Float + Primitive,
 {
@@ -157,7 +157,7 @@ where
 impl<T, U> FloatReal<T> for U
 where
     T: Float + Primitive,
-    U: BinaryReal<T> + Real + TryFrom<T> + TryInto<T>,
+    U: BinaryReal<T> + Into<T> + Real + TryFrom<T>,
 {
 }
 
