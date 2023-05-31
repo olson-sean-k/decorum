@@ -17,10 +17,22 @@ features, does **not** require the `std` nor `alloc` libraries.
 The primary API of Decorum is its `Proxy` types, which transparently wrap
 primitive IEEE 754 floating-point types and configure their behavior. `Proxy`
 types support many numeric features and operations and integrate with the
-[`num-traits`] crate and additional crates when [Cargo
-features](#cargo-features) are enabled. Depending on its configuration, a proxy
-can be used as a drop-in replacement for primitive floating-point types.
-Behavior is configured in two ways: _constraints_ and _divergence_.
+[`num-traits`] crate and others when [Cargo features](#cargo-features) are
+enabled. Depending on its configuration, a proxy can be used as a drop-in
+replacement for primitive floating-point types.
+
+The following `Proxy` behaviors can be configured:
+
+1. the allowed subset of IEEE 754 floating-point values
+1. the output type of fallibe operations (that may produce non-member values
+   w.r.t. a subset)
+1. what happens when an error occurs (i.e., return an error value or panic)
+
+Note that the output type of fallible operations and the error behavior are
+independent. A `Proxy` type may return a `Result` and yet panic if an error
+occurs, which can be useful for conditional compilation and builds wherein
+behavior changes but types do not. The behavior of a `Proxy` type is configured
+using two mechanisms: _constraints_ and _divergence_.
 
 ```rust
 use decorum::constraint::FiniteConstraint;
@@ -31,28 +43,28 @@ use decorum::proxy::Proxy;
 pub type Real = Proxy<f64, FiniteConstraint<Assert>>;
 ```
 
-Constraints specify a subset of floating-point values that a proxy can
+Constraints specify a subset of floating-point values that a proxy may
 represent. IEEE 754 floating-point values are divided into three such subsets:
 
-| Subset       | Example Member |
-|--------------|----------------|
-| real numbers | `3.1459`       |
-| infinities   | `+INF`         |
-| not-a-number | `NaN`          |
+| Subset        | Example Member |
+|---------------|----------------|
+| real numbers  | `3.1459`       |
+| infinities    | `+INF`         |
+| not-a-numbers | `NaN`          |
 
 Constraints can be used to strictly represent real numbers, extended reals, or
 complete but totally ordered IEEE 754 types (i.e., no constraints). Available
 constraints are summarized below:
 
-| Constraint         | Members                                | Fallible  |
-|--------------------|----------------------------------------|-----------|
-| `UnitConstraint`   | real numbers, infinities, not-a-number | no        |
-| `NotNanConstraint` | real numbers, infinities               | yes       |
-| `FiniteConstraint` | real numbers                           | yes       |
+| Constraint         | Members                                 | Fallible  |
+|--------------------|-----------------------------------------|-----------|
+| `UnitConstraint`   | real numbers, infinities, not-a-numbers | no        |
+| `NotNanConstraint` | real numbers, infinities                | yes       |
+| `FiniteConstraint` | real numbers                            | yes       |
 
-Note that `UnitConstraint` supports all IEEE 754 floating-point values and so
-applies no constraint at all and is infallible. As such, it does not accept a
-divergence type parameter (see below).
+`UnitConstraint` supports all IEEE 754 floating-point values and so applies no
+constraint at all. As such, it has no fallible operations w.r.t. the constraint
+and does not accept a divergence.
 
 Many operations on members of these subsets may produce values from other
 subsets that are illegal w.r.t. constraints, such as the addition of two real
@@ -60,18 +72,18 @@ numbers resulting in `+INF`. A divergence type determines both the behavior when
 an illegal value is encountered as well as the output type of such fallible
 operations.
 
-| Divergence | OK       | Error     | Default Branch     |
-|------------|----------|-----------|--------------------|
-| `Assert`   | continue | **panic** | `OutputBranch`     |
-| `Try`      | continue | break     | `ExpressionBranch` |
+| Divergence | OK       | Error     | Default Branch Kind |
+|------------|----------|-----------|---------------------|
+| `Assert`   | continue | **panic** | `OutputBranch`      |
+| `Try`      | continue | break     | `ExpressionBranch`  |
 
-In the above table, "continue" refers to returning a **non**-error value while
-"break" refers to returning an error value. If an illegal value is encountered,
+In the above table, _continue_ refers to returning a **non**-error value while
+_break_ refers to returning an error value. If an illegal value is encountered,
 then **the `Assert` divergence panics** while the `Try` divergence constructs a
-value that encodes the error. The output type of fallible operations is called
-the branch type and is determined by an optional divergence type parameter:
+value that encodes the error. The output type of fallible operations is the
+_branch_ type and it is determined by an optional _branch kind_ type parameter:
 
-| Branch             | Output Type        | Continue     | Break          |
+| Branch Kind        | Branch Type        | Continue     | Break          |
 |--------------------|--------------------|--------------|----------------|
 | `OutputBranch`     | `T`                | `T`          |                |
 | `OptionBranch`     | `Option<T>`        | `Some(T)`    | `None`         |
@@ -85,19 +97,20 @@ fallible operations (just like primitive IEEE 754 floating-point types).
 
 With the sole exception of `OutputBranch`, the branch type of fallible
 operations is extrinsic: fallible operations produce types that differ from
-their input type. The `Expression` type, which resembles the standard `Result`
+their input types. The `Expression` type, which resembles the standard `Result`
 type, improves the ergonomics of error handling by supporting mathematical
-traits such that it can be used directly in expressions and defer branching.
+traits such that it can be used directly in expressions and defer error
+checking.
 
 ```rust
 use decorum::constraint::FiniteConstraint;
 use decorum::divergence::Try;
-use decorum::proxy::{ExpressionOf, Proxy};
+use decorum::proxy::{BranchOf, Proxy};
 use decorum::real::UnaryReal as _;
 use decorum::try_expression;
 
 pub type Real = Proxy<f64, FiniteConstraint<Try>>;
-pub type Expr = ExpressionOf<Real>;
+pub type Expr = BranchOf<Real>;
 
 pub fn f(x: Real, y: Real) -> Expr {
     let sum = x + y;
@@ -142,11 +155,11 @@ The following type definitions provide common proxy configurations. Each type
 implements different traits describing components of IEEE 754 floating-point
 based on the constraints of the proxy.
 
-| Type     | Sized Aliases | Trait Implementations                      | Illegal Values        |
-|----------|---------------|--------------------------------------------|-----------------------|
-| `Total`  |               | `Encoding + Real + Infinite + Nan + Float` |                       |
-| `NotNan` | `N32`, `N64`  | `Encoding + Real + Infinite`               | `NaN`                 |
-| `Finite` | `R32`, `R64`  | `Encoding + Real`                          | `NaN`, `-INF`, `+INF` |
+| Type Definition | Sized Aliases | Trait Implementations                      | Illegal Values        |
+|-----------------|---------------|--------------------------------------------|-----------------------|
+| `Total`         |               | `Encoding + Real + Infinite + Nan + Float` |                       |
+| `NotNan`        | `N32`, `N64`  | `Encoding + Real + Infinite`               | `NaN`                 |
+| `Finite`        | `R32`, `R64`  | `Encoding + Real`                          | `NaN`, `-INF`, `+INF` |
 
 ## Relations and Total Ordering
 
@@ -191,7 +204,7 @@ partially ordered types that have an intrinsic representation for undefined,
 such as `Option` (`None`) and IEEE 754 floating-point representations (`NaN`).
 For floating-point representations, this provides an ergonomic method for
 comparison that naturally propogates `NaN`s just like floating-point operations
-do.
+do (unlike `f64::max`, etc.).
 
 ```rust
 use decorum::cmp;

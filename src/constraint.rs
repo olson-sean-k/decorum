@@ -111,7 +111,7 @@ where
 /// Describes constraints on the set of floating-point values that a [`Proxy`] may represent.
 ///
 /// Note that constraints require [`Member<RealSet>`][`Member`], meaning that the set of real
-/// numbers must always be supported and is implied where ever a `Constraint` bound is used.
+/// numbers must always be supported and is implied wherever a `Constraint` bound is used.
 ///
 /// [`Member`]: crate::constraint::Member
 /// [`Proxy`]: crate::proxy::Proxy
