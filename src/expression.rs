@@ -151,6 +151,13 @@ impl<T, E> Expression<T, E> {
         }
     }
 
+    pub fn as_ref(&self) -> Expression<&T, &E> {
+        match self {
+            Defined(ref defined) => Defined(defined),
+            Undefined(ref undefined) => Undefined(undefined),
+        }
+    }
+
     pub fn map<U, F>(self, f: F) -> Expression<U, E>
     where
         F: FnOnce(T) -> U,
@@ -171,16 +178,16 @@ impl<T, E> Expression<T, E> {
         }
     }
 
-    pub fn defined(&self) -> Option<&T> {
+    pub fn defined(self) -> Option<T> {
         match self {
-            Defined(ref defined) => Some(defined),
+            Defined(defined) => Some(defined),
             _ => None,
         }
     }
 
-    pub fn undefined(&self) -> Option<&E> {
+    pub fn undefined(self) -> Option<E> {
         match self {
-            Undefined(ref undefined) => Some(undefined),
+            Undefined(undefined) => Some(undefined),
             _ => None,
         }
     }
@@ -191,6 +198,50 @@ impl<T, E> Expression<T, E> {
 
     pub fn is_undefined(&self) -> bool {
         matches!(self, Undefined(_))
+    }
+}
+
+impl<'a, T, E> Expression<&'a T, E> {
+    pub fn copied(self) -> Expression<T, E>
+    where
+        T: Copy,
+    {
+        match self {
+            Defined(defined) => Defined(*defined),
+            Undefined(undefined) => Undefined(undefined),
+        }
+    }
+
+    pub fn cloned(self) -> Expression<T, E>
+    where
+        T: Clone,
+    {
+        match self {
+            Defined(defined) => Defined(defined.clone()),
+            Undefined(undefined) => Undefined(undefined),
+        }
+    }
+}
+
+impl<'a, T, E> Expression<&'a mut T, E> {
+    pub fn copied(self) -> Expression<T, E>
+    where
+        T: Copy,
+    {
+        match self {
+            Defined(defined) => Defined(*defined),
+            Undefined(undefined) => Undefined(undefined),
+        }
+    }
+
+    pub fn cloned(self) -> Expression<T, E>
+    where
+        T: Clone,
+    {
+        match self {
+            Defined(defined) => Defined(defined.clone()),
+            Undefined(undefined) => Undefined(undefined),
+        }
     }
 }
 
@@ -476,8 +527,9 @@ where
     T: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
-        self.defined()
-            .zip(other.defined())
+        self.as_ref()
+            .defined()
+            .zip(other.as_ref().defined())
             .map_or(false, |(left, right)| left.eq(right))
     }
 }
@@ -487,8 +539,9 @@ where
     T: PartialOrd,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.defined()
-            .zip(other.defined())
+        self.as_ref()
+            .defined()
+            .zip(other.as_ref().defined())
             .and_then(|(left, right)| left.partial_cmp(right))
     }
 }
