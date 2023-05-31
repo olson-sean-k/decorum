@@ -10,7 +10,7 @@ use crate::cmp::UndefinedError;
 use crate::constraint::Constraint;
 use crate::divergence::{ExpressionBranch, Try};
 use crate::proxy::{ErrorOf, ExpressionOf, Proxy};
-use crate::real::{BinaryReal, Function, UnaryReal};
+use crate::real::{BinaryReal, Function, Sign, UnaryReal};
 use crate::{with_binary_operations, with_primitives, Float, Infinite, Primitive};
 
 pub use Expression::Defined;
@@ -596,14 +596,8 @@ where
         self.defined().map_or(false, |defined| defined.is_one())
     }
 
-    fn is_positive(self) -> bool {
-        self.defined()
-            .map_or(false, |defined| defined.is_positive())
-    }
-
-    fn is_negative(self) -> bool {
-        self.defined()
-            .map_or(false, |defined| defined.is_negative())
+    fn sign(self) -> Sign {
+        self.defined().map_or(Sign::Zero, |defined| defined.sign())
     }
 
     #[cfg(feature = "std")]
@@ -612,26 +606,26 @@ where
     }
 
     #[cfg(feature = "std")]
-    fn signum(self) -> Self {
-        self.map(UnaryReal::signum)
-    }
-
     fn floor(self) -> Self {
         self.map(UnaryReal::floor)
     }
 
+    #[cfg(feature = "std")]
     fn ceil(self) -> Self {
         self.map(UnaryReal::ceil)
     }
 
+    #[cfg(feature = "std")]
     fn round(self) -> Self {
         self.map(UnaryReal::round)
     }
 
+    #[cfg(feature = "std")]
     fn trunc(self) -> Self {
         self.map(UnaryReal::trunc)
     }
 
+    #[cfg(feature = "std")]
     fn fract(self) -> Self {
         self.map(UnaryReal::fract)
     }

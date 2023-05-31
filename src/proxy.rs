@@ -53,11 +53,12 @@ use crate::constraint::{
 use crate::divergence::{Diverge, NonResidual};
 use crate::expression::Expression;
 use crate::hash::FloatHash;
+use crate::real::{BinaryReal, Function, Sign, UnaryReal};
 #[cfg(feature = "std")]
 use crate::ForeignReal;
 use crate::{
-    with_binary_operations, with_primitives, BinaryReal, Encoding, Finite, Float, ForeignFloat,
-    Function, Infinite, Nan, NotNan, Primitive, ToCanonicalBits, Total, UnaryReal,
+    with_binary_operations, with_primitives, Encoding, Finite, Float, ForeignFloat, Infinite, Nan,
+    NotNan, Primitive, ToCanonicalBits, Total,
 };
 
 pub type BranchOf<P> = <DivergenceOf<P> as Diverge>::Branch<P, ErrorOf<P>>;
@@ -814,6 +815,11 @@ where
         self.into_inner().is_sign_negative()
     }
 
+    #[cfg(feature = "std")]
+    fn signum(self) -> Self {
+        self.map_unchecked(|inner| inner.signum())
+    }
+
     fn integer_decode(self) -> (u64, i16, i8) {
         T::integer_decode(self.into_inner())
     }
@@ -1155,12 +1161,12 @@ where
 
     #[cfg(not(feature = "std"))]
     fn to_degrees(self) -> Self {
-        ForeignFloat::to_degrees(self)
+        self.map(ForeignFloat::to_degrees)
     }
 
     #[cfg(not(feature = "std"))]
     fn to_radians(self) -> Self {
-        ForeignFloat::to_radians(self)
+        self.map(ForeignFloat::to_radians)
     }
 }
 
@@ -1811,12 +1817,8 @@ where
         self.into_inner().is_zero()
     }
 
-    fn is_positive(self) -> bool {
-        self.into_inner().is_positive()
-    }
-
-    fn is_negative(self) -> bool {
-        self.into_inner().is_negative()
+    fn sign(self) -> Sign {
+        self.with_inner(|inner| inner.sign())
     }
 
     #[cfg(feature = "std")]
@@ -1825,26 +1827,26 @@ where
     }
 
     #[cfg(feature = "std")]
-    fn signum(self) -> Self {
-        self.map_unchecked(UnaryReal::signum)
-    }
-
     fn floor(self) -> Self {
         self.map_unchecked(UnaryReal::floor)
     }
 
+    #[cfg(feature = "std")]
     fn ceil(self) -> Self {
         self.map_unchecked(UnaryReal::ceil)
     }
 
+    #[cfg(feature = "std")]
     fn round(self) -> Self {
         self.map_unchecked(UnaryReal::round)
     }
 
+    #[cfg(feature = "std")]
     fn trunc(self) -> Self {
         self.map_unchecked(UnaryReal::trunc)
     }
 
+    #[cfg(feature = "std")]
     fn fract(self) -> Self {
         self.map_unchecked(UnaryReal::fract)
     }

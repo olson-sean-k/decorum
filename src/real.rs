@@ -40,24 +40,19 @@ pub trait UnaryReal:
     fn is_zero(self) -> bool;
     fn is_one(self) -> bool;
 
-    fn is_positive(self) -> bool;
-    fn is_negative(self) -> bool;
+    fn sign(self) -> Sign;
     #[cfg(feature = "std")]
     fn abs(self) -> Self;
-    #[cfg(feature = "std")]
-    fn signum(self) -> Self {
-        if self.is_positive() {
-            Self::ONE
-        }
-        else {
-            -Self::ONE
-        }
-    }
 
+    #[cfg(feature = "std")]
     fn floor(self) -> Self;
+    #[cfg(feature = "std")]
     fn ceil(self) -> Self;
+    #[cfg(feature = "std")]
     fn round(self) -> Self;
+    #[cfg(feature = "std")]
     fn trunc(self) -> Self;
+    #[cfg(feature = "std")]
     fn fract(self) -> Self;
     fn recip(self) -> Self::Codomain; // Undefined.
 
@@ -177,4 +172,25 @@ where
     T: Float + Primitive,
     U: Endofunction + FloatReal<T>,
 {
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum Sign {
+    Positive,
+    Negative,
+    Zero,
+}
+
+impl Sign {
+    pub fn is_positive(&self) -> bool {
+        matches!(self, Sign::Positive)
+    }
+
+    pub fn is_negative(&self) -> bool {
+        matches!(self, Sign::Negative)
+    }
+
+    pub fn is_zero(&self) -> bool {
+        matches!(self, Sign::Zero)
+    }
 }

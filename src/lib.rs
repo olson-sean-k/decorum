@@ -171,7 +171,7 @@ use crate::cmp::IntrinsicOrd;
 use crate::constraint::{FiniteConstraint, NotNanConstraint, UnitConstraint};
 use crate::divergence::Assert;
 use crate::proxy::Proxy;
-use crate::real::{BinaryReal, Function, Real, UnaryReal};
+use crate::real::{BinaryReal, Function, Real, Sign, UnaryReal};
 
 mod sealed {
     use core::convert::Infallible;
@@ -318,6 +318,8 @@ pub trait Encoding: Sized {
 
     fn is_sign_positive(self) -> bool;
     fn is_sign_negative(self) -> bool;
+    #[cfg(feature = "std")]
+    fn signum(self) -> Self;
 
     fn integer_decode(self) -> (u64, i16, i8);
 }
@@ -342,6 +344,11 @@ impl Encoding for f32 {
 
     fn is_sign_negative(self) -> bool {
         Self::is_sign_negative(self)
+    }
+
+    #[cfg(feature = "std")]
+    fn signum(self) -> Self {
+        Self::signum(self)
     }
 
     fn integer_decode(self) -> (u64, i16, i8) {
@@ -378,6 +385,11 @@ impl Encoding for f64 {
 
     fn is_sign_negative(self) -> bool {
         Self::is_sign_negative(self)
+    }
+
+    #[cfg(feature = "std")]
+    fn signum(self) -> Self {
+        Self::signum(self)
     }
 
     fn integer_decode(self) -> (u64, i16, i8) {
@@ -524,12 +536,16 @@ macro_rules! impl_primitive {
                 self == Self::ONE
             }
 
-            fn is_positive(self) -> bool {
-                <$t>::is_sign_positive(self)
-            }
-
-            fn is_negative(self) -> bool {
-                <$t>::is_sign_negative(self)
+            fn sign(self) -> Sign {
+                if self.is_nan() || self.is_zero() {
+                    Sign::Zero
+                }
+                else if self > 0.0 {
+                    Sign::Positive
+                }
+                else {
+                    Sign::Negative
+                }
             }
 
             #[cfg(feature = "std")]
@@ -538,26 +554,26 @@ macro_rules! impl_primitive {
             }
 
             #[cfg(feature = "std")]
-            fn signum(self) -> Self {
-                <$t>::signum(self)
-            }
-
             fn floor(self) -> Self {
                 <$t>::floor(self)
             }
 
+            #[cfg(feature = "std")]
             fn ceil(self) -> Self {
                 <$t>::ceil(self)
             }
 
+            #[cfg(feature = "std")]
             fn round(self) -> Self {
                 <$t>::round(self)
             }
 
+            #[cfg(feature = "std")]
             fn trunc(self) -> Self {
                 <$t>::trunc(self)
             }
 
+            #[cfg(feature = "std")]
             fn fract(self) -> Self {
                 <$t>::fract(self)
             }
