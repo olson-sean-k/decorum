@@ -1,22 +1,73 @@
-//! Constraint divergence types and behaviors (error handling).
+//! Output types for fallible operations and error behavior.
+//!
+//! This module provides types that determine the output types of fallible [`Proxy`] operations as
+//! well as the behavior when an error occurs. These types are used as parameters of some
+//! [constraints][`constraint`].
+//!
+//! # Output Types
+//!
+//! The output type of a fallible operations is the _branch_ type. The branch type is determined by
+//! a divergence type parameter called the _branch kind_. These marker types are described below:
+//!
+//! | Branch Kind          | Branch Type        | Continue     | Break          |
+//! |----------------------|--------------------|--------------|----------------|
+//! | [`OutputBranch`]     | `T`                | `T`          |                |
+//! | [`OptionBranch`]     | `Option<T>`        | `Some(T)`    | `None`         |
+//! | [`ResultBranch`]     | `Result<T, E>`     | `Ok(T)`      | `Err(E)`       |
+//! | [`ExpressionBranch`] | `Expression<T, E>` | `Defined(T)` | `Undefined(E)` |
+//!
+//! In the above table, `T` refers to a [`Proxy`] type and `E` refers to the associated error type
+//! of its [constraint][`constraint`]. [`OutputBranch`] is unique in that it does not support
+//! breaking and cannot produce a representation of errors. The remaining branch kinds produce
+//! branch types that can represent both success and failure.
 //!
 //! # Error Behaviors
 //!
-//! This module provides marker types that express the behavior of [`Proxy`]s when a disallowed
-//! IEEE 754 floating-point value is encountered. These types and behaviors are summarized in the
-//! following table:
+//! Error behavior is determined by a _divergence_ marker type:
 //!
-//! | Divergence        | Branch Type        | Error Output   |
-//! |-------------------|--------------------|----------------|
-//! | [`Assert`]        | `T`                | **panic**      |
-//! | [`TryOption`]     | `Option<T>`        | `None`         |
-//! | [`TryResult`]     | `Result<T, E>`     | `Err(E)`       |
-//! | [`TryExpression`] | `Expression<T, E>` | `Undefined(E)` |
+//! | Divergence | OK       | Error     | Default Branch Kind  |
+//! |------------|----------|-----------|----------------------|
+//! | [`Assert`] | continue | **panic** | [`OutputBranch`]     |
+//! | [`Try`]    | continue | break     | [`ExpressionBranch`] |
 //!
-//! Note that [`Assert`] is the only intrinsic divergence where the output type of fallible
-//! operations is the same as the input type. **However, this divergence panics when encountering a
-//! value that violates a [constraint][`constraint`].** The remaining divergence types instead use
-//! an extrinsic type to encode errors as values.
+//! The output of a divergence is determined by its branch kind. Note that **[`Assert`] panics if
+//! an error occurs** and is the only divergence that supports [`OutputBranch`].
+//!
+//! # Examples
+//!
+//! The following example demonstrates a conditionally compiled `Real` type definition with a
+//! [`Result`] branch type that, when an error occurs, returns `Err` in non-debug builds and panics
+//! in debug builds.
+//!
+//! ```rust
+//! use decorum::constraint::FiniteConstraint;
+//! use decorum::divergence::ResultBranch;
+//! use decorum::proxy::{BranchOf, Proxy};
+//! use decorum::real::UnaryReal as _;
+//!
+//! #[cfg(debug_assertions)]
+//! type Divergence = decorum::divergence::Assert<ResultBranch>;
+//! #[cfg(not(debug_assertions))]
+//! type Divergence = decorum::divergence::Try<ResultBranch>;
+//!
+//! pub type Real = Proxy<f64, FiniteConstraint<Divergence>>;
+//! pub type RealResult = BranchOf<Real>;
+//!
+//! pub fn f(x: Real) -> RealResult {
+//!     // This panics in debug builds and returns `Err` in non-debug builds.
+//!     x / Real::ZERO
+//! }
+//! ```
+//!
+//! [`Assert`]: crate::divergence::Assert
+//! [`constraint`]: crate::contraint
+//! [`ExpressionBranch`]: crate::divergence::ExpressionBranch
+//! [`OptionBranch`]: crate::divergence::OptionBranch
+//! [`OutputBranch`]: crate::divergence::OutputBranch
+//! [`Proxy`]: crate::proxy::Proxy
+//! [`Result`]: core::result::Result
+//! [`ResultBranch`]: crate::divergence::ResultBranch
+//! [`Try`]: crate::divergence::Try
 
 use core::convert::Infallible;
 use core::fmt::Debug;
@@ -148,10 +199,18 @@ where
 {
 }
 
-/// Divergence that panics when an error is encountered.
+/// Divergence that breaks on errors by **panicking**.
 ///
-/// This divergence is always intrinsic, so its branch type is the same as the type involved in the
-/// fallible construction.
+/// **`Assert` panics if an error occurs.** This behavior is independent of the branch type, so
+/// even an `Assert` divergence configured to construct [`Result`]s panics in the face of errors.
+///
+/// The branch type is determined by a branch kind type parameter. By default, `Assert` uses the
+/// [`OutputBranch`] kind and therefore constructs [`Proxy`]s (no representation for errors) as the
+/// output of fallible operations.
+///
+/// [`OutputBranch`]: crate::divergence::OutputBranch
+/// [`Proxy`]: crate::proxy::Proxy
+/// [`Result`]: core::result::Result
 pub struct Assert<C = OutputBranch>(PhantomData<fn() -> C>, Infallible);
 
 impl<C> Diverge for Assert<C>
@@ -170,12 +229,14 @@ where
 
 impl<C> Sealed for Assert<C> {}
 
-/// Divergence that constructs an [`Undefined`] when an error is encountered.
+/// Divergence that breaks on errors by constructing a branch type that represents the error.
 ///
-/// This divergence is intrinsic with respect to [`Expression`]. For all other types, it is
-/// extrinsic.
+/// The branch type is determined by a branch kind type parameter. By default, `Try` uses the
+/// [`ExpressionBranch`] kind and therefore constructs [`Expression`]s as the output of fallible
+/// operations.
 ///
-/// [`Undefined`]: crate::expression::Expression::Undefined
+/// [`Expression`]: crate::expression::Expression
+/// [`ExpressionBranch`]: crate::divergence::ExpressionBranch
 pub struct Try<C = ExpressionBranch>(PhantomData<fn() -> C>, Infallible);
 
 impl<C> Diverge for Try<C>

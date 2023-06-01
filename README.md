@@ -141,15 +141,15 @@ the standard `From` and `TryFrom` traits. The following inherent functions are
 supported by all `Proxy` types, though some more bespoke constructions are
 available for specific configurations.
 
-| Method                 | Input     | Output    | Error      |
-|------------------------|-----------|-----------|------------|
-| `new`                  | primitive | proxy     | divergence |
-| `assert`               | primitive | proxy     | **panic**  |
-| `try_new`              | primitive | proxy     | `Result`   |
-| `try_from_{mut_}slice` | primitive | proxy     | `Result`   |
-| `into_inner`           | proxy     | primitive |            |
-| `from_subset`          | proxy     | proxy     |            |
-| `into_superset`        | proxy     | proxy     |            |
+| Proxy Method           | Input     | Output    | Error         |
+|------------------------|-----------|-----------|---------------|
+| `new`                  | primitive | proxy     | break         |
+| `assert`               | primitive | proxy     | **panic**     |
+| `try_new`              | primitive | proxy     | `Result::Err` |
+| `try_from_{mut_}slice` | primitive | proxy     | `Result::Err` |
+| `into_inner`           | proxy     | primitive |               |
+| `from_subset`          | proxy     | proxy     |               |
+| `into_superset`        | proxy     | proxy     |               |
 
 The following type definitions provide common proxy configurations. Each type
 implements different traits describing components of IEEE 754 floating-point
