@@ -61,7 +61,7 @@ use crate::{
     NotNan, Primitive, ToCanonicalBits, Total,
 };
 
-pub type BranchOf<P> = <DivergenceOf<P> as Diverge>::Branch<P, ErrorOf<P>>;
+pub type BranchOf<P> = <DivergenceOf<P> as Diverge<ErrorOf<P>>>::Branch<P, ErrorOf<P>>;
 pub type ConstraintOf<P> = <P as ClosedProxy>::Constraint;
 pub type DivergenceOf<P> = <ConstraintOf<P> as Constraint>::Divergence;
 pub type ErrorOf<P> = <ConstraintOf<P> as Constraint>::Error;
@@ -553,22 +553,22 @@ where
     }
 }
 
-impl<T, C> AddAssign for Proxy<T, C>
+impl<T, C, E> AddAssign for Proxy<T, C>
 where
     T: Float + Primitive,
-    C: Constraint,
-    C::Divergence: NonResidual<Self>,
+    C: Constraint<Error = E>,
+    C::Divergence: NonResidual<Self, E>,
 {
     fn add_assign(&mut self, other: Self) {
         *self = *self + other;
     }
 }
 
-impl<T, C> AddAssign<T> for Proxy<T, C>
+impl<T, C, E> AddAssign<T> for Proxy<T, C>
 where
     T: Float + Primitive,
-    C: Constraint,
-    C::Divergence: NonResidual<Self>,
+    C: Constraint<Error = E>,
+    C::Divergence: NonResidual<Self, E>,
 {
     fn add_assign(&mut self, other: T) {
         *self = self.map(|inner| inner + other);
@@ -768,22 +768,22 @@ where
     }
 }
 
-impl<T, C> DivAssign for Proxy<T, C>
+impl<T, C, E> DivAssign for Proxy<T, C>
 where
     T: Float + Primitive,
-    C: Constraint,
-    C::Divergence: NonResidual<Self>,
+    C: Constraint<Error = E>,
+    C::Divergence: NonResidual<Self, E>,
 {
     fn div_assign(&mut self, other: Self) {
         *self = *self / other
     }
 }
 
-impl<T, C> DivAssign<T> for Proxy<T, C>
+impl<T, C, E> DivAssign<T> for Proxy<T, C>
 where
     T: Float + Primitive,
-    C: Constraint,
-    C::Divergence: NonResidual<Self>,
+    C: Constraint<Error = E>,
+    C::Divergence: NonResidual<Self, E>,
 {
     fn div_assign(&mut self, other: T) {
         *self = self.map(|inner| inner / other);
@@ -898,11 +898,11 @@ where
     }
 }
 
-impl<T, C> ForeignFloat for Proxy<T, C>
+impl<T, C, E> ForeignFloat for Proxy<T, C>
 where
     T: IntrinsicOrd + Float + ForeignFloat + Num + NumCast + Primitive,
-    C: Constraint + Member<InfinitySet> + Member<NanSet>,
-    C::Divergence: NonResidual<Self>,
+    C: Constraint<Error = E> + Member<InfinitySet> + Member<NanSet>,
+    C::Divergence: NonResidual<Self, E>,
 {
     fn infinity() -> Self {
         Infinite::INFINITY
@@ -1300,11 +1300,11 @@ where
     }
 }
 
-impl<T, C> FromStr for Proxy<T, C>
+impl<T, C, E> FromStr for Proxy<T, C>
 where
     T: Float + FromStr + Primitive,
-    C: Constraint,
-    C::Divergence: NonResidual<Self>,
+    C: Constraint<Error = E>,
+    C::Divergence: NonResidual<Self, E>,
 {
     type Err = <T as FromStr>::Err;
 
@@ -1377,22 +1377,22 @@ where
     }
 }
 
-impl<T, C> MulAssign for Proxy<T, C>
+impl<T, C, E> MulAssign for Proxy<T, C>
 where
     T: Float + Primitive,
-    C: Constraint,
-    C::Divergence: NonResidual<Self>,
+    C: Constraint<Error = E>,
+    C::Divergence: NonResidual<Self, E>,
 {
     fn mul_assign(&mut self, other: Self) {
         *self = *self * other;
     }
 }
 
-impl<T, C> MulAssign<T> for Proxy<T, C>
+impl<T, C, E> MulAssign<T> for Proxy<T, C>
 where
     T: Float + Primitive,
-    C: Constraint,
-    C::Divergence: NonResidual<Self>,
+    C: Constraint<Error = E>,
+    C::Divergence: NonResidual<Self, E>,
 {
     fn mul_assign(&mut self, other: T) {
         *self = *self * other;
@@ -1423,11 +1423,11 @@ where
     }
 }
 
-impl<T, C> Num for Proxy<T, C>
+impl<T, C, E> Num for Proxy<T, C>
 where
     T: Float + Primitive + Num,
-    C: Constraint,
-    C::Divergence: NonResidual<Self>,
+    C: Constraint<Error = E>,
+    C::Divergence: NonResidual<Self, E>,
 {
     // TODO: Differentiate between parse and contraint errors.
     type FromStrRadixErr = ();
@@ -1452,11 +1452,11 @@ where
     }
 }
 
-impl<T, C> One for Proxy<T, C>
+impl<T, C, E> One for Proxy<T, C>
 where
     T: Float + Primitive,
-    C: Constraint,
-    C::Divergence: NonResidual<Self>,
+    C: Constraint<Error = E>,
+    C::Divergence: NonResidual<Self, E>,
 {
     fn one() -> Self {
         UnaryReal::ONE
@@ -1519,11 +1519,11 @@ where
     }
 }
 
-impl<T, C> Product for Proxy<T, C>
+impl<T, C, E> Product for Proxy<T, C>
 where
     T: Float + Primitive,
-    C: Constraint,
-    C::Divergence: NonResidual<Self>,
+    C: Constraint<Error = E>,
+    C::Divergence: NonResidual<Self, E>,
 {
     fn product<I>(input: I) -> Self
     where
@@ -1581,33 +1581,33 @@ where
     }
 }
 
-impl<T, C> RemAssign for Proxy<T, C>
+impl<T, C, E> RemAssign for Proxy<T, C>
 where
     T: Float + Primitive,
-    C: Constraint,
-    C::Divergence: NonResidual<Self>,
+    C: Constraint<Error = E>,
+    C::Divergence: NonResidual<Self, E>,
 {
     fn rem_assign(&mut self, other: Self) {
         *self = *self % other;
     }
 }
 
-impl<T, C> RemAssign<T> for Proxy<T, C>
+impl<T, C, E> RemAssign<T> for Proxy<T, C>
 where
     T: Float + Primitive,
-    C: Constraint,
-    C::Divergence: NonResidual<Self>,
+    C: Constraint<Error = E>,
+    C::Divergence: NonResidual<Self, E>,
 {
     fn rem_assign(&mut self, other: T) {
         *self = self.map(|inner| inner % other);
     }
 }
 
-impl<T, C> Signed for Proxy<T, C>
+impl<T, C, E> Signed for Proxy<T, C>
 where
     T: Float + Primitive + Signed,
-    C: Constraint,
-    C::Divergence: NonResidual<Self>,
+    C: Constraint<Error = E>,
+    C::Divergence: NonResidual<Self, E>,
 {
     fn abs(&self) -> Self {
         self.map_unchecked(|inner| Signed::abs(&inner))
@@ -1654,33 +1654,33 @@ where
     }
 }
 
-impl<T, C> SubAssign for Proxy<T, C>
+impl<T, C, E> SubAssign for Proxy<T, C>
 where
     T: Float + Primitive,
-    C: Constraint,
-    C::Divergence: NonResidual<Self>,
+    C: Constraint<Error = E>,
+    C::Divergence: NonResidual<Self, E>,
 {
     fn sub_assign(&mut self, other: Self) {
         *self = *self - other
     }
 }
 
-impl<T, C> SubAssign<T> for Proxy<T, C>
+impl<T, C, E> SubAssign<T> for Proxy<T, C>
 where
     T: Float + Primitive,
-    C: Constraint,
-    C::Divergence: NonResidual<Self>,
+    C: Constraint<Error = E>,
+    C::Divergence: NonResidual<Self, E>,
 {
     fn sub_assign(&mut self, other: T) {
         *self = self.map(|inner| inner - other)
     }
 }
 
-impl<T, C> Sum for Proxy<T, C>
+impl<T, C, E> Sum for Proxy<T, C>
 where
     T: Float + Primitive,
-    C: Constraint,
-    C::Divergence: NonResidual<Self>,
+    C: Constraint<Error = E>,
+    C::Divergence: NonResidual<Self, E>,
 {
     fn sum<I>(input: I) -> Self
     where
@@ -1992,11 +1992,11 @@ where
     }
 }
 
-impl<T, C> Zero for Proxy<T, C>
+impl<T, C, E> Zero for Proxy<T, C>
 where
     T: Float + Primitive,
-    C: Constraint,
-    C::Divergence: NonResidual<Self>,
+    C: Constraint<Error = E>,
+    C::Divergence: NonResidual<Self, E>,
 {
     fn zero() -> Self {
         UnaryReal::ZERO
@@ -2059,9 +2059,9 @@ macro_rules! impl_foreign_real {
     };
     (proxy => $p:ident, primitive => $t:ty) => {
         #[cfg(feature = "std")]
-        impl<C> ForeignReal for $p<$t, C>
+        impl<D> ForeignReal for $p<$t, D>
         where
-            C: NonResidual<Self>,
+            D: NonResidual<Self, ConstraintViolation>,
         {
             fn max_value() -> Self {
                 Encoding::MAX_FINITE
@@ -2227,7 +2227,7 @@ macro_rules! impl_foreign_real {
 
             fn sin_cos(self) -> (Self, Self) {
                 let (sin, cos) = self.with_inner(ForeignReal::sin_cos);
-                ($p::<_, C>::new(sin), $p::<_, C>::new(cos))
+                ($p::<_, D>::new(sin), $p::<_, D>::new(cos))
             }
 
             fn sinh(self) -> Self {
@@ -2271,7 +2271,7 @@ macro_rules! impl_try_from {
     (proxy => $p:ident, primitive => $t:ty) => {
         impl<D> TryFrom<$t> for $p<$t, D>
         where
-            D: Diverge,
+            D: Diverge<ConstraintViolation>,
         {
             type Error = ConstraintViolation;
 
@@ -2282,7 +2282,7 @@ macro_rules! impl_try_from {
 
         impl<'a, D> TryFrom<&'a $t> for &'a $p<$t, D>
         where
-            D: Diverge,
+            D: Diverge<ConstraintViolation>,
         {
             type Error = ConstraintViolation;
 
@@ -2298,7 +2298,7 @@ macro_rules! impl_try_from {
 
         impl<'a, D> TryFrom<&'a mut $t> for &'a mut $p<$t, D>
         where
-            D: Diverge,
+            D: Diverge<ConstraintViolation>,
         {
             type Error = ConstraintViolation;
 

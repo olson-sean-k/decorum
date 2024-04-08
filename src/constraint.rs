@@ -116,7 +116,7 @@ where
 /// [`Member`]: crate::constraint::Member
 /// [`Proxy`]: crate::proxy::Proxy
 pub trait Constraint: Member<RealSet> {
-    type Divergence: Diverge;
+    type Divergence: Diverge<Self::Error>;
     type Error: Debug;
 
     // NOTE: It is not possible for constraints to map accepted values because of reference
@@ -127,7 +127,10 @@ pub trait Constraint: Member<RealSet> {
     where
         T: Float + Primitive;
 
-    fn diverge<T, U, F>(inner: T, f: F) -> <Self::Divergence as Diverge>::Branch<U, Self::Error>
+    fn diverge<T, U, F>(
+        inner: T,
+        f: F,
+    ) -> <Self::Divergence as Diverge<Self::Error>>::Branch<U, Self::Error>
     where
         T: Float + Primitive,
         U: ClosedProxy<Constraint = Self, Primitive = T>,
@@ -183,7 +186,7 @@ pub struct NotNanConstraint<D>(PhantomData<fn() -> D>, Infallible);
 
 impl<D> Constraint for NotNanConstraint<D>
 where
-    D: Diverge,
+    D: Diverge<ConstraintViolation>,
 {
     type Divergence = D;
     type Error = ConstraintViolation;
@@ -215,7 +218,7 @@ pub struct FiniteConstraint<D>(PhantomData<fn() -> D>, Infallible);
 
 impl<D> Constraint for FiniteConstraint<D>
 where
-    D: Diverge,
+    D: Diverge<ConstraintViolation>,
 {
     type Divergence = D;
     type Error = ConstraintViolation;

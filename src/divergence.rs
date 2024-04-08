@@ -161,21 +161,16 @@ impl Sealed for ResultBranch {}
 /// constructed from an output, the branch type is always constructed and returned.
 ///
 /// [`Proxy`]: crate::proxy::Proxy
-pub trait Diverge: Sealed {
-    type Branch<T, E>;
+pub trait Diverge<E>: Sealed {
+    type Branch<T, B>;
 
-    fn diverge<T, E>(result: Result<T, E>) -> Self::Branch<T, E>
-    where
-        E: Debug;
+    fn diverge<T>(result: Result<T, E>) -> Self::Branch<T, E>;
 }
 
-impl Diverge for Infallible {
-    type Branch<T, E> = T;
+impl Diverge<Infallible> for Infallible {
+    type Branch<T, B> = T;
 
-    fn diverge<T, E>(result: Result<T, E>) -> Self::Branch<T, E>
-    where
-        E: Debug,
-    {
+    fn diverge<T>(result: Result<T, Infallible>) -> Self::Branch<T, Infallible> {
         match result {
             Ok(output) => output,
             _ => unreachable!(),
@@ -186,16 +181,16 @@ impl Diverge for Infallible {
 /// A [`Divergence`] with a branch type that is the same as its output type.
 ///
 /// [`Divergence`]: crate::divergence::Divergence
-pub trait NonResidual<P>: Diverge<Branch<P, ErrorOf<P>> = P>
+pub trait NonResidual<P, E>: Diverge<E, Branch<P, ErrorOf<P>> = P>
 where
     P: ClosedProxy,
 {
 }
 
-impl<P, D> NonResidual<P> for D
+impl<P, E, D> NonResidual<P, E> for D
 where
     P: ClosedProxy,
-    D: Diverge<Branch<P, ErrorOf<P>> = P>,
+    D: Diverge<E, Branch<P, ErrorOf<P>> = P>,
 {
 }
 
@@ -213,16 +208,14 @@ where
 /// [`Result`]: core::result::Result
 pub struct Assert<C = OutputBranch>(PhantomData<fn() -> C>, Infallible);
 
-impl<C> Diverge for Assert<C>
+impl<C, E> Diverge<E> for Assert<C>
 where
     C: Continue,
+    E: Debug,
 {
-    type Branch<T, E> = C::Branch<T, E>;
+    type Branch<T, B> = C::Branch<T, B>;
 
-    fn diverge<T, E>(result: Result<T, E>) -> Self::Branch<T, E>
-    where
-        E: Debug,
-    {
+    fn diverge<T>(result: Result<T, E>) -> Self::Branch<T, E> {
         C::continue_with_output(result.expect_constrained())
     }
 }
@@ -239,16 +232,13 @@ impl<C> Sealed for Assert<C> {}
 /// [`ExpressionBranch`]: crate::divergence::ExpressionBranch
 pub struct Try<C = ExpressionBranch>(PhantomData<fn() -> C>, Infallible);
 
-impl<C> Diverge for Try<C>
+impl<C, E> Diverge<E> for Try<C>
 where
     C: Break,
 {
-    type Branch<T, E> = C::Branch<T, E>;
+    type Branch<T, B> = C::Branch<T, B>;
 
-    fn diverge<T, E>(result: Result<T, E>) -> Self::Branch<T, E>
-    where
-        E: Debug,
-    {
+    fn diverge<T>(result: Result<T, E>) -> Self::Branch<T, E> {
         match result {
             Ok(output) => C::continue_with_output(output),
             Err(error) => C::break_with_error(error),
