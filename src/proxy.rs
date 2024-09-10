@@ -420,8 +420,9 @@ where
     ///
     /// Returns an error if the primitive floating-point value does not satisfy the constraints of
     /// the proxy **and** the [divergence][`divergence`] of the proxy encodes errors in its branch
-    /// type. For example, the branch type of the [`TryExpression`] divergence is [`Expression`]
-    /// and this function returns the [`Undefined`] variant if the constraint is violated.
+    /// type. For example, the branch type of the `Try<ExpressionKind>` divergence is
+    /// [`Expression`] and this function returns the [`Undefined`] variant if the constraint is
+    /// violated.
     ///
     /// # Examples
     ///
@@ -429,11 +430,11 @@ where
     ///
     /// ```rust
     /// use decorum::constraint::FiniteConstraint;
-    /// use decorum::divergence::{ResultBranch, Try};
+    /// use decorum::divergence::{ThenResult, Try};
     /// use decorum::proxy::Proxy;
     ///
     /// // The branch type of `Real` is `Result`.
-    /// type Real = Proxy<f64, FiniteConstraint<Try<ResultBranch>>>;
+    /// type Real = Proxy<f64, FiniteConstraint<Try<ThenResult>>>;
     ///
     /// let x = Real::new(2.0).unwrap(); // The output type of `new` is `Result` per `TryResult`.
     /// ```
@@ -456,7 +457,6 @@ where
     /// [`divergence`]: crate::divergence
     /// [`Expression`]: crate::expression::Expression
     /// [`Total`]: crate::Total
-    /// [`TryExpression`]: crate::divergence::TryExpression
     /// [`Undefined`]: crate::expression::Expression::Undefined
     pub fn new(inner: T) -> BranchOf<Self> {
         C::diverge(inner, |inner| Proxy {

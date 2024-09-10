@@ -12,6 +12,45 @@ features, does **not** require the `std` nor `alloc` libraries.
 [![docs.rs](https://img.shields.io/badge/docs.rs-decorum-66c2a5?logo=rust&style=for-the-badge)](https://docs.rs/decorum)
 [![crates.io](https://img.shields.io/crates/v/decorum.svg?logo=rust&style=for-the-badge)](https://crates.io/crates/decorum)
 
+## Basic Usage
+
+Panic when a `NaN` is encountered:
+
+```rust
+use decorum::NotNan;
+
+let x = NotNan::<f64>::assert(0.0);
+let y = NotNan::<f64>::assert(0.0);
+let z = x / y; // Panics.
+```
+
+Hash totally ordered IEEE 754 floating-point representations:
+
+```rust
+use decorum::Finite;
+use std::collections::HashMap;
+
+let key = Finite::<f64>::assert(3.14159);
+let mut xs: HashMap<_, _> = [(key, "pi")].into_iter().collect();
+```
+
+Configure the behavior of an IEEE 754 floating-point representation:
+
+```rust
+use decorum::constraint::FiniteConstraint;
+use decorum::divergence::{ThenResult, Try};
+use decorum::proxy::{BranchOf, Proxy};
+
+// A 64-bit floating point type that must represent a real number and returns
+// `Result`s from fallible operations.
+pub type Real = Proxy<f64, FiniteConstraint<Try<ThenResult>>>;
+pub type Result = BranchOf<Real>;
+
+let x = Real::assert(0.0);
+let y = Real::assert(0.0);
+let z = (x / y)?;
+```
+
 ## Proxy Types
 
 The primary API of Decorum is its `Proxy` types, which transparently wrap
@@ -68,48 +107,47 @@ and does not accept a divergence.
 
 Many operations on members of these subsets may produce values from other
 subsets that are illegal w.r.t. constraints, such as the addition of two real
-numbers resulting in `+INF`. A divergence type determines both the behavior when
-an illegal value is encountered as well as the output type of such fallible
-operations.
+numbers resulting in `+INF`. A divergence marker type determines both the
+behavior when an illegal value is encountered as well as the output type of such
+fallible operations.
 
-| Divergence | OK       | Error     | Default Branch Kind |
-|------------|----------|-----------|---------------------|
-| `Assert`   | continue | **panic** | `OutputBranch`      |
-| `Try`      | continue | break     | `ExpressionBranch`  |
+| Divergence | OK       | Error     | Default Branch Marker Type |
+|------------|----------|-----------|----------------------------|
+| `Assert`   | continue | **panic** | `ThenSelf`                 |
+| `Try`      | continue | break     | `ThenExpression`           |
 
 In the above table, _continue_ refers to returning a **non**-error value while
 _break_ refers to returning an error value. If an illegal value is encountered,
 then **the `Assert` divergence panics** while the `Try` divergence constructs a
 value that encodes the error. The output type of fallible operations is the
-_branch_ type and it is determined by an optional _branch kind_ type parameter:
+_branch type_ and it is determined by an optional marker type parameter:
 
-| Branch Kind        | Branch Type        | Continue     | Break          |
+| Branch Marker Type | Branch Type        | Continue     | Break          |
 |--------------------|--------------------|--------------|----------------|
-| `OutputBranch`     | `T`                | `T`          |                |
-| `OptionBranch`     | `Option<T>`        | `Some(T)`    | `None`         |
-| `ResultBranch`     | `Result<T, E>`     | `Ok(T)`      | `Err(E)`       |
-| `ExpressionBranch` | `Expression<T, E>` | `Defined(T)` | `Undefined(E)` |
+| `ThenSelf`         | `T`                | `T`          |                |
+| `ThenOption`       | `Option<T>`        | `Some(T)`    | `None`         |
+| `ThenResult`       | `Result<T, E>`     | `Ok(T)`      | `Err(E)`       |
+| `ThenExpression`   | `Expression<T, E>` | `Defined(T)` | `Undefined(E)` |
 
 In the table above, `T` refers to a `Proxy` type and `E` refers to the
 associated error type of its constraint. Note that only the `Assert` divergence
-supports `OutputBranch` and can output the same type as its input type (`T`) for
+supports `ThenSelf` and can output the same type as its input type (`T`) for
 fallible operations (just like primitive IEEE 754 floating-point types).
 
-With the sole exception of `OutputBranch`, the branch type of fallible
-operations is extrinsic: fallible operations produce types that differ from
-their input types. The `Expression` type, which resembles the standard `Result`
-type, improves the ergonomics of error handling by supporting mathematical
-traits such that it can be used directly in expressions and defer error
-checking.
+With the sole exception of `ThenSelf`, the branch type of fallible operations is
+extrinsic: fallible operations produce types that differ from their input types.
+The `Expression` type, which resembles the standard `Result` type, improves the
+ergonomics of error handling by supporting mathematical traits such that it can
+be used directly in expressions and defer error checking.
 
 ```rust
 use decorum::constraint::FiniteConstraint;
-use decorum::divergence::Try;
+use decorum::divergence::{ThenExpression, Try};
 use decorum::proxy::{BranchOf, Proxy};
 use decorum::real::UnaryReal as _;
 use decorum::try_expression;
 
-pub type Real = Proxy<f64, FiniteConstraint<Try>>;
+pub type Real = Proxy<f64, FiniteConstraint<Try<ThenExpression>>>;
 pub type Expr = BranchOf<Real>;
 
 pub fn f(x: Real, y: Real) -> Expr {
@@ -226,13 +264,13 @@ where
 ## Mathematical Traits
 
 The `real` module provides various traits that describe real numbers and
-constructions via IEEE 765 floating-point types. These traits model functions
+constructions via IEEE 754 floating-point types. These traits model functions
 and operations on real numbers and specify a codomain for functions where the
 output is not mathematically confined to the reals or a floating-point exception
 may yield a non-real approximation or error. For example, the logarithm of zero
-is undefined and the sum of two very large reals results in an infinity in
-floating-point encoding. For proxy types, the codomain is the same as the branch
-type of the divergence of the type (see above).
+is undefined and the sum of two very large reals results in an infinity in IEEE
+754. For proxy types, the codomain is the same as the branch type of its
+divergence (see above).
 
 Real number and IEEE 754 encoding traits can both be used for generic
 programming. The following code demonstrates a function that accepts types that

@@ -8,7 +8,7 @@ use core::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 use crate::cmp::UndefinedError;
 use crate::constraint::Constraint;
-use crate::divergence::{ExpressionBranch, Try};
+use crate::divergence::{ThenExpression, Try};
 use crate::proxy::{ErrorOf, ExpressionOf, Proxy};
 use crate::real::{BinaryReal, Function, Sign, UnaryReal};
 use crate::{with_binary_operations, with_primitives, Float, Infinite, Primitive};
@@ -23,7 +23,7 @@ pub use Expression::Undefined;
 /// macro) is the accompanying value. Otherwise, the error in the `Undefined` variant is converted
 /// via [`From`] and returned in the constructed [`Expression`].
 ///
-/// [`Expression`]: crate::Expression
+/// [`Expression`]: crate::expression::Expression
 /// [`From`]: core::convert::From
 /// [`Result`]: core::result::Result
 /// [`try`]: core::try
@@ -84,11 +84,11 @@ macro_rules! try_expression {
 ///
 /// ```rust
 /// use decorum::constraint::FiniteConstraint;
-/// use decorum::divergence::{ResultBranch, Try};
+/// use decorum::divergence::{ThenResult, Try};
 /// use decorum::proxy::{BranchOf, Proxy};
 /// use decorum::real::UnaryReal;
 ///
-/// pub type Real = Proxy<f64, FiniteConstraint<Try<ResultBranch>>>;
+/// pub type Real = Proxy<f64, FiniteConstraint<Try<ThenResult>>>;
 /// pub type RealResult = BranchOf<Real>;
 ///
 /// # fn fallible() -> RealResult {
@@ -111,11 +111,11 @@ macro_rules! try_expression {
 ///
 /// ```rust,ignore
 /// use decorum::constraint::FiniteConstraint;
-/// use decorum::divergence::{ExpressionBranch, Try};
+/// use decorum::divergence::{ThenExpression, Try};
 /// use decorum::proxy::{BranchOf, Proxy};
 /// use decorum::real::UnaryReal;
 ///
-/// pub type Real = Proxy<f64, FiniteConstraint<Try<ExpressionBranch>>>;
+/// pub type Real = Proxy<f64, FiniteConstraint<Try<ThenExpression>>>;
 /// pub type Expr = BranchOf<Real>;
 ///
 /// # fn fallible() -> Expr {
@@ -249,7 +249,7 @@ impl<T, C> BinaryReal for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
     T: Float + Primitive,
-    C: Constraint<Divergence = Try<ExpressionBranch>>,
+    C: Constraint<Divergence = Try<ThenExpression>>,
 {
     #[cfg(feature = "std")]
     fn div_euclid(self, n: Self) -> Self::Codomain {
@@ -286,7 +286,7 @@ impl<T, C> BinaryReal<T> for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
     T: Float + Primitive,
-    C: Constraint<Divergence = Try<ExpressionBranch>>,
+    C: Constraint<Divergence = Try<ThenExpression>>,
 {
     #[cfg(feature = "std")]
     fn div_euclid(self, n: T) -> Self::Codomain {
@@ -341,7 +341,7 @@ impl<T, C> BinaryReal<Proxy<T, C>> for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
     T: Float + Primitive,
-    C: Constraint<Divergence = Try<ExpressionBranch>>,
+    C: Constraint<Divergence = Try<ThenExpression>>,
 {
     #[cfg(feature = "std")]
     fn div_euclid(self, n: Proxy<T, C>) -> Self::Codomain {
@@ -378,7 +378,7 @@ impl<T, C> BinaryReal<ExpressionOf<Proxy<T, C>>> for Proxy<T, C>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
     T: Float + Primitive,
-    C: Constraint<Divergence = Try<ExpressionBranch>>,
+    C: Constraint<Divergence = Try<ThenExpression>>,
 {
     #[cfg(feature = "std")]
     fn div_euclid(self, n: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
@@ -425,7 +425,7 @@ impl<'a, T, C> From<&'a T> for ExpressionOf<Proxy<T, C>>
 where
     Proxy<T, C>: TryFrom<&'a T, Error = C::Error>,
     T: Float + Primitive,
-    C: Constraint<Divergence = Try<ExpressionBranch>>,
+    C: Constraint<Divergence = Try<ThenExpression>>,
 {
     fn from(inner: &'a T) -> Self {
         Proxy::<T, C>::try_from(inner).into()
@@ -436,7 +436,7 @@ impl<'a, T, C> From<&'a mut T> for ExpressionOf<Proxy<T, C>>
 where
     Proxy<T, C>: TryFrom<&'a mut T, Error = C::Error>,
     T: Float + Primitive,
-    C: Constraint<Divergence = Try<ExpressionBranch>>,
+    C: Constraint<Divergence = Try<ThenExpression>>,
 {
     fn from(inner: &'a mut T) -> Self {
         Proxy::<T, C>::try_from(inner).into()
@@ -485,7 +485,7 @@ impl<T, C> Function for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: UndefinedError,
     T: Float + Primitive,
-    C: Constraint<Divergence = Try<ExpressionBranch>>,
+    C: Constraint<Divergence = Try<ThenExpression>>,
 {
     type Codomain = Self;
 }
@@ -495,7 +495,7 @@ where
     ErrorOf<Proxy<T, C>>: Copy,
     Proxy<T, C>: Infinite,
     T: Float + Primitive,
-    C: Constraint<Divergence = Try<ExpressionBranch>>,
+    C: Constraint<Divergence = Try<ThenExpression>>,
 {
     const INFINITY: Self = Defined(Infinite::INFINITY);
     const NEG_INFINITY: Self = Defined(Infinite::NEG_INFINITY);
@@ -513,7 +513,7 @@ where
 impl<T, C> Neg for ExpressionOf<Proxy<T, C>>
 where
     T: Float + Primitive,
-    C: Constraint<Divergence = Try<ExpressionBranch>>,
+    C: Constraint<Divergence = Try<ThenExpression>>,
 {
     type Output = Self;
 
@@ -567,7 +567,7 @@ impl<T, C> UnaryReal for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
     T: Float + Primitive,
-    C: Constraint<Divergence = Try<ExpressionBranch>>,
+    C: Constraint<Divergence = Try<ThenExpression>>,
 {
     const ZERO: Self = Defined(UnaryReal::ZERO);
     const ONE: Self = Defined(UnaryReal::ONE);
@@ -783,7 +783,7 @@ macro_rules! impl_binary_operation {
             (primitive => $t:ty) => {
                 impl<C> $trait<ExpressionOf<Proxy<$t, C>>> for $t
                 where
-                    C: Constraint<Divergence = Try<ExpressionBranch>>,
+                    C: Constraint<Divergence = Try<ThenExpression>>,
                 {
                     type Output = ExpressionOf<Proxy<$t, C>>;
 
@@ -800,7 +800,7 @@ macro_rules! impl_binary_operation {
         impl<T, C> $trait<ExpressionOf<Self>> for Proxy<T, C>
         where
             T: Float + Primitive,
-            C: Constraint<Divergence = Try<ExpressionBranch>>,
+            C: Constraint<Divergence = Try<ThenExpression>>,
         {
             type Output = ExpressionOf<Self>;
 
@@ -814,7 +814,7 @@ macro_rules! impl_binary_operation {
         impl<T, C> $trait<Proxy<T, C>> for ExpressionOf<Proxy<T, C>>
         where
             T: Float + Primitive,
-            C: Constraint<Divergence = Try<ExpressionBranch>>,
+            C: Constraint<Divergence = Try<ThenExpression>>,
         {
             type Output = Self;
 
@@ -828,7 +828,7 @@ macro_rules! impl_binary_operation {
         impl<T, C> $trait<ExpressionOf<Proxy<T, C>>> for ExpressionOf<Proxy<T, C>>
         where
             T: Float + Primitive,
-            C: Constraint<Divergence = Try<ExpressionBranch>>,
+            C: Constraint<Divergence = Try<ThenExpression>>,
         {
             type Output = Self;
 
@@ -842,7 +842,7 @@ macro_rules! impl_binary_operation {
         impl<T, C> $trait<T> for ExpressionOf<Proxy<T, C>>
         where
             T: Float + Primitive,
-            C: Constraint<Divergence = Try<ExpressionBranch>>,
+            C: Constraint<Divergence = Try<ThenExpression>>,
         {
             type Output = Self;
 

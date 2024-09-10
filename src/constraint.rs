@@ -17,14 +17,14 @@
 //!
 //! [`NotNan`], [`Finite`], and their corresponding constraints disallow certain IEEE 754 values.
 //! Because the output of some floating-point operations may yield these values (even when the
-//! inputs are real numbers), these constraints must specify a [`Divergence`], which determines the
-//! behavior of [`Proxy`]s when such a value is encountered. These proxy type definitions specify
-//! the [`Assert`] divergence by default, **which panics when a disallowed value is encountered.**
+//! inputs are real numbers), these constraints must specify a [divergence][`divergence`], which
+//! determines the behavior of [`Proxy`]s when such a value is encountered. These proxy type
+//! definitions specify the [`Assert`] divergence by default, **which panics when a disallowed
+//! value is encountered.**
 //!
 //! [`Assert`]: crate::divergence::Assert
 //! [`cmp`]: crate::cmp
 //! [`divergence`]: crate::divergence
-//! [`Divergence`]: crate::divergence::Divergence
 //! [`Finite`]: crate::Finite
 //! [`FiniteConstraint`]: crate::constraint::FiniteConstraint
 //! [`NotNan`]: crate::NotNan
