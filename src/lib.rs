@@ -79,10 +79,10 @@
 //!
 //! ```rust
 //! use decorum::constraint::FiniteConstraint;
-//! use decorum::divergence::Try;
+//! use decorum::divergence::OrError;
 //! use decorum::proxy::{BranchOf, Proxy};
 //!
-//! type Real = Proxy<f64, FiniteConstraint<Try>>;
+//! type Real = Proxy<f64, FiniteConstraint<OrError>>;
 //! type Expr = BranchOf<Real>;
 //!
 //! fn f(x: Real, y: Real) -> Expr {
@@ -101,11 +101,11 @@
 //!
 //! ```rust,ignore
 //! use decorum::constraint::FiniteConstraint;
-//! use decorum::divergence::Try;
+//! use decorum::divergence::OrError;
 //! use decorum::proxy::{BranchOf, Proxy};
 //! use decorum::real::UnaryReal;
 //!
-//! type Real = Proxy<f64, FiniteConstraint<Try>>;
+//! type Real = Proxy<f64, FiniteConstraint<OrError>>;
 //! type Expr = BranchOf<Real>;
 //!
 //! # fn fallible() -> Expr {
@@ -169,7 +169,7 @@ use num_traits::{PrimInt, Unsigned};
 
 use crate::cmp::IntrinsicOrd;
 use crate::constraint::{FiniteConstraint, NotNanConstraint, UnitConstraint};
-use crate::divergence::Assert;
+use crate::divergence::OrPanic;
 use crate::proxy::Proxy;
 use crate::real::{BinaryReal, Function, Real, Sign, UnaryReal};
 
@@ -208,26 +208,26 @@ pub type Total<T> = Proxy<T, UnitConstraint>;
 /// [`NotNanConstraint`]: crate::constraint::NotNanConstraint
 /// [`Proxy`]: crate::proxy::Proxy
 /// [`Total`]: crate::Total
-pub type NotNan<T, D = Assert> = Proxy<T, NotNanConstraint<D>>;
+pub type NotNan<T, D = OrPanic> = Proxy<T, NotNanConstraint<D>>;
 
 /// 32-bit IEEE 754 floating-point representation that cannot be `NaN`.
-pub type N32<D = Assert> = NotNan<f32, D>;
+pub type N32<D = OrPanic> = NotNan<f32, D>;
 /// 64-bit IEEE 754 floating-point representation that cannot be `NaN`.
-pub type N64<D = Assert> = NotNan<f64, D>;
+pub type N64<D = OrPanic> = NotNan<f64, D>;
 
 /// IEEE 754 floating-point representation that must be a real number.
-pub type Finite<T, D = Assert> = Proxy<T, FiniteConstraint<D>>;
+pub type Finite<T, D = OrPanic> = Proxy<T, FiniteConstraint<D>>;
 
 /// 32-bit IEEE 754 floating-point representation that must be a real number.
 ///
 /// The prefix "R" for _real_ is used instead of "F" for _finite_, because if "F" were used, then
 /// this name would be too similar to `f32`.
-pub type R32<D = Assert> = Finite<f32, D>;
+pub type R32<D = OrPanic> = Finite<f32, D>;
 /// 64-bit IEEE 754 floating-point representation that must be a real number.
 ///
 /// The prefix "R" for _real_ is used instead of "F" for _finite_, because if "F" were used, then
 /// this name would be too similar to `f64`.
-pub type R64<D = Assert> = Finite<f64, D>;
+pub type R64<D = OrPanic> = Finite<f64, D>;
 
 // TODO: Inverse the relationship between `Encoding` and `ToCanonicalBits` such that `Encoding`
 //       requires `ToCanonicalBits`.
@@ -422,7 +422,7 @@ pub trait Primitive: Copy + Sealed {}
 fn _sanity() {
     use crate::real::FloatEndoreal;
 
-    type Real = Proxy<f64, FiniteConstraint<Assert>>;
+    type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
 
     fn f<T>(x: T) -> T
     where

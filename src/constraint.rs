@@ -42,7 +42,7 @@ use core::marker::PhantomData;
 use thiserror::Error;
 
 use crate::cmp::UndefinedError;
-use crate::divergence::Diverge;
+use crate::divergence::Divergence;
 use crate::proxy::ClosedProxy;
 use crate::sealed::Sealed;
 use crate::{Float, Primitive};
@@ -116,7 +116,7 @@ where
 /// [`Member`]: crate::constraint::Member
 /// [`Proxy`]: crate::proxy::Proxy
 pub trait Constraint: Member<RealSet> {
-    type Divergence: Diverge<Self::Error>;
+    type Divergence: Divergence<Self::Error>;
     type Error: Debug;
 
     // NOTE: It is not possible for constraints to map accepted values because of reference
@@ -130,7 +130,7 @@ pub trait Constraint: Member<RealSet> {
     fn diverge<T, U, F>(
         inner: T,
         f: F,
-    ) -> <Self::Divergence as Diverge<Self::Error>>::Branch<U, Self::Error>
+    ) -> <Self::Divergence as Divergence<Self::Error>>::Branch<U, Self::Error>
     where
         T: Float + Primitive,
         U: ClosedProxy<Constraint = Self, Primitive = T>,
@@ -186,7 +186,7 @@ pub struct NotNanConstraint<D>(PhantomData<fn() -> D>, Infallible);
 
 impl<D> Constraint for NotNanConstraint<D>
 where
-    D: Diverge<ConstraintViolation>,
+    D: Divergence<ConstraintViolation>,
 {
     type Divergence = D;
     type Error = ConstraintViolation;
@@ -218,7 +218,7 @@ pub struct FiniteConstraint<D>(PhantomData<fn() -> D>, Infallible);
 
 impl<D> Constraint for FiniteConstraint<D>
 where
-    D: Diverge<ConstraintViolation>,
+    D: Divergence<ConstraintViolation>,
 {
     type Divergence = D;
     type Error = ConstraintViolation;

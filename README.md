@@ -27,10 +27,11 @@ let z = x / y; // Panics.
 Hash totally ordered IEEE 754 floating-point representations:
 
 ```rust
+use decorum::real::UnaryReal;
 use decorum::Finite;
 use std::collections::HashMap;
 
-let key = Finite::<f64>::assert(3.14159);
+let key = Finite::<f64>::PI;
 let mut xs: HashMap<_, _> = [(key, "pi")].into_iter().collect();
 ```
 
@@ -38,12 +39,12 @@ Configure the behavior of an IEEE 754 floating-point representation:
 
 ```rust
 use decorum::constraint::FiniteConstraint;
-use decorum::divergence::{ThenResult, Try};
+use decorum::divergence::{AsResult, OrError};
 use decorum::proxy::{BranchOf, Proxy};
 
 // A 64-bit floating point type that must represent a real number and returns
 // `Result`s from fallible operations.
-pub type Real = Proxy<f64, FiniteConstraint<Try<ThenResult>>>;
+pub type Real = Proxy<f64, FiniteConstraint<OrError<AsResult>>>;
 pub type Result = BranchOf<Real>;
 
 let x = Real::assert(0.0);
@@ -75,11 +76,11 @@ using two mechanisms: _constraints_ and _divergence_.
 
 ```rust
 use decorum::constraint::FiniteConstraint;
-use decorum::divergence::Assert;
+use decorum::divergence::OrPanic;
 use decorum::proxy::Proxy;
 
 // `Real` must represent a real number and otherwise panics.
-pub type Real = Proxy<f64, FiniteConstraint<Assert>>;
+pub type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
 ```
 
 Constraints specify a subset of floating-point values that a proxy may
@@ -107,47 +108,47 @@ and does not accept a divergence.
 
 Many operations on members of these subsets may produce values from other
 subsets that are illegal w.r.t. constraints, such as the addition of two real
-numbers resulting in `+INF`. A divergence marker type determines both the
-behavior when an illegal value is encountered as well as the output type of such
-fallible operations.
+numbers resulting in `+INF`. A _divergence_ type determines both the behavior
+when an illegal value is encountered as well as the output type of such fallible
+operations.
 
-| Divergence | OK       | Error     | Default Branch Marker Type |
-|------------|----------|-----------|----------------------------|
-| `Assert`   | continue | **panic** | `ThenSelf`                 |
-| `Try`      | continue | break     | `ThenExpression`           |
+| Divergence | OK       | Error     | Default Branch |
+|------------|----------|-----------|----------------|
+| `OrPanic`  | continue | **panic** | `AsSelf`       |
+| `OrError`  | continue | break     | `AsExpression` |
 
 In the above table, _continue_ refers to returning a **non**-error value while
 _break_ refers to returning an error value. If an illegal value is encountered,
-then **the `Assert` divergence panics** while the `Try` divergence constructs a
-value that encodes the error. The output type of fallible operations is the
-_branch type_ and it is determined by an optional marker type parameter:
+then **the `OrPanic` divergence panics** while the `OrError` divergence
+constructs a value that encodes the error. The output type of fallible
+operations is determined by a _branch_ type:
 
-| Branch Marker Type | Branch Type        | Continue     | Break          |
-|--------------------|--------------------|--------------|----------------|
-| `ThenSelf`         | `T`                | `T`          |                |
-| `ThenOption`       | `Option<T>`        | `Some(T)`    | `None`         |
-| `ThenResult`       | `Result<T, E>`     | `Ok(T)`      | `Err(E)`       |
-| `ThenExpression`   | `Expression<T, E>` | `Defined(T)` | `Undefined(E)` |
+| Branch         | Type                  | Continue        | Break          |
+|----------------|-----------------------|-----------------|----------------|
+| `AsSelf`       | `Self`                | `Self`          |                |
+| `AsOption`     | `Option<Self>`        | `Some(Self)`    | `None`         |
+| `AsResult`     | `Result<Self, E>`     | `Ok(Self)`      | `Err(E)`       |
+| `AsExpression` | `Expression<Self, E>` | `Defined(Self)` | `Undefined(E)` |
 
-In the table above, `T` refers to a `Proxy` type and `E` refers to the
-associated error type of its constraint. Note that only the `Assert` divergence
-supports `ThenSelf` and can output the same type as its input type (`T`) for
-fallible operations (just like primitive IEEE 754 floating-point types).
+In the table above, `Self` refers to a `Proxy` type and `E` refers to the
+associated error type of its constraint. Note that only the `OrPanic` divergence
+supports `AsSelf` and can output the same type as its input type for fallible
+operations (just like primitive IEEE 754 floating-point types).
 
-With the sole exception of `ThenSelf`, the branch type of fallible operations is
+With the sole exception of `AsSelf`, the output type of fallible operations is
 extrinsic: fallible operations produce types that differ from their input types.
-The `Expression` type, which resembles the standard `Result` type, improves the
-ergonomics of error handling by supporting mathematical traits such that it can
-be used directly in expressions and defer error checking.
+The `Expression` type, which somewhat resembles the standard `Result` type,
+improves the ergonomics of error handling by implementing mathematical traits
+such that it can be used directly in expressions and defer error checking.
 
 ```rust
 use decorum::constraint::FiniteConstraint;
-use decorum::divergence::{ThenExpression, Try};
+use decorum::divergence::{AsExpression, OrError};
 use decorum::proxy::{BranchOf, Proxy};
 use decorum::real::UnaryReal as _;
 use decorum::try_expression;
 
-pub type Real = Proxy<f64, FiniteConstraint<Try<ThenExpression>>>;
+pub type Real = Proxy<f64, FiniteConstraint<OrError<AsExpression>>>;
 pub type Expr = BranchOf<Real>;
 
 pub fn f(x: Real, y: Real) -> Expr {

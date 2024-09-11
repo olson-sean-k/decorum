@@ -50,7 +50,7 @@ use crate::constraint::{
     Constraint, ConstraintViolation, ExpectConstrained, InfinitySet, Member, NanSet, SubsetOf,
     SupersetOf,
 };
-use crate::divergence::{Diverge, NonResidual};
+use crate::divergence::{Divergence, NonResidual};
 use crate::expression::Expression;
 use crate::hash::FloatHash;
 use crate::real::{BinaryReal, Function, Sign, UnaryReal};
@@ -61,7 +61,7 @@ use crate::{
     NotNan, Primitive, ToCanonicalBits, Total,
 };
 
-pub type BranchOf<P> = <DivergenceOf<P> as Diverge<ErrorOf<P>>>::Branch<P, ErrorOf<P>>;
+pub type BranchOf<P> = <DivergenceOf<P> as Divergence<ErrorOf<P>>>::Branch<P, ErrorOf<P>>;
 pub type ConstraintOf<P> = <P as ClosedProxy>::Constraint;
 pub type DivergenceOf<P> = <ConstraintOf<P> as Constraint>::Divergence;
 pub type ErrorOf<P> = <ConstraintOf<P> as Constraint>::Error;
@@ -217,10 +217,10 @@ where
     ///
     /// ```rust
     /// use decorum::constraint::FiniteConstraint;
-    /// use decorum::divergence::Assert;
+    /// use decorum::divergence::OrPanic;
     /// use decorum::proxy::Proxy;
     ///
-    /// type Real = Proxy<f64, FiniteConstraint<Assert>>;
+    /// type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
     ///
     /// fn f(x: Real) -> Real {
     ///     x * 2.0
@@ -235,10 +235,10 @@ where
     ///
     /// ```rust,should_panic
     /// use decorum::constraint::FiniteConstraint;
-    /// use decorum::divergence::Assert;
+    /// use decorum::divergence::OrPanic;
     /// use decorum::proxy::Proxy;
     ///
-    /// type Real = Proxy<f64, FiniteConstraint<Assert>>;
+    /// type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
     ///
     /// // `FiniteConstraint` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
     /// let x = Real::try_new(0.0 / 0.0).unwrap(); // Panics when unwrapping.
@@ -274,10 +274,10 @@ where
     ///
     /// ```rust
     /// use decorum::constraint::FiniteConstraint;
-    /// use decorum::divergence::Assert;
+    /// use decorum::divergence::OrPanic;
     /// use decorum::proxy::Proxy;
     ///
-    /// type Real = Proxy<f64, FiniteConstraint<Assert>>;
+    /// type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
     ///
     /// fn f(x: Real) -> Real {
     ///     x * 2.0
@@ -290,10 +290,10 @@ where
     ///
     /// ```rust,should_panic
     /// use decorum::constraint::FiniteConstraint;
-    /// use decorum::divergence::Assert;
+    /// use decorum::divergence::OrPanic;
     /// use decorum::proxy::Proxy;
     ///
-    /// type Real = Proxy<f64, FiniteConstraint<Assert>>;
+    /// type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
     ///
     /// // `FiniteConstraint` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
     /// let x = Real::assert(0.0 / 0.0); // Panics.
@@ -311,11 +311,11 @@ where
     /// # Examples
     ///
     /// ```rust
-    /// use decorum::divergence::Assert;
+    /// use decorum::divergence::OrPanic;
     /// use decorum::real::UnaryReal;
     /// use decorum::{N64, R64};
     ///
-    /// let x = R64::<Assert>::ZERO;
+    /// let x = R64::<OrPanic>::ZERO;
     /// let y = N64::from_subset(x); // `N64` allows a superset of the values of `R64`.
     /// ```
     pub fn from_subset<C2>(other: Proxy<T, C2>) -> Self
@@ -414,7 +414,7 @@ where
     ///
     /// This function panics if the primitive floating-point value does not satisfy the constraints
     /// of the proxy **and** the [divergence][`divergence`] of the proxy panics. For example, the
-    /// [`Assert`] divergence asserts constraints and panics.
+    /// [`OrPanic`] divergence asserts constraints and panics.
     ///
     /// # Errors
     ///
@@ -430,11 +430,11 @@ where
     ///
     /// ```rust
     /// use decorum::constraint::FiniteConstraint;
-    /// use decorum::divergence::{ThenResult, Try};
+    /// use decorum::divergence::{AsResult, OrError};
     /// use decorum::proxy::Proxy;
     ///
     /// // The branch type of `Real` is `Result`.
-    /// type Real = Proxy<f64, FiniteConstraint<Try<ThenResult>>>;
+    /// type Real = Proxy<f64, FiniteConstraint<OrError<AsResult>>>;
     ///
     /// let x = Real::new(2.0).unwrap(); // The output type of `new` is `Result` per `TryResult`.
     /// ```
@@ -443,19 +443,19 @@ where
     ///
     /// ```rust,should_panic
     /// use decorum::constraint::FiniteConstraint;
-    /// use decorum::divergence::Assert;
+    /// use decorum::divergence::OrPanic;
     /// use decorum::proxy::Proxy;
     ///
-    /// // The branch type of `Assert` is `Real`.
-    /// type Real = Proxy<f64, FiniteConstraint<Assert>>;
+    /// // The branch type of `OrPanic` is `Real`.
+    /// type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
     ///
-    /// let x = Real::new(2.0); // The output type of `new` is `Real` per `Assert`.
+    /// let x = Real::new(2.0); // The output type of `new` is `Real` per `OrPanic`.
     /// let y = Real::new(0.0 / 0.0); // Panics.
     /// ```
     ///
-    /// [`Assert`]: crate::divergence::Assert
     /// [`divergence`]: crate::divergence
     /// [`Expression`]: crate::expression::Expression
+    /// [`OrPanic`]: crate::divergence::OrPanic
     /// [`Total`]: crate::Total
     /// [`Undefined`]: crate::expression::Expression::Undefined
     pub fn new(inner: T) -> BranchOf<Self> {
@@ -2271,7 +2271,7 @@ macro_rules! impl_try_from {
     (proxy => $p:ident, primitive => $t:ty) => {
         impl<D> TryFrom<$t> for $p<$t, D>
         where
-            D: Diverge<ConstraintViolation>,
+            D: Divergence<ConstraintViolation>,
         {
             type Error = ConstraintViolation;
 
@@ -2282,7 +2282,7 @@ macro_rules! impl_try_from {
 
         impl<'a, D> TryFrom<&'a $t> for &'a $p<$t, D>
         where
-            D: Diverge<ConstraintViolation>,
+            D: Divergence<ConstraintViolation>,
         {
             type Error = ConstraintViolation;
 
@@ -2298,7 +2298,7 @@ macro_rules! impl_try_from {
 
         impl<'a, D> TryFrom<&'a mut $t> for &'a mut $p<$t, D>
         where
-            D: Diverge<ConstraintViolation>,
+            D: Divergence<ConstraintViolation>,
         {
             type Error = ConstraintViolation;
 
@@ -2317,7 +2317,7 @@ impl_try_from!();
 
 #[cfg(test)]
 mod tests {
-    use crate::divergence::Assert;
+    use crate::divergence::OrPanic;
     use crate::{Finite, Float, Infinite, Nan, NotNan, Real, Total, UnaryReal, N32, R32};
 
     #[test]
@@ -2570,12 +2570,12 @@ mod tests {
     fn serialize() {
         assert_eq!(
             "1.0",
-            serde_json::to_string(&N32::<Assert>::assert(1.0)).unwrap()
+            serde_json::to_string(&N32::<OrPanic>::assert(1.0)).unwrap()
         );
         // TODO: See `SerdeContainer`.
         assert_eq!(
             "null",
-            serde_json::to_string(&N32::<Assert>::INFINITY).unwrap()
+            serde_json::to_string(&N32::<OrPanic>::INFINITY).unwrap()
         );
     }
 }
