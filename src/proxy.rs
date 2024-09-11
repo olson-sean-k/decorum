@@ -50,7 +50,7 @@ use crate::constraint::{
     Constraint, ConstraintViolation, ExpectConstrained, InfinitySet, Member, NanSet, SubsetOf,
     SupersetOf,
 };
-use crate::divergence::{Divergence, NonResidual};
+use crate::divergence::{self, Divergence, NonResidual};
 use crate::expression::Expression;
 use crate::hash::FloatHash;
 use crate::real::{BinaryReal, Function, Sign, UnaryReal};
@@ -61,7 +61,7 @@ use crate::{
     NotNan, Primitive, ToCanonicalBits, Total,
 };
 
-pub type BranchOf<P> = <DivergenceOf<P> as Divergence<ErrorOf<P>>>::Branch<P, ErrorOf<P>>;
+pub type BranchOf<P> = divergence::BranchOf<DivergenceOf<P>, P, ErrorOf<P>>;
 pub type ConstraintOf<P> = <P as ClosedProxy>::Constraint;
 pub type DivergenceOf<P> = <ConstraintOf<P> as Constraint>::Divergence;
 pub type ErrorOf<P> = <ConstraintOf<P> as Constraint>::Error;
@@ -459,7 +459,7 @@ where
     /// [`Total`]: crate::Total
     /// [`Undefined`]: crate::expression::Expression::Undefined
     pub fn new(inner: T) -> BranchOf<Self> {
-        C::diverge(inner, |inner| Proxy {
+        C::map(inner, |inner| Proxy {
             inner,
             phantom: PhantomData,
         })
@@ -557,7 +557,7 @@ impl<T, C, E> AddAssign for Proxy<T, C>
 where
     T: Float + Primitive,
     C: Constraint<Error = E>,
-    C::Divergence: NonResidual<Self, E>,
+    divergence::ContinueOf<C::Divergence, E>: NonResidual<Self, E>,
 {
     fn add_assign(&mut self, other: Self) {
         *self = *self + other;
@@ -568,7 +568,7 @@ impl<T, C, E> AddAssign<T> for Proxy<T, C>
 where
     T: Float + Primitive,
     C: Constraint<Error = E>,
-    C::Divergence: NonResidual<Self, E>,
+    divergence::ContinueOf<C::Divergence, E>: NonResidual<Self, E>,
 {
     fn add_assign(&mut self, other: T) {
         *self = self.map(|inner| inner + other);
@@ -772,7 +772,7 @@ impl<T, C, E> DivAssign for Proxy<T, C>
 where
     T: Float + Primitive,
     C: Constraint<Error = E>,
-    C::Divergence: NonResidual<Self, E>,
+    divergence::ContinueOf<C::Divergence, E>: NonResidual<Self, E>,
 {
     fn div_assign(&mut self, other: Self) {
         *self = *self / other
@@ -783,7 +783,7 @@ impl<T, C, E> DivAssign<T> for Proxy<T, C>
 where
     T: Float + Primitive,
     C: Constraint<Error = E>,
-    C::Divergence: NonResidual<Self, E>,
+    divergence::ContinueOf<C::Divergence, E>: NonResidual<Self, E>,
 {
     fn div_assign(&mut self, other: T) {
         *self = self.map(|inner| inner / other);
@@ -902,7 +902,7 @@ impl<T, C, E> ForeignFloat for Proxy<T, C>
 where
     T: IntrinsicOrd + Float + ForeignFloat + Num + NumCast + Primitive,
     C: Constraint<Error = E> + Member<InfinitySet> + Member<NanSet>,
-    C::Divergence: NonResidual<Self, E>,
+    divergence::ContinueOf<C::Divergence, E>: NonResidual<Self, E>,
 {
     fn infinity() -> Self {
         Infinite::INFINITY
@@ -1304,7 +1304,7 @@ impl<T, C, E> FromStr for Proxy<T, C>
 where
     T: Float + FromStr + Primitive,
     C: Constraint<Error = E>,
-    C::Divergence: NonResidual<Self, E>,
+    divergence::ContinueOf<C::Divergence, E>: NonResidual<Self, E>,
 {
     type Err = <T as FromStr>::Err;
 
@@ -1381,7 +1381,7 @@ impl<T, C, E> MulAssign for Proxy<T, C>
 where
     T: Float + Primitive,
     C: Constraint<Error = E>,
-    C::Divergence: NonResidual<Self, E>,
+    divergence::ContinueOf<C::Divergence, E>: NonResidual<Self, E>,
 {
     fn mul_assign(&mut self, other: Self) {
         *self = *self * other;
@@ -1392,7 +1392,7 @@ impl<T, C, E> MulAssign<T> for Proxy<T, C>
 where
     T: Float + Primitive,
     C: Constraint<Error = E>,
-    C::Divergence: NonResidual<Self, E>,
+    divergence::ContinueOf<C::Divergence, E>: NonResidual<Self, E>,
 {
     fn mul_assign(&mut self, other: T) {
         *self = *self * other;
@@ -1427,7 +1427,7 @@ impl<T, C, E> Num for Proxy<T, C>
 where
     T: Float + Primitive + Num,
     C: Constraint<Error = E>,
-    C::Divergence: NonResidual<Self, E>,
+    divergence::ContinueOf<C::Divergence, E>: NonResidual<Self, E>,
 {
     // TODO: Differentiate between parse and contraint errors.
     type FromStrRadixErr = ();
@@ -1456,7 +1456,7 @@ impl<T, C, E> One for Proxy<T, C>
 where
     T: Float + Primitive,
     C: Constraint<Error = E>,
-    C::Divergence: NonResidual<Self, E>,
+    divergence::ContinueOf<C::Divergence, E>: NonResidual<Self, E>,
 {
     fn one() -> Self {
         UnaryReal::ONE
@@ -1523,7 +1523,7 @@ impl<T, C, E> Product for Proxy<T, C>
 where
     T: Float + Primitive,
     C: Constraint<Error = E>,
-    C::Divergence: NonResidual<Self, E>,
+    divergence::ContinueOf<C::Divergence, E>: NonResidual<Self, E>,
 {
     fn product<I>(input: I) -> Self
     where
@@ -1585,7 +1585,7 @@ impl<T, C, E> RemAssign for Proxy<T, C>
 where
     T: Float + Primitive,
     C: Constraint<Error = E>,
-    C::Divergence: NonResidual<Self, E>,
+    divergence::ContinueOf<C::Divergence, E>: NonResidual<Self, E>,
 {
     fn rem_assign(&mut self, other: Self) {
         *self = *self % other;
@@ -1596,7 +1596,7 @@ impl<T, C, E> RemAssign<T> for Proxy<T, C>
 where
     T: Float + Primitive,
     C: Constraint<Error = E>,
-    C::Divergence: NonResidual<Self, E>,
+    divergence::ContinueOf<C::Divergence, E>: NonResidual<Self, E>,
 {
     fn rem_assign(&mut self, other: T) {
         *self = self.map(|inner| inner % other);
@@ -1607,7 +1607,7 @@ impl<T, C, E> Signed for Proxy<T, C>
 where
     T: Float + Primitive + Signed,
     C: Constraint<Error = E>,
-    C::Divergence: NonResidual<Self, E>,
+    divergence::ContinueOf<C::Divergence, E>: NonResidual<Self, E>,
 {
     fn abs(&self) -> Self {
         self.map_unchecked(|inner| Signed::abs(&inner))
@@ -1658,7 +1658,7 @@ impl<T, C, E> SubAssign for Proxy<T, C>
 where
     T: Float + Primitive,
     C: Constraint<Error = E>,
-    C::Divergence: NonResidual<Self, E>,
+    divergence::ContinueOf<C::Divergence, E>: NonResidual<Self, E>,
 {
     fn sub_assign(&mut self, other: Self) {
         *self = *self - other
@@ -1669,7 +1669,7 @@ impl<T, C, E> SubAssign<T> for Proxy<T, C>
 where
     T: Float + Primitive,
     C: Constraint<Error = E>,
-    C::Divergence: NonResidual<Self, E>,
+    divergence::ContinueOf<C::Divergence, E>: NonResidual<Self, E>,
 {
     fn sub_assign(&mut self, other: T) {
         *self = self.map(|inner| inner - other)
@@ -1680,7 +1680,7 @@ impl<T, C, E> Sum for Proxy<T, C>
 where
     T: Float + Primitive,
     C: Constraint<Error = E>,
-    C::Divergence: NonResidual<Self, E>,
+    divergence::ContinueOf<C::Divergence, E>: NonResidual<Self, E>,
 {
     fn sum<I>(input: I) -> Self
     where
@@ -1996,7 +1996,7 @@ impl<T, C, E> Zero for Proxy<T, C>
 where
     T: Float + Primitive,
     C: Constraint<Error = E>,
-    C::Divergence: NonResidual<Self, E>,
+    divergence::ContinueOf<C::Divergence, E>: NonResidual<Self, E>,
 {
     fn zero() -> Self {
         UnaryReal::ZERO
@@ -2061,7 +2061,8 @@ macro_rules! impl_foreign_real {
         #[cfg(feature = "std")]
         impl<D> ForeignReal for $p<$t, D>
         where
-            D: NonResidual<Self, ConstraintViolation>,
+            D: Divergence<ConstraintViolation>,
+            divergence::ContinueOf<D, ConstraintViolation>: NonResidual<Self, ConstraintViolation>,
         {
             fn max_value() -> Self {
                 Encoding::MAX_FINITE

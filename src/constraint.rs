@@ -42,7 +42,7 @@ use core::marker::PhantomData;
 use thiserror::Error;
 
 use crate::cmp::UndefinedError;
-use crate::divergence::Divergence;
+use crate::divergence::{BranchOf, Divergence};
 use crate::proxy::ClosedProxy;
 use crate::sealed::Sealed;
 use crate::{Float, Primitive};
@@ -119,18 +119,14 @@ pub trait Constraint: Member<RealSet> {
     type Divergence: Divergence<Self::Error>;
     type Error: Debug;
 
-    // NOTE: It is not possible for constraints to map accepted values because of reference
-    //       conversions, so the successful output is the unit type and primitive values must be
-    //       used as-is. That is, this function only expresses the membership of the given value
-    //       and no other.
+    // It is not possible for constraints to map accepted values because of reference conversions,
+    // so the successful output is the unit type and primitive values must be used as-is. That is,
+    // this function only expresses the membership of the given value and no other.
     fn check<T>(inner: T) -> Result<(), Self::Error>
     where
         T: Float + Primitive;
 
-    fn diverge<T, U, F>(
-        inner: T,
-        f: F,
-    ) -> <Self::Divergence as Divergence<Self::Error>>::Branch<U, Self::Error>
+    fn map<T, U, F>(inner: T, f: F) -> BranchOf<Self::Divergence, U, Self::Error>
     where
         T: Float + Primitive,
         U: ClosedProxy<Constraint = Self, Primitive = T>,
@@ -157,7 +153,7 @@ impl Constraint for UnitConstraint {
     }
 
     #[inline(always)]
-    fn diverge<T, U, F>(inner: T, f: F) -> U
+    fn map<T, U, F>(inner: T, f: F) -> U
     where
         T: Float + Primitive,
         U: ClosedProxy<Constraint = Self, Primitive = T>,
