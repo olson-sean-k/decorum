@@ -34,37 +34,99 @@
 //! [`UnitConstraint`]: crate::constraint::UnitConstraint
 
 use core::convert::Infallible;
-use core::fmt::Debug;
 #[cfg(not(feature = "std"))]
-use core::fmt::{self, Display, Formatter};
+use core::fmt::{self, Formatter};
+use core::fmt::{Debug, Display};
 use core::marker::PhantomData;
 #[cfg(feature = "std")]
 use thiserror::Error;
 
 use crate::cmp::UndefinedError;
-use crate::divergence::{BranchOf, Divergence};
+use crate::divergence::{BranchOf, Divergence, OrPanic};
 use crate::proxy::ClosedProxy;
 use crate::sealed::Sealed;
 use crate::{Float, Primitive};
 
-const VIOLATION_MESSAGE: &str = "floating-point constraint violated";
+pub(crate) trait Description {
+    const DESCRIPTION: &'static str;
+}
 
 #[cfg_attr(feature = "std", derive(Error))]
-#[cfg_attr(feature = "std", error("{}", VIOLATION_MESSAGE))]
 #[derive(Clone, Copy, Debug)]
-pub struct ConstraintViolation;
+pub enum ConstraintError {
+    #[cfg_attr(feature = "std", error(transparent))]
+    Nan(NanError),
+    #[cfg_attr(feature = "std", error(transparent))]
+    NotFinite(NotFiniteError),
+}
 
-// When the `std` feature is enabled, the `thiserror` crate is used to implement `Display`.
 #[cfg(not(feature = "std"))]
-impl Display for ConstraintViolation {
+impl Display for ConstraintError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", VIOLATION_MESSAGE)
+        write!(
+            f,
+            "{}",
+            match self {
+                ConstraintError::Nan(_) => NanError::DESCRIPTION,
+                ConstraintError::NotFinite(_) => NotFiniteError::DESCRIPTION,
+            },
+        )
     }
 }
 
-impl UndefinedError for ConstraintViolation {
+impl From<NanError> for ConstraintError {
+    fn from(error: NanError) -> Self {
+        ConstraintError::Nan(error)
+    }
+}
+
+impl From<NotFiniteError> for ConstraintError {
+    fn from(error: NotFiniteError) -> Self {
+        ConstraintError::NotFinite(error)
+    }
+}
+
+#[cfg_attr(feature = "std", derive(Error))]
+#[cfg_attr(feature = "std", error("{}", NanError::DESCRIPTION))]
+#[derive(Clone, Copy, Debug)]
+pub struct NanError;
+
+impl Description for NanError {
+    const DESCRIPTION: &'static str = "floating point value must be an extended real";
+}
+
+#[cfg(not(feature = "std"))]
+impl Display for NanError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", NanError::DESCRIPTION)
+    }
+}
+
+impl UndefinedError for NanError {
     fn undefined() -> Self {
-        ConstraintViolation
+        NanError
+    }
+}
+
+#[cfg_attr(feature = "std", derive(Error))]
+#[cfg_attr(feature = "std", error("{}", NotFiniteError::DESCRIPTION))]
+#[derive(Clone, Copy, Debug)]
+pub struct NotFiniteError;
+
+impl Description for NotFiniteError {
+    const DESCRIPTION: &'static str = "floating point value must be a real";
+}
+
+#[cfg(not(feature = "std"))]
+impl Display for NotFiniteError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", NotFiniteError::DESCRIPTION)
+    }
+}
+
+impl UndefinedError for NotFiniteError {
+    fn undefined() -> Self {
+        NotFiniteError
     }
 }
 
@@ -76,15 +138,7 @@ impl<T, E> ExpectConstrained<T> for Result<T, E>
 where
     E: Debug,
 {
-    #[cfg(not(feature = "std"))]
     fn expect_constrained(self) -> T {
-        self.expect(VIOLATION_MESSAGE)
-    }
-
-    #[cfg(feature = "std")]
-    fn expect_constrained(self) -> T {
-        // When the `std` feature is enabled, `ConstraintViolation` implements `Error` and an
-        // appropriate error message is displayed when unwrapping.
         self.unwrap()
     }
 }
@@ -116,8 +170,9 @@ where
 /// [`Member`]: crate::constraint::Member
 /// [`Proxy`]: crate::proxy::Proxy
 pub trait Constraint: Member<RealSet> {
-    type Divergence: Divergence<Self::Error>;
-    type Error: Debug;
+    type Divergence: Divergence;
+    // TODO: Bound this on `core::Error` once it is stabilized.
+    type Error: Debug + Display;
 
     // It is not possible for constraints to map accepted values because of reference conversions,
     // so the successful output is the unit type and primitive values must be used as-is. That is,
@@ -141,7 +196,8 @@ pub trait Constraint: Member<RealSet> {
 pub enum UnitConstraint {}
 
 impl Constraint for UnitConstraint {
-    type Divergence = Infallible;
+    // Branching in the `Divergence` is completely bypassed in this implementation.
+    type Divergence = OrPanic;
     type Error = Infallible;
 
     #[inline(always)]
@@ -159,7 +215,6 @@ impl Constraint for UnitConstraint {
         U: ClosedProxy<Constraint = Self, Primitive = T>,
         F: FnOnce(T) -> U,
     {
-        // Bypass branches and constructions in the default implementation.
         f(inner)
     }
 }
@@ -182,17 +237,17 @@ pub struct NotNanConstraint<D>(PhantomData<fn() -> D>, Infallible);
 
 impl<D> Constraint for NotNanConstraint<D>
 where
-    D: Divergence<ConstraintViolation>,
+    D: Divergence,
 {
     type Divergence = D;
-    type Error = ConstraintViolation;
+    type Error = NanError;
 
     fn check<T>(inner: T) -> Result<(), Self::Error>
     where
         T: Float + Primitive,
     {
         if inner.is_nan() {
-            Err(ConstraintViolation)
+            Err(NanError)
         }
         else {
             Ok(())
@@ -214,17 +269,17 @@ pub struct FiniteConstraint<D>(PhantomData<fn() -> D>, Infallible);
 
 impl<D> Constraint for FiniteConstraint<D>
 where
-    D: Divergence<ConstraintViolation>,
+    D: Divergence,
 {
     type Divergence = D;
-    type Error = ConstraintViolation;
+    type Error = NotFiniteError;
 
     fn check<T>(inner: T) -> Result<(), Self::Error>
     where
         T: Float + Primitive,
     {
         if inner.is_nan() || inner.is_infinite() {
-            Err(ConstraintViolation)
+            Err(NotFiniteError)
         }
         else {
             Ok(())

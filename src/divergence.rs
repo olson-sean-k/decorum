@@ -99,35 +99,35 @@ use crate::expression::{Defined, Expression, Undefined};
 use crate::sealed::Sealed;
 
 pub trait Continue: Sealed {
-    type Branch<P, E>;
+    type As<P, E>;
 
-    fn continue_with_output<P, E>(output: P) -> Self::Branch<P, E>;
+    fn continue_with_output<P, E>(output: P) -> Self::As<P, E>;
 }
 
 pub trait Break: Continue {
-    fn break_with_error<P, E>(error: E) -> Self::Branch<P, E>;
+    fn break_with_error<P, E>(error: E) -> Self::As<P, E>;
 }
 
 /// A [branch][`Continue`] type that outputs the identity.
 ///
 /// [`Continue`]: crate::divergence::Continue
-pub trait NonResidual<P, E>: Continue<Branch<P, E> = P> {}
+pub trait NonResidual<P, E>: Continue<As<P, E> = P> {}
 
-impl<P, E, B> NonResidual<P, E> for B where B: Continue<Branch<P, E> = P> {}
+impl<P, E, B> NonResidual<P, E> for B where B: Continue<As<P, E> = P> {}
 
 #[derive(Debug)]
 pub enum AsExpression {}
 
 impl Break for AsExpression {
-    fn break_with_error<P, E>(error: E) -> Self::Branch<P, E> {
+    fn break_with_error<P, E>(error: E) -> Self::As<P, E> {
         Undefined(error)
     }
 }
 
 impl Continue for AsExpression {
-    type Branch<P, E> = Expression<P, E>;
+    type As<P, E> = Expression<P, E>;
 
-    fn continue_with_output<P, E>(output: P) -> Self::Branch<P, E> {
+    fn continue_with_output<P, E>(output: P) -> Self::As<P, E> {
         Defined(output)
     }
 }
@@ -138,15 +138,15 @@ impl Sealed for AsExpression {}
 pub enum AsOption {}
 
 impl Break for AsOption {
-    fn break_with_error<P, E>(_: E) -> Self::Branch<P, E> {
+    fn break_with_error<P, E>(_: E) -> Self::As<P, E> {
         None
     }
 }
 
 impl Continue for AsOption {
-    type Branch<P, E> = Option<P>;
+    type As<P, E> = Option<P>;
 
-    fn continue_with_output<P, E>(output: P) -> Self::Branch<P, E> {
+    fn continue_with_output<P, E>(output: P) -> Self::As<P, E> {
         Some(output)
     }
 }
@@ -157,15 +157,15 @@ impl Sealed for AsOption {}
 pub enum AsResult {}
 
 impl Break for AsResult {
-    fn break_with_error<P, E>(error: E) -> Self::Branch<P, E> {
+    fn break_with_error<P, E>(error: E) -> Self::As<P, E> {
         Err(error)
     }
 }
 
 impl Continue for AsResult {
-    type Branch<P, E> = Result<P, E>;
+    type As<P, E> = Result<P, E>;
 
-    fn continue_with_output<P, E>(output: P) -> Self::Branch<P, E> {
+    fn continue_with_output<P, E>(output: P) -> Self::As<P, E> {
         Ok(output)
     }
 }
@@ -176,9 +176,9 @@ impl Sealed for AsResult {}
 pub enum AsSelf {}
 
 impl Continue for AsSelf {
-    type Branch<P, E> = P;
+    type As<P, E> = P;
 
-    fn continue_with_output<P, E>(output: P) -> Self::Branch<P, E> {
+    fn continue_with_output<P, E>(output: P) -> Self::As<P, E> {
         output
     }
 }
@@ -192,25 +192,16 @@ impl Sealed for AsSelf {}
 /// constructed from an output, the branch type is always constructed and returned.
 ///
 /// [`Proxy`]: crate::proxy::Proxy
-pub trait Divergence<E>: Sealed {
+pub trait Divergence: Sealed {
     type Continue: Continue;
 
-    fn diverge<T>(result: Result<T, E>) -> <Self::Continue as Continue>::Branch<T, E>;
+    fn diverge<T, E>(result: Result<T, E>) -> <Self::Continue as Continue>::As<T, E>
+    where
+        E: Debug;
 }
 
-pub type ContinueOf<D, E> = <D as Divergence<E>>::Continue;
-pub type BranchOf<D, P, E> = <ContinueOf<D, E> as Continue>::Branch<P, E>;
-
-impl Divergence<Infallible> for Infallible {
-    type Continue = AsSelf;
-
-    #[inline(always)]
-    fn diverge<T>(result: Result<T, Infallible>) -> T {
-        // SAFETY: The `Err` variant of `Result<_, Infallible>` is impossible to construct, so this
-        //         cannot be `Err` here.
-        unsafe { result.unwrap_unchecked() }
-    }
-}
+pub type ContinueOf<D> = <D as Divergence>::Continue;
+pub type BranchOf<D, P, E> = <ContinueOf<D> as Continue>::As<P, E>;
 
 /// Divergence that breaks on errors by **panicking**.
 ///
@@ -226,14 +217,16 @@ impl Divergence<Infallible> for Infallible {
 /// [`Result`]: core::result::Result
 pub struct OrPanic<B = AsSelf>(PhantomData<fn() -> B>, Infallible);
 
-impl<B, E> Divergence<E> for OrPanic<B>
+impl<B> Divergence for OrPanic<B>
 where
     B: Continue,
-    E: Debug,
 {
     type Continue = B;
 
-    fn diverge<T>(result: Result<T, E>) -> B::Branch<T, E> {
+    fn diverge<T, E>(result: Result<T, E>) -> B::As<T, E>
+    where
+        E: Debug,
+    {
         B::continue_with_output(result.expect_constrained())
     }
 }
@@ -250,13 +243,16 @@ impl<B> Sealed for OrPanic<B> {}
 /// [`Expression`]: crate::expression::Expression
 pub struct OrError<B = AsExpression>(PhantomData<fn() -> B>, Infallible);
 
-impl<B, E> Divergence<E> for OrError<B>
+impl<B> Divergence for OrError<B>
 where
     B: Break,
 {
     type Continue = B;
 
-    fn diverge<T>(result: Result<T, E>) -> B::Branch<T, E> {
+    fn diverge<T, E>(result: Result<T, E>) -> B::As<T, E>
+    where
+        E: Debug,
+    {
         match result {
             Ok(output) => B::continue_with_output(output),
             Err(error) => B::break_with_error(error),
