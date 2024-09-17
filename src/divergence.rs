@@ -87,12 +87,11 @@
 //
 //         pub type Real = Constrained<f64, IsReal<OrPanic>>;
 //         pub type Real = Constrained<f64, IsReal<OrPanic<AsSelf>>>;
-//         pub type ExtendedReal = Constrained<f64, IsExtendedReal<OrError<AsExpression>>>;
+//         pub type Extended = Constrained<f64, IsExtended<OrError<AsExpression>>>;
 //         pub type Total = Constrained<f64, IsFloat>;
 
 use core::convert::Infallible;
 use core::fmt::Debug;
-use core::hint;
 use core::marker::PhantomData;
 
 use crate::constraint::ExpectConstrained as _;
@@ -205,13 +204,11 @@ pub type BranchOf<D, P, E> = <ContinueOf<D, E> as Continue>::Branch<P, E>;
 impl Divergence<Infallible> for Infallible {
     type Continue = AsSelf;
 
+    #[inline(always)]
     fn diverge<T>(result: Result<T, Infallible>) -> T {
-        match result {
-            Ok(output) => output,
-            // SAFETY: The `Err` variant of `Result<_, Infallible>` is impossible to construct, so
-            //         `result` cannot be `Err` here and this branch is unreachable.
-            Err(_) => unsafe { hint::unreachable_unchecked() },
-        }
+        // SAFETY: The `Err` variant of `Result<_, Infallible>` is impossible to construct, so this
+        //         cannot be `Err` here.
+        unsafe { result.unwrap_unchecked() }
     }
 }
 
