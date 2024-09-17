@@ -62,12 +62,12 @@ macro_rules! try_expression {
 /// ```rust
 /// use decorum::constraint::FiniteConstraint;
 /// use decorum::divergence::OrError;
-/// use decorum::proxy::{BranchOf, Proxy};
+/// use decorum::proxy::{OutputOf, Proxy};
 /// use decorum::real::UnaryReal;
 /// use decorum::try_expression;
 ///
 /// pub type Real = Proxy<f64, FiniteConstraint<OrError>>;
-/// pub type Expr = BranchOf<Real>;
+/// pub type Expr = OutputOf<Real>;
 ///
 /// # fn fallible() -> Expr {
 /// fn f(x: Real, y: Real, z: Real) -> Expr {
@@ -85,11 +85,11 @@ macro_rules! try_expression {
 /// ```rust
 /// use decorum::constraint::FiniteConstraint;
 /// use decorum::divergence::{AsResult, OrError};
-/// use decorum::proxy::{BranchOf, Proxy};
+/// use decorum::proxy::{OutputOf, Proxy};
 /// use decorum::real::UnaryReal;
 ///
 /// pub type Real = Proxy<f64, FiniteConstraint<OrError<AsResult>>>;
-/// pub type RealResult = BranchOf<Real>;
+/// pub type RealResult = OutputOf<Real>;
 ///
 /// # fn fallible() -> RealResult {
 /// fn f(x: Real, y: Real, z: Real) -> RealResult {
@@ -112,11 +112,11 @@ macro_rules! try_expression {
 /// ```rust,ignore
 /// use decorum::constraint::FiniteConstraint;
 /// use decorum::divergence::{AsExpression, OrError};
-/// use decorum::proxy::{BranchOf, Proxy};
+/// use decorum::proxy::{OutputOf, Proxy};
 /// use decorum::real::UnaryReal;
 ///
 /// pub type Real = Proxy<f64, FiniteConstraint<OrError<AsExpression>>>;
-/// pub type Expr = BranchOf<Real>;
+/// pub type Expr = OutputOf<Real>;
 ///
 /// # fn fallible() -> Expr {
 /// fn f(x: Real, y: Real, z: Real) -> Expr {

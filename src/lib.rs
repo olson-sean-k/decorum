@@ -3,8 +3,8 @@
 //!
 //! Decorum provides APIs for extending IEEE 754 floating-point. This is primarily accomplished
 //! with [proxy types][`proxy`] that wrap primitive floating-point types and compose
-//! [constraints][`constraint`] and [divergence][`divergence`] to configure behavior. Decorum also
-//! provides numerous traits describing real numerics and IEEE 754 encoding.
+//! [constraints][`constraint`] and [divergence] to configure behavior. Decorum also provides
+//! numerous traits describing real numerics and IEEE 754 encoding.
 //!
 //! Decorum requires Rust 1.65.0 or higher.
 //!
@@ -27,8 +27,8 @@
 //!
 //! These subsets are reflected throughout APIs, in particular in traits concerning IEEE 754
 //! encoding and constraints. [`Constraint`]s describe which subsets are members of a proxy type
-//! and are composed with a [divergence][`divergence`], which further describes the outputs and
-//! error behavior of operations.
+//! and are composed with a [divergence], which further describes the outputs and error behavior of
+//! operations.
 //!
 //! These types can be configured to, for example, cause a panic in debugging builds whenever a
 //! `NaN` is encountered or enable structured error handling of extended real numbers where any
@@ -80,10 +80,10 @@
 //! ```rust
 //! use decorum::constraint::FiniteConstraint;
 //! use decorum::divergence::OrError;
-//! use decorum::proxy::{BranchOf, Proxy};
+//! use decorum::proxy::{OutputOf, Proxy};
 //!
 //! type Real = Proxy<f64, FiniteConstraint<OrError>>;
-//! type Expr = BranchOf<Real>;
+//! type Expr = OutputOf<Real>;
 //!
 //! fn f(x: Real, y: Real) -> Expr {
 //!     let z = x + y;
@@ -102,11 +102,11 @@
 //! ```rust,ignore
 //! use decorum::constraint::FiniteConstraint;
 //! use decorum::divergence::OrError;
-//! use decorum::proxy::{BranchOf, Proxy};
+//! use decorum::proxy::{OutputOf, Proxy};
 //! use decorum::real::UnaryReal;
 //!
 //! type Real = Proxy<f64, FiniteConstraint<OrError>>;
-//! type Expr = BranchOf<Real>;
+//! type Expr = OutputOf<Real>;
 //!
 //! # fn fallible() -> Expr {
 //! fn f(x: Real, y: Real) -> Expr {
@@ -197,15 +197,15 @@ pub type Total<T> = Proxy<T, UnitConstraint>;
 /// IEEE 754 floating-point representation that cannot be `NaN`.
 ///
 /// This [`Proxy`] type applies the [`NotNanConstraint`] and [diverges][`divergence`] if a `NaN`
-/// value is encountered. **The default divergence of this definition is [`Assert`], which panics
+/// value is encountered. **The default divergence of this definition is [`OrPanic`], which panics
 /// when the constraint is violated.**
 ///
 /// Like [`Total`], `NotNan` defines equivalence and total ordering, but need not consider `NaN`
 /// and so uses only standard IEEE 754 floating-point semantics.
 ///
-/// [`Assert`]: crate::divergence::Assert
 /// [`divergence`]: crate::divergence
 /// [`NotNanConstraint`]: crate::constraint::NotNanConstraint
+/// [`OrPanic`]: crate::divergence::OrPanic
 /// [`Proxy`]: crate::proxy::Proxy
 /// [`Total`]: crate::Total
 pub type NotNan<T, D = OrPanic> = Proxy<T, NotNanConstraint<D>>;

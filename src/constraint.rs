@@ -1,9 +1,10 @@
 //! Constraints on the set of IEEE 754 floating-point values that [`Proxy`] types may represent.
 //!
-//! This module provides traits and marker types that define the error conditions of [`Proxy`]s.
+//! This module provides traits and types that define the error conditions of [`Proxy`]s.
 //! Constraints determine when, if ever, a particular floating-point value is considered an error
-//! and must [diverge][`divergence`]. Constraints are defined in terms of subsets of IEEE 754
-//! floating-point values and each constraint has associated [`Proxy`] type definitions:
+//! and so construction must [diverge][`divergence`]. Constraints are defined in terms of subsets
+//! of IEEE 754 floating-point values and each constraint has associated [`Proxy`] type
+//! definitions:
 //!
 //! | Constraint           | Divergent | Type Definition | Disallowed Values     |
 //! |----------------------|-----------|-----------------|-----------------------|
@@ -19,16 +20,16 @@
 //! Because the output of some floating-point operations may yield these values (even when the
 //! inputs are real numbers), these constraints must specify a [divergence][`divergence`], which
 //! determines the behavior of [`Proxy`]s when such a value is encountered. These proxy type
-//! definitions specify the [`Assert`] divergence by default, **which panics when a disallowed
+//! definitions specify the [`OrPanic`] divergence by default, **which panics when a disallowed
 //! value is encountered.**
 //!
-//! [`Assert`]: crate::divergence::Assert
 //! [`cmp`]: crate::cmp
 //! [`divergence`]: crate::divergence
 //! [`Finite`]: crate::Finite
 //! [`FiniteConstraint`]: crate::constraint::FiniteConstraint
 //! [`NotNan`]: crate::NotNan
 //! [`NotNanConstraint`]: crate::constraint::NotNanConstraint
+//! [`OrPanic`]: crate::divergence::OrPanic
 //! [`Proxy`]: crate::proxy::Proxy
 //! [`Total`]: crate::Total
 //! [`UnitConstraint`]: crate::constraint::UnitConstraint
@@ -42,7 +43,7 @@ use core::marker::PhantomData;
 use thiserror::Error;
 
 use crate::cmp::UndefinedError;
-use crate::divergence::{BranchOf, Divergence, OrPanic};
+use crate::divergence::{Divergence, OrPanic, OutputOf};
 use crate::proxy::ClosedProxy;
 use crate::sealed::Sealed;
 use crate::{Float, Primitive};
@@ -92,7 +93,7 @@ impl From<NotFiniteError> for ConstraintError {
 pub struct NanError;
 
 impl Description for NanError {
-    const DESCRIPTION: &'static str = "floating point value must be an extended real";
+    const DESCRIPTION: &'static str = "floating-point value must be an extended real";
 }
 
 #[cfg(not(feature = "std"))]
@@ -114,7 +115,7 @@ impl UndefinedError for NanError {
 pub struct NotFiniteError;
 
 impl Description for NotFiniteError {
-    const DESCRIPTION: &'static str = "floating point value must be a real";
+    const DESCRIPTION: &'static str = "floating-point value must be a real";
 }
 
 #[cfg(not(feature = "std"))]
@@ -181,7 +182,7 @@ pub trait Constraint: Member<RealSet> {
     where
         T: Float + Primitive;
 
-    fn map<T, U, F>(inner: T, f: F) -> BranchOf<Self::Divergence, U, Self::Error>
+    fn map<T, U, F>(inner: T, f: F) -> OutputOf<Self::Divergence, U, Self::Error>
     where
         T: Float + Primitive,
         U: ClosedProxy<Constraint = Self, Primitive = T>,

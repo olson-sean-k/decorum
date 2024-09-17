@@ -1,38 +1,38 @@
-//! Output types for fallible operations and error behavior.
+//! Error behavior and output types for fallible operations.
 //!
-//! This module provides type constructors that determine the output types of fallible [`Proxy`]
-//! operations as well as the behavior when an error occurs. These types are used as parameters of
-//! some [constraints][`constraint`].
+//! This module provides type constructors that determine the behavior and output types of fallible
+//! [`Proxy`] operations. These types are used as parameters of some [constraints][`constraint`].
 //!
 //! # Error Behaviors
 //!
-//! Error behavior is determined by a [_divergence_ type][`Divergence`]:
+//! Error behavior is determined by a [divergence type][`Divergence`]:
 //!
-//! | Divergence  | OK       | Error     | Default Branch   |
-//! |-------------|----------|-----------|------------------|
-//! | [`OrPanic`] | continue | **panic** | [`AsSelf`]       |
-//! | [`OrError`] | continue | break     | [`AsExpression`] |
+//! | Divergence  | OK       | Error     | Default Output Kind |
+//! |-------------|----------|-----------|---------------------|
+//! | [`OrPanic`] | continue | **panic** | [`AsSelf`]          |
+//! | [`OrError`] | continue | break     | [`AsExpression`]    |
 //!
-//! The output type of fallible operations is determined by the [_branch_ type][`Continue`] of the
-//! divergence. Note that **[`OrPanic`] panics if an error occurs** and is the only divergence that
-//! supports the [`AsSelf`] branch, which returns `Self` in fallible oeprations.
+//! Divergence is independent of output types: the [`OrPanic`] divergence panics when breaking even
+//! when the output type can represent errors (e.g., [`Result`]). Because [`OrPanic`] never returns
+//! an error value, it can be used with output types that cannot respresent errors. This differs
+//! from [`OrError`], which requires an error representation.
 //!
 //! # Output Types
 //!
-//! The output type of fallible [`Proxy`] operations is an [associated type][`Continue::Branch`] of
-//! a [_branch_ type][`Continue`]. These types are described below:
+//! Output types are determined by an [output kind][`Continue`]. An output kind is type constructor
+//! with which a [`Divergence`] can construct an output type:
 //!
-//! | Branch           | Type                  | Continue        | Break          |
+//! | Output Kind      | Output Type           | Continue        | Break          |
 //! |------------------|-----------------------|-----------------|----------------|
 //! | [`AsSelf`]       | `Self`                | `Self`          |                |
 //! | [`AsOption`]     | `Option<Self>`        | `Some(Self)`    | `None`         |
 //! | [`AsResult`]     | `Result<Self, E>`     | `Ok(Self)`      | `Err(E)`       |
 //! | [`AsExpression`] | `Expression<Self, E>` | `Defined(Self)` | `Undefined(E)` |
 //!
-//! In the above table, `Self` refers to a [`Proxy`] type and `E` refers to the associated error
-//! type of its [constraint][`constraint`]. [`AsSelf`] is unique in that it cannot represent errors
-//! and so does not support breaks: its output type is the identity. The remaining branch types
-//! produce output types that can encode both success and failure.
+//! In the above table, `Self` refers to a [`Proxy`] type and `E` refers to the [associated
+//! error][`Constraint::Error`] type of its [constraint][`constraint`]. [`AsSelf`] is unique in
+//! that it cannot represent errors and so does not support breaking: its output type is the
+//! identity.
 //!
 //! # Examples
 //!
@@ -49,24 +49,29 @@
 //! ```
 //!
 //! The following example demonstrates a conditionally compiled `Real` type definition with a
-//! [`Result`] branch type that, when an error occurs, returns `Err` in **non**-debug builds and
+//! [`Result`] branch type that, when an error occurs, returns `Err` in **non**-debug builds but
 //! panics in debug builds.
 //!
 //! ```rust
-//! use decorum::constraint::FiniteConstraint;
-//! use decorum::divergence::AsResult;
-//! use decorum::proxy::{BranchOf, Proxy};
+//! pub mod real {
+//!     use decorum::constraint::FiniteConstraint;
+//!     use decorum::divergence::{self, AsResult};
+//!     use decorum::proxy::{OutputOf, Proxy};
+//!
+//!     #[cfg(debug_assertions)]
+//!     type OrDiverge = divergence::OrPanic<AsResult>;
+//!     #[cfg(not(debug_assertions))]
+//!     type OrDiverge = divergence::OrError<AsResult>;
+//!
+//!     pub type Real = Proxy<f64, FiniteConstraint<OrDiverge>>;
+//!     pub type Result = OutputOf<Real>;
+//! }
+//!
 //! use decorum::real::UnaryReal as _;
 //!
-//! #[cfg(debug_assertions)]
-//! type Divergence = decorum::divergence::OrPanic<AsResult>;
-//! #[cfg(not(debug_assertions))]
-//! type Divergence = decorum::divergence::OrError<AsResult>;
+//! use real::Real;
 //!
-//! pub type Real = Proxy<f64, FiniteConstraint<Divergence>>;
-//! pub type RealResult = BranchOf<Real>;
-//!
-//! pub fn f(x: Real) -> RealResult {
+//! pub fn f(x: Real) -> real::Result {
 //!     // This panics in debug builds and returns `Err` in non-debug builds.
 //!     x / Real::ZERO
 //! }
@@ -77,6 +82,7 @@
 //! [`AsResult`]: crate::divergence::AsResult
 //! [`AsSelf`]: crate::divergence::AsSelf
 //! [`constraint`]: crate::constraint
+//! [`Constraint::Error`]: crate::constraint::Constraint::Error
 //! [`Divergence`]: crate::divergence::Divergence
 //! [`OrError`]: crate::divergence::OrError
 //! [`OrPanic`]: crate::divergence::OrPanic
@@ -98,22 +104,24 @@ use crate::constraint::ExpectConstrained as _;
 use crate::expression::{Defined, Expression, Undefined};
 use crate::sealed::Sealed;
 
+/// An output kind that can continue with an output.
 pub trait Continue: Sealed {
     type As<P, E>;
 
     fn continue_with_output<P, E>(output: P) -> Self::As<P, E>;
 }
 
+/// An output kind that can break with an error.
 pub trait Break: Continue {
     fn break_with_error<P, E>(error: E) -> Self::As<P, E>;
 }
 
-/// A [branch][`Continue`] type that outputs the identity.
+/// An [output kind][`Continue`] that outputs the identity.
 ///
 /// [`Continue`]: crate::divergence::Continue
 pub trait NonResidual<P, E>: Continue<As<P, E> = P> {}
 
-impl<P, E, B> NonResidual<P, E> for B where B: Continue<As<P, E> = P> {}
+impl<P, E, K> NonResidual<P, E> for K where K: Continue<As<P, E> = P> {}
 
 #[derive(Debug)]
 pub enum AsExpression {}
@@ -187,11 +195,14 @@ impl Sealed for AsSelf {}
 
 /// Determines the output type and behavior of a [`Proxy`] when it is fallibly constructed.
 ///
-/// This trait defines a branch type and behavior when that type is constructed from an error. In
-/// the error case, this may or may not yield a value and may instead diverge by panicking. When
-/// constructed from an output, the branch type is always constructed and returned.
+/// The output type is defined by an associated [output **kind**][`Continue`]. Regardless of this
+/// type, this trait implements continuing and breaking on the [`Result`] of constructing a
+/// [`Proxy`]. See the [module documentation][`divergence`].
 ///
+/// [`Continue`]: crate::divergence::Continue
+/// [`divergence`]: crate::divergence
 /// [`Proxy`]: crate::proxy::Proxy
+/// [`Result`]: core::result::Result
 pub trait Divergence: Sealed {
     type Continue: Continue;
 
@@ -201,63 +212,63 @@ pub trait Divergence: Sealed {
 }
 
 pub type ContinueOf<D> = <D as Divergence>::Continue;
-pub type BranchOf<D, P, E> = <ContinueOf<D> as Continue>::As<P, E>;
+pub type OutputOf<D, P, E> = <ContinueOf<D> as Continue>::As<P, E>;
 
 /// Divergence that breaks on errors by **panicking**.
 ///
-/// **`OrPanic` panics if an error occurs.** This behavior is independent of the branch type, so
-/// even an `OrPanic` divergence configured to construct [`Result`]s panics in the face of errors.
+/// **`OrPanic` panics if a [`Proxy`] cannot be constructed.** This behavior is independent of the
+/// output kind, so even an `OrPanic` divergence with a [`Result`] output type panics if an error
+/// occurs.
 ///
-/// The branch type is determined by a branch kind type parameter. By default, `OrPanic` uses the
-/// [`AsSelf`] kind and therefore constructs [`Proxy`]s (no representation for errors) as the
-/// output of fallible operations.
+/// By default, `OrPanic` uses the [`AsSelf`] output kind.
 ///
 /// [`AsSelf`]: crate::divergence::AsSelf
 /// [`Proxy`]: crate::proxy::Proxy
 /// [`Result`]: core::result::Result
-pub struct OrPanic<B = AsSelf>(PhantomData<fn() -> B>, Infallible);
+pub struct OrPanic<K = AsSelf>(PhantomData<fn() -> K>, Infallible);
 
-impl<B> Divergence for OrPanic<B>
+impl<K> Divergence for OrPanic<K>
 where
-    B: Continue,
+    K: Continue,
 {
-    type Continue = B;
+    type Continue = K;
 
-    fn diverge<T, E>(result: Result<T, E>) -> B::As<T, E>
+    fn diverge<T, E>(result: Result<T, E>) -> K::As<T, E>
     where
         E: Debug,
     {
-        B::continue_with_output(result.expect_constrained())
+        K::continue_with_output(result.expect_constrained())
     }
 }
 
-impl<B> Sealed for OrPanic<B> {}
+impl<K> Sealed for OrPanic<K> {}
 
-/// Divergence that breaks on errors by constructing a branch type that represents the error.
+/// Divergence that breaks on errors by constructing an error representation of its output type.
 ///
-/// The branch type is determined by a branch kind type parameter. By default, `OrError` uses the
-/// [`AsExpression`] kind and therefore constructs [`Expression`]s as the output of fallible
-/// operations.
+/// The output kind `K` must support an error representation and implement [`Break`].
+///
+/// By default, `OrError` uses the [`AsExpression`] kind and therefore has an [`Expression`] output
+/// type.
 ///
 /// [`AsExpression`]: crate::divergence::AsExpression
 /// [`Expression`]: crate::expression::Expression
-pub struct OrError<B = AsExpression>(PhantomData<fn() -> B>, Infallible);
+pub struct OrError<K = AsExpression>(PhantomData<fn() -> K>, Infallible);
 
-impl<B> Divergence for OrError<B>
+impl<K> Divergence for OrError<K>
 where
-    B: Break,
+    K: Break,
 {
-    type Continue = B;
+    type Continue = K;
 
-    fn diverge<T, E>(result: Result<T, E>) -> B::As<T, E>
+    fn diverge<T, E>(result: Result<T, E>) -> K::As<T, E>
     where
         E: Debug,
     {
         match result {
-            Ok(output) => B::continue_with_output(output),
-            Err(error) => B::break_with_error(error),
+            Ok(output) => K::continue_with_output(output),
+            Err(error) => K::break_with_error(error),
         }
     }
 }
 
-impl<B> Sealed for OrError<B> {}
+impl<K> Sealed for OrError<K> {}

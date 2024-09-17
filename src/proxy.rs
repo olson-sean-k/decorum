@@ -60,7 +60,7 @@ use crate::{
     NotNan, Primitive, ToCanonicalBits, Total,
 };
 
-pub type BranchOf<P> = divergence::BranchOf<DivergenceOf<P>, P, ErrorOf<P>>;
+pub type OutputOf<P> = divergence::OutputOf<DivergenceOf<P>, P, ErrorOf<P>>;
 pub type ConstraintOf<P> = <P as ClosedProxy>::Constraint;
 pub type DivergenceOf<P> = <ConstraintOf<P> as Constraint>::Divergence;
 pub type ErrorOf<P> = <ConstraintOf<P> as Constraint>::Error;
@@ -202,7 +202,7 @@ where
     /// Fallibly constructs a proxy from a primitive IEEE 754 floating-point value.
     ///
     /// This construction mirrors the [`TryFrom`] implementation and is independent of the
-    /// [divergence][`divergence`] of the proxy; it always outputs a [`Result`] and never panics.
+    /// [divergence] of the proxy; it always outputs a [`Result`] and never panics.
     ///
     /// # Errors
     ///
@@ -258,9 +258,9 @@ where
     /// Constructs a proxy from a primitive IEEE 754 floating-point value and asserts that its
     /// constraints are satisfied.
     ///
-    /// This construction is independent of the [divergence][`divergence`] of the proxy and always
-    /// asserts constraints (even when the divergence is fallible). Note that this function never
-    /// fails (panics) for [`Total`], which has no constraints.
+    /// This construction is independent of the [divergence] of the proxy and always asserts
+    /// constraints (even when the divergence is fallible). Note that this function never fails
+    /// (panics) for [`Total`], which has no constraints.
     ///
     /// # Panics
     ///
@@ -402,9 +402,9 @@ where
 {
     /// Constructs a proxy from a primitive IEEE 754 floating-point value.
     ///
-    /// This construction outputs the branch type of the [divergence][`divergence`] of the proxy
-    /// and invokes its divergence behavior if the floating-point value does not satisfy
-    /// constraints. Note that this function never fails for [`Total`], which has no constraints.
+    /// This function returns the output type of the [divergence] of the proxy and invokes its
+    /// error behavior if the floating-point value does not satisfy constraints. Note that this
+    /// function never fails for [`Total`], which has no constraints.
     ///
     /// The distinctions in output and behavior are static and are determined by the type
     /// parameters of the `Proxy` type constructor.
@@ -412,16 +412,15 @@ where
     /// # Panics
     ///
     /// This function panics if the primitive floating-point value does not satisfy the constraints
-    /// of the proxy **and** the [divergence][`divergence`] of the proxy panics. For example, the
-    /// [`OrPanic`] divergence asserts constraints and panics.
+    /// of the proxy **and** the [divergence] of the proxy panics. For example, the [`OrPanic`]
+    /// divergence asserts constraints and panics.
     ///
     /// # Errors
     ///
     /// Returns an error if the primitive floating-point value does not satisfy the constraints of
-    /// the proxy **and** the [divergence][`divergence`] of the proxy encodes errors in its branch
-    /// type. For example, the branch type of the `Try<ExpressionKind>` divergence is
-    /// [`Expression`] and this function returns the [`Undefined`] variant if the constraint is
-    /// violated.
+    /// the proxy **and** the [divergence] of the proxy encodes errors in its output type. For
+    /// example, the output type of the `OrError<AsExpression>` divergence is [`Expression`] and
+    /// this function returns the [`Undefined`] variant if the constraint is violated.
     ///
     /// # Examples
     ///
@@ -457,21 +456,21 @@ where
     /// [`OrPanic`]: crate::divergence::OrPanic
     /// [`Total`]: crate::Total
     /// [`Undefined`]: crate::expression::Expression::Undefined
-    pub fn new(inner: T) -> BranchOf<Self> {
+    pub fn new(inner: T) -> OutputOf<Self> {
         C::map(inner, |inner| Proxy {
             inner,
             phantom: PhantomData,
         })
     }
 
-    pub(crate) fn map<F>(self, f: F) -> BranchOf<Self>
+    pub(crate) fn map<F>(self, f: F) -> OutputOf<Self>
     where
         F: FnOnce(T) -> T,
     {
         Self::new(f(self.into_inner()))
     }
 
-    pub(crate) fn zip_map<C2, F>(self, other: Proxy<T, C2>, f: F) -> BranchOf<Self>
+    pub(crate) fn zip_map<C2, F>(self, other: Proxy<T, C2>, f: F) -> OutputOf<Self>
     where
         C2: Constraint,
         F: FnOnce(T, T) -> T,
@@ -533,7 +532,7 @@ where
     T: Float + Primitive,
     C: Constraint,
 {
-    type Output = BranchOf<Self>;
+    type Output = OutputOf<Self>;
 
     fn add(self, other: Self) -> Self::Output {
         self.zip_map(other, Add::add)
@@ -545,7 +544,7 @@ where
     T: Float + Primitive,
     C: Constraint,
 {
-    type Output = BranchOf<Self>;
+    type Output = OutputOf<Self>;
 
     fn add(self, other: T) -> Self::Output {
         self.map(|inner| inner + other)
@@ -691,7 +690,7 @@ where
     T: Float + Primitive,
     C: Constraint,
 {
-    type Codomain = BranchOf<Self>;
+    type Codomain = OutputOf<Self>;
 }
 
 impl<T, C> Copy for Proxy<T, C> where T: Copy {}
@@ -748,7 +747,7 @@ where
     T: Float + Primitive,
     C: Constraint,
 {
-    type Output = BranchOf<Self>;
+    type Output = OutputOf<Self>;
 
     fn div(self, other: Self) -> Self::Output {
         self.zip_map(other, Div::div)
@@ -760,7 +759,7 @@ where
     T: Float + Primitive,
     C: Constraint,
 {
-    type Output = BranchOf<Self>;
+    type Output = OutputOf<Self>;
 
     fn div(self, other: T) -> Self::Output {
         self.map(|inner| inner / other)
@@ -1357,7 +1356,7 @@ where
     T: Float + Primitive,
     C: Constraint,
 {
-    type Output = BranchOf<Self>;
+    type Output = OutputOf<Self>;
 
     fn mul(self, other: Self) -> Self::Output {
         self.zip_map(other, Mul::mul)
@@ -1369,7 +1368,7 @@ where
     T: Float + Primitive,
     C: Constraint,
 {
-    type Output = BranchOf<Self>;
+    type Output = OutputOf<Self>;
 
     fn mul(self, other: T) -> Self::Output {
         self.map(|a| a * other)
@@ -1561,7 +1560,7 @@ where
     T: Float + Primitive,
     C: Constraint,
 {
-    type Output = BranchOf<Self>;
+    type Output = OutputOf<Self>;
 
     fn rem(self, other: Self) -> Self::Output {
         self.zip_map(other, Rem::rem)
@@ -1573,7 +1572,7 @@ where
     T: Float + Primitive,
     C: Constraint,
 {
-    type Output = BranchOf<Self>;
+    type Output = OutputOf<Self>;
 
     fn rem(self, other: T) -> Self::Output {
         self.map(|inner| inner % other)
@@ -1634,7 +1633,7 @@ where
     T: Float + Primitive,
     C: Constraint,
 {
-    type Output = BranchOf<Self>;
+    type Output = OutputOf<Self>;
 
     fn sub(self, other: Self) -> Self::Output {
         self.zip_map(other, Sub::sub)
@@ -1646,7 +1645,7 @@ where
     T: Float + Primitive,
     C: Constraint,
 {
-    type Output = BranchOf<Self>;
+    type Output = OutputOf<Self>;
 
     fn sub(self, other: T) -> Self::Output {
         self.map(|inner| inner - other)
@@ -2022,7 +2021,7 @@ macro_rules! impl_binary_operation {
                 where
                     C: Constraint,
                 {
-                    type Output = BranchOf<Proxy<$t, C>>;
+                    type Output = OutputOf<Proxy<$t, C>>;
 
                     fn $method(self, other: Proxy<$t, C>) -> Self::Output {
                         let $left = self;

@@ -38,14 +38,20 @@ let mut xs: HashMap<_, _> = [(key, "pi")].into_iter().collect();
 Configure the behavior of an IEEE 754 floating-point representation:
 
 ```rust
-use decorum::constraint::FiniteConstraint;
-use decorum::divergence::{AsResult, OrError};
-use decorum::proxy::{BranchOf, Proxy};
+pub mod real {
+    use decorum::constraint::FiniteConstraint;
+    use decorum::divergence::{AsResult, OrError};
+    use decorum::proxy::{OutputOf, Proxy};
 
-// A 64-bit floating point type that must represent a real number and returns
-// `Result`s from fallible operations.
-pub type Real = Proxy<f64, FiniteConstraint<OrError<AsResult>>>;
-pub type Result = BranchOf<Real>;
+    // A 64-bit floating point type that must represent a real number and returns
+    // `Result`s from fallible operations.
+    pub type Real = Proxy<f64, FiniteConstraint<OrError<AsResult>>>;
+    pub type Result = OutputOf<Real>;
+}
+
+use real::Real;
+
+pub fn f(x: Real) -> real::Result { ... }
 
 let x = Real::assert(0.0);
 let y = Real::assert(0.0);
@@ -71,8 +77,8 @@ The following `Proxy` behaviors can be configured:
 Note that the output type of fallible operations and the error behavior are
 independent. A `Proxy` type may return a `Result` and yet panic if an error
 occurs, which can be useful for conditional compilation and builds wherein
-behavior changes but types do not. The behavior of a `Proxy` type is configured
-using two mechanisms: _constraints_ and _divergence_.
+**behavior** changes but types do not. The behavior of a `Proxy` type is
+configured using two mechanisms: _constraints_ and _divergence_.
 
 ```rust
 use decorum::constraint::FiniteConstraint;
@@ -108,20 +114,20 @@ and does not accept a divergence.
 
 Many operations on members of these subsets may produce values from other
 subsets that are illegal w.r.t. constraints, such as the addition of two real
-numbers resulting in `+INF`. A _divergence_ type determines both the behavior
+numbers resulting in `+INF`. A _divergence type_ determines both the behavior
 when an illegal value is encountered as well as the output type of such fallible
 operations.
 
-| Divergence | OK       | Error     | Default Branch |
-|------------|----------|-----------|----------------|
-| `OrPanic`  | continue | **panic** | `AsSelf`       |
-| `OrError`  | continue | break     | `AsExpression` |
+| Divergence | OK       | Error     | Default Output Kind |
+|------------|----------|-----------|---------------------|
+| `OrPanic`  | continue | **panic** | `AsSelf`            |
+| `OrError`  | continue | break     | `AsExpression`      |
 
 In the above table, _continue_ refers to returning a **non**-error value while
 _break_ refers to returning an error value. If an illegal value is encountered,
 then **the `OrPanic` divergence panics** while the `OrError` divergence
 constructs a value that encodes the error. The output type of fallible
-operations is determined by a _branch_ type:
+operations is determined by an _output kind_:
 
 | Branch         | Type                  | Continue        | Break          |
 |----------------|-----------------------|-----------------|----------------|
@@ -144,12 +150,12 @@ such that it can be used directly in expressions and defer error checking.
 ```rust
 use decorum::constraint::FiniteConstraint;
 use decorum::divergence::{AsExpression, OrError};
-use decorum::proxy::{BranchOf, Proxy};
+use decorum::proxy::{OutputOf, Proxy};
 use decorum::real::UnaryReal as _;
 use decorum::try_expression;
 
 pub type Real = Proxy<f64, FiniteConstraint<OrError<AsExpression>>>;
-pub type Expr = BranchOf<Real>;
+pub type Expr = OutputOf<Real>;
 
 pub fn f(x: Real, y: Real) -> Expr {
     let sum = x + y;
