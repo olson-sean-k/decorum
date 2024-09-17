@@ -1501,7 +1501,7 @@ where
     C: Constraint,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(FloatOrd::float_cmp(self.as_ref(), other.as_ref()))
+        Some(self.cmp(other))
     }
 }
 
