@@ -28,10 +28,10 @@ Hash totally ordered IEEE 754 floating-point representations:
 
 ```rust
 use decorum::real::UnaryReal;
-use decorum::Finite;
+use decorum::Real;
 use std::collections::HashMap;
 
-let key = Finite::<f64>::PI;
+let key = Real::<f64>::PI;
 let mut xs: HashMap<_, _> = [(key, "pi")].into_iter().collect();
 ```
 
@@ -203,8 +203,8 @@ based on the constraints of the proxy.
 | Type Definition | Sized Aliases | Trait Implementations                      | Illegal Values        |
 |-----------------|---------------|--------------------------------------------|-----------------------|
 | `Total`         |               | `Encoding + Real + Infinite + Nan + Float` |                       |
-| `NotNan`        | `N32`, `N64`  | `Encoding + Real + Infinite`               | `NaN`                 |
-| `Finite`        | `R32`, `R64`  | `Encoding + Real`                          | `NaN`, `-INF`, `+INF` |
+| `ExtendedReal`  | `E32`, `E64`  | `Encoding + Real + Infinite`               | `NaN`                 |
+| `Real`          | `R32`, `R64`  | `Encoding + Real`                          | `NaN`, `-INF`, `+INF` |
 
 ## Relations and Total Ordering
 

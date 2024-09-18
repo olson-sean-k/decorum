@@ -45,7 +45,7 @@
 //!
 //! // A 32-bit floating-point representation that must be a real number or an infinity. Panics if
 //! // constructed from a `NaN`.
-//! pub type ExtendedReal = Proxy<f32, IsNotNan<OrPanic<AsSelf>>>;
+//! pub type NotNan = Proxy<f32, IsNotNan<OrPanic<AsSelf>>>;
 //! ```
 //!
 //! The following example demonstrates a conditionally compiled `Real` type definition with a

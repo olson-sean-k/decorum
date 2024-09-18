@@ -11,20 +11,23 @@
 //! that is not in this set is encountered. The following table summarizes the proxy type
 //! definitions and their constraints:
 //!
-//! | Type Definition | Sized Definitions | Trait Implementations                      | Disallowed Values     |
-//! |-----------------|-------------------|--------------------------------------------|-----------------------|
-//! | [`Total`]       |                   | `Encoding + Real + Infinite + Nan + Float` |                       |
-//! | [`NotNan`]      | `N32`, `N64`      | `Encoding + Real + Infinite`               | `NaN`                 |
-//! | [`Finite`]      | `R32`, `R64`      | `Encoding + Real`                          | `NaN`, `-INF`, `+INF` |
+//! | Type Definition  | Sized Definitions | Trait Implementations                      | Disallowed Values     |
+//! |------------------|-------------------|--------------------------------------------|-----------------------|
+//! | [`Total`]        |                   | `Encoding + Real + Infinite + Nan + Float` |                       |
+//! | [`ExtendedReal`] | `E32`, `E64`      | `Encoding + Real + Infinite`               | `NaN`                 |
+//! | [`Real`]         | `R32`, `R64`      | `Encoding + Real`                          | `NaN`, `-INF`, `+INF` |
 //!
-//! The [`NotNan`] and [`Finite`] types disallow values that represent `NaN`, $\infin$, and
+//! The [`ExtendedReal`] and [`Real`] types disallow values that represent `NaN`, $\infin$, and
 //! $-\infin$. These types diverge if such a value is encountered, which may result in an error
 //! encoding output (e.g., a `Result::Err`) or even a panic. Notably, the [`Total`] type applies no
 //! constraints and is infallible (never diverges).
 //!
 //! [`constraint`]: crate::constraint
 //! [`divergence`]: crate::divergence
+//! [`ExtendedReal`]: crate::ExtendedReal
+//! [`Real`]: crate::Real
 //! [`Result::Err`]: core::result::Result::Err
+//! [`Total`]: crate::Total
 
 #[cfg(feature = "approx")]
 use approx::{AbsDiffEq, RelativeEq, UlpsEq};
@@ -312,10 +315,10 @@ where
     /// ```rust
     /// use decorum::divergence::OrPanic;
     /// use decorum::real::UnaryReal;
-    /// use decorum::{N64, R64};
+    /// use decorum::{E64, R64};
     ///
     /// let x = R64::<OrPanic>::ZERO;
-    /// let y = N64::from_subset(x); // `N64` allows a superset of the values of `R64`.
+    /// let y = E64::from_subset(x); // `E64` allows a superset of the values of `R64`.
     /// ```
     pub fn from_subset<C2>(other: Proxy<T, C2>) -> Self
     where
@@ -331,10 +334,10 @@ where
     ///
     /// ```rust
     /// use decorum::real::UnaryReal;
-    /// use decorum::{N64, R64};
+    /// use decorum::{E64, R64};
     ///
     /// let x = R64::ZERO;
-    /// let y: N64 = x.into_superset(); // `N64` allows a superset of the values of `R64`.
+    /// let y: E64 = x.into_superset(); // `E64` allows a superset of the values of `R64`.
     /// ```
     pub fn into_superset<C2>(self) -> Proxy<T, C2>
     where

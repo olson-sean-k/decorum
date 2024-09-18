@@ -313,8 +313,8 @@ where
         // Both `min` and `max` are `NaN` if `a` and `b` are incomparable.
         if min.is_nan() {
             // This relies on the correctness of the implementation of `IntrinsicOrd` for `T`. For
-            // constrained (and nonresidual) types like `NotNan` and `Finite`, `a` and `b` must not
-            // be undefined (`NaN`) and so `min` and `max` also must not be undefined.
+            // constrained (and nonresidual) types like `ExtendedReal` and `Real`, `a` and `b` must
+            // not be undefined (`NaN`) and so `min` and `max` also must not be undefined.
             let nan = Proxy::<_, C>::unchecked(T::NAN);
             (nan, nan)
         }

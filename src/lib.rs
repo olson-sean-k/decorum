@@ -40,8 +40,8 @@
 //! | Type Definition | Subsets                                |
 //! |-----------------|----------------------------------------|
 //! | [`Total`]       | real numbers, infinities, not-a-number |
-//! | [`NotNan`]      | real numbers, infinities               |
-//! | [`Finite`]      | real numbers                           |
+//! | [`ExtendedReal`]      | real numbers, infinities               |
+//! | [`Real`]      | real numbers                           |
 //!
 //! # Equivalence and Ordering
 //!
@@ -125,13 +125,13 @@
 //! [`Constraint`]: crate::constraint::Constraint
 //! [`divergence`]: crate::divergence
 //! [`Expression`]: crate::expression::Expression
-//! [`Finite`]: crate::Finite
+//! [`ExtendedReal`]: crate::ExtendedReal
 //! [`hash`]: crate::hash
 //! [`Hash`]: core::hash::Hash
-//! [`NotNan`]: crate::NotNan
 //! [`proxy`]: crate::proxy
 //! [`Proxy`]: crate::proxy::Proxy
 //! [`real`]: crate::real
+//! [`Real`]: crate::Real
 //! [`Total`]: crate::Total
 //! [`Try`]: core::ops::Try
 //! [`try_expression`]: crate::try_expression
@@ -194,41 +194,23 @@ use crate::sealed::Sealed;
 /// [`Proxy`]: crate::proxy::Proxy
 pub type Total<T> = Proxy<T, IsFloat>;
 
-/// IEEE 754 floating-point representation that cannot be `NaN`.
-///
-/// This [`Proxy`] type applies the [`IsExtendedReal`] constraint and [diverges][`divergence`] if a
-/// `NaN` value is encountered. **The default divergence of this definition is [`OrPanic`], which
-/// panics when the constraint is violated.**
-///
-/// Like [`Total`], `NotNan` defines equivalence and total ordering, but need not consider `NaN`
-/// and so uses only standard IEEE 754 floating-point semantics.
-///
-/// [`divergence`]: crate::divergence
-/// [`IsExtendedReal`]: crate::constraint::IsExtendedReal
-/// [`OrPanic`]: crate::divergence::OrPanic
-/// [`Proxy`]: crate::proxy::Proxy
-/// [`Total`]: crate::Total
+/// IEEE 754 floating-point representation that must be an extended real.
 pub type ExtendedReal<T, D = OrPanic> = Proxy<T, IsExtendedReal<D>>;
 
+/// IEEE 754 floating-point representation that must not be `NaN`.
 pub type NotNan<T, D = OrPanic> = ExtendedReal<T, D>;
 
-/// 32-bit IEEE 754 floating-point representation that cannot be `NaN`.
+/// 32-bit IEEE 754 floating-point representation that must be an extended real (not `NaN`).
 pub type E32<D = OrPanic> = ExtendedReal<f32, D>;
-/// 64-bit IEEE 754 floating-point representation that cannot be `NaN`.
+/// 64-bit IEEE 754 floating-point representation that must be an extended real (not `NaN`).
 pub type E64<D = OrPanic> = ExtendedReal<f64, D>;
 
 /// IEEE 754 floating-point representation that must be a real number.
 pub type Real<T, D = OrPanic> = Proxy<T, IsReal<D>>;
 
 /// 32-bit IEEE 754 floating-point representation that must be a real number.
-///
-/// The prefix "R" for _real_ is used instead of "F" for _finite_, because if "F" were used, then
-/// this name would be too similar to `f32`.
 pub type R32<D = OrPanic> = Real<f32, D>;
 /// 64-bit IEEE 754 floating-point representation that must be a real number.
-///
-/// The prefix "R" for _real_ is used instead of "F" for _finite_, because if "F" were used, then
-/// this name would be too similar to `f64`.
 pub type R64<D = OrPanic> = Real<f64, D>;
 
 // TODO: Inverse the relationship between `Encoding` and `ToCanonicalBits` such that `Encoding`
