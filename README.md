@@ -27,7 +27,7 @@ let z = x / y; // Panics.
 Hash totally ordered IEEE 754 floating-point representations:
 
 ```rust
-use decorum::real::UnaryReal;
+use decorum::real::UnaryRealFunction;
 use decorum::Real;
 use std::collections::HashMap;
 
@@ -151,7 +151,7 @@ such that it can be used directly in expressions and defer error checking.
 use decorum::constraint::IsReal;
 use decorum::divergence::{AsExpression, OrError};
 use decorum::proxy::{OutputOf, Proxy};
-use decorum::real::UnaryReal as _;
+use decorum::real::UnaryRealFunction;
 use decorum::try_expression;
 
 pub type Real = Proxy<f64, IsReal<OrError<AsExpression>>>;
@@ -253,11 +253,11 @@ do (unlike `f64::max`, etc.).
 
 ```rust
 use decorum::cmp;
-use decorum::real::{Endoreal, UnaryReal as _};
+use decorum::real::{RealEndofunction, UnaryRealFunction};
 
 pub fn f<T>(x: T, y: T) -> T
 where
-    T: Endoreal,
+    T: RealEndofunction,
 {
     // If the comparison is undefined, then `min` is assigned some
     // representation of undefined. For floating-point types, `NaN` represents

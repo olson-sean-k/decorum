@@ -10,7 +10,7 @@ use crate::cmp::UndefinedError;
 use crate::constraint::Constraint;
 use crate::divergence::{AsExpression, OrError};
 use crate::proxy::{ErrorOf, ExpressionOf, Proxy};
-use crate::real::{BinaryReal, Function, Sign, UnaryReal};
+use crate::real::{BinaryRealFunction, Function, Sign, UnaryRealFunction};
 use crate::{with_binary_operations, with_primitives, Float, Infinite, Primitive};
 
 pub use Expression::Defined;
@@ -63,7 +63,7 @@ macro_rules! try_expression {
 /// use decorum::constraint::IsReal;
 /// use decorum::divergence::OrError;
 /// use decorum::proxy::{OutputOf, Proxy};
-/// use decorum::real::UnaryReal;
+/// use decorum::real::UnaryRealFunction;
 /// use decorum::try_expression;
 ///
 /// pub type Real = Proxy<f64, IsReal<OrError>>;
@@ -86,7 +86,7 @@ macro_rules! try_expression {
 /// use decorum::constraint::IsReal;
 /// use decorum::divergence::{AsResult, OrError};
 /// use decorum::proxy::{OutputOf, Proxy};
-/// use decorum::real::UnaryReal;
+/// use decorum::real::UnaryRealFunction;
 ///
 /// pub type Real = Proxy<f64, IsReal<OrError<AsResult>>>;
 /// pub type RealResult = OutputOf<Real>;
@@ -113,7 +113,7 @@ macro_rules! try_expression {
 /// use decorum::constraint::IsReal;
 /// use decorum::divergence::{AsExpression, OrError};
 /// use decorum::proxy::{OutputOf, Proxy};
-/// use decorum::real::UnaryReal;
+/// use decorum::real::UnaryRealFunction;
 ///
 /// pub type Real = Proxy<f64, IsReal<OrError<AsExpression>>>;
 /// pub type Expr = OutputOf<Real>;
@@ -245,7 +245,7 @@ impl<'a, T, E> Expression<&'a mut T, E> {
     }
 }
 
-impl<T, C> BinaryReal for ExpressionOf<Proxy<T, C>>
+impl<T, C> BinaryRealFunction for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
     T: Float + Primitive,
@@ -253,36 +253,36 @@ where
 {
     #[cfg(feature = "std")]
     fn div_euclid(self, n: Self) -> Self::Codomain {
-        BinaryReal::div_euclid(try_expression!(self), try_expression!(n))
+        BinaryRealFunction::div_euclid(try_expression!(self), try_expression!(n))
     }
 
     #[cfg(feature = "std")]
     fn rem_euclid(self, n: Self) -> Self::Codomain {
-        BinaryReal::rem_euclid(try_expression!(self), try_expression!(n))
+        BinaryRealFunction::rem_euclid(try_expression!(self), try_expression!(n))
     }
 
     #[cfg(feature = "std")]
     fn pow(self, n: Self) -> Self::Codomain {
-        BinaryReal::pow(try_expression!(self), try_expression!(n))
+        BinaryRealFunction::pow(try_expression!(self), try_expression!(n))
     }
 
     #[cfg(feature = "std")]
     fn log(self, base: Self) -> Self::Codomain {
-        BinaryReal::log(try_expression!(self), try_expression!(base))
+        BinaryRealFunction::log(try_expression!(self), try_expression!(base))
     }
 
     #[cfg(feature = "std")]
     fn hypot(self, other: Self) -> Self::Codomain {
-        BinaryReal::hypot(try_expression!(self), try_expression!(other))
+        BinaryRealFunction::hypot(try_expression!(self), try_expression!(other))
     }
 
     #[cfg(feature = "std")]
     fn atan2(self, other: Self) -> Self::Codomain {
-        BinaryReal::atan2(try_expression!(self), try_expression!(other))
+        BinaryRealFunction::atan2(try_expression!(self), try_expression!(other))
     }
 }
 
-impl<T, C> BinaryReal<T> for ExpressionOf<Proxy<T, C>>
+impl<T, C> BinaryRealFunction<T> for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
     T: Float + Primitive,
@@ -290,7 +290,7 @@ where
 {
     #[cfg(feature = "std")]
     fn div_euclid(self, n: T) -> Self::Codomain {
-        BinaryReal::div_euclid(
+        BinaryRealFunction::div_euclid(
             try_expression!(self),
             try_expression!(Proxy::<T, C>::new(n)),
         )
@@ -298,7 +298,7 @@ where
 
     #[cfg(feature = "std")]
     fn rem_euclid(self, n: T) -> Self::Codomain {
-        BinaryReal::rem_euclid(
+        BinaryRealFunction::rem_euclid(
             try_expression!(self),
             try_expression!(Proxy::<T, C>::new(n)),
         )
@@ -306,7 +306,7 @@ where
 
     #[cfg(feature = "std")]
     fn pow(self, n: T) -> Self::Codomain {
-        BinaryReal::pow(
+        BinaryRealFunction::pow(
             try_expression!(self),
             try_expression!(Proxy::<T, C>::new(n)),
         )
@@ -314,7 +314,7 @@ where
 
     #[cfg(feature = "std")]
     fn log(self, base: T) -> Self::Codomain {
-        BinaryReal::log(
+        BinaryRealFunction::log(
             try_expression!(self),
             try_expression!(Proxy::<T, C>::new(base)),
         )
@@ -322,7 +322,7 @@ where
 
     #[cfg(feature = "std")]
     fn hypot(self, other: T) -> Self::Codomain {
-        BinaryReal::hypot(
+        BinaryRealFunction::hypot(
             try_expression!(self),
             try_expression!(Proxy::<T, C>::new(other)),
         )
@@ -330,14 +330,14 @@ where
 
     #[cfg(feature = "std")]
     fn atan2(self, other: T) -> Self::Codomain {
-        BinaryReal::atan2(
+        BinaryRealFunction::atan2(
             try_expression!(self),
             try_expression!(Proxy::<T, C>::new(other)),
         )
     }
 }
 
-impl<T, C> BinaryReal<Proxy<T, C>> for ExpressionOf<Proxy<T, C>>
+impl<T, C> BinaryRealFunction<Proxy<T, C>> for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
     T: Float + Primitive,
@@ -345,36 +345,36 @@ where
 {
     #[cfg(feature = "std")]
     fn div_euclid(self, n: Proxy<T, C>) -> Self::Codomain {
-        BinaryReal::div_euclid(try_expression!(self), n)
+        BinaryRealFunction::div_euclid(try_expression!(self), n)
     }
 
     #[cfg(feature = "std")]
     fn rem_euclid(self, n: Proxy<T, C>) -> Self::Codomain {
-        BinaryReal::rem_euclid(try_expression!(self), n)
+        BinaryRealFunction::rem_euclid(try_expression!(self), n)
     }
 
     #[cfg(feature = "std")]
     fn pow(self, n: Proxy<T, C>) -> Self::Codomain {
-        BinaryReal::pow(try_expression!(self), n)
+        BinaryRealFunction::pow(try_expression!(self), n)
     }
 
     #[cfg(feature = "std")]
     fn log(self, base: Proxy<T, C>) -> Self::Codomain {
-        BinaryReal::log(try_expression!(self), base)
+        BinaryRealFunction::log(try_expression!(self), base)
     }
 
     #[cfg(feature = "std")]
     fn hypot(self, other: Proxy<T, C>) -> Self::Codomain {
-        BinaryReal::hypot(try_expression!(self), other)
+        BinaryRealFunction::hypot(try_expression!(self), other)
     }
 
     #[cfg(feature = "std")]
     fn atan2(self, other: Proxy<T, C>) -> Self::Codomain {
-        BinaryReal::atan2(try_expression!(self), other)
+        BinaryRealFunction::atan2(try_expression!(self), other)
     }
 }
 
-impl<T, C> BinaryReal<ExpressionOf<Proxy<T, C>>> for Proxy<T, C>
+impl<T, C> BinaryRealFunction<ExpressionOf<Proxy<T, C>>> for Proxy<T, C>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
     T: Float + Primitive,
@@ -382,32 +382,32 @@ where
 {
     #[cfg(feature = "std")]
     fn div_euclid(self, n: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
-        BinaryReal::div_euclid(self, try_expression!(n))
+        BinaryRealFunction::div_euclid(self, try_expression!(n))
     }
 
     #[cfg(feature = "std")]
     fn rem_euclid(self, n: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
-        BinaryReal::rem_euclid(self, try_expression!(n))
+        BinaryRealFunction::rem_euclid(self, try_expression!(n))
     }
 
     #[cfg(feature = "std")]
     fn pow(self, n: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
-        BinaryReal::pow(self, try_expression!(n))
+        BinaryRealFunction::pow(self, try_expression!(n))
     }
 
     #[cfg(feature = "std")]
     fn log(self, base: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
-        BinaryReal::log(self, try_expression!(base))
+        BinaryRealFunction::log(self, try_expression!(base))
     }
 
     #[cfg(feature = "std")]
     fn hypot(self, other: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
-        BinaryReal::hypot(self, try_expression!(other))
+        BinaryRealFunction::hypot(self, try_expression!(other))
     }
 
     #[cfg(feature = "std")]
     fn atan2(self, other: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
-        BinaryReal::atan2(self, try_expression!(other))
+        BinaryRealFunction::atan2(self, try_expression!(other))
     }
 }
 
@@ -568,30 +568,30 @@ impl<T, E> ops::Try for Expression<T, E> {
     }
 }
 
-impl<T, C> UnaryReal for ExpressionOf<Proxy<T, C>>
+impl<T, C> UnaryRealFunction for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
     T: Float + Primitive,
     C: Constraint<Divergence = OrError<AsExpression>>,
 {
-    const ZERO: Self = Defined(UnaryReal::ZERO);
-    const ONE: Self = Defined(UnaryReal::ONE);
-    const E: Self = Defined(UnaryReal::E);
-    const PI: Self = Defined(UnaryReal::PI);
-    const FRAC_1_PI: Self = Defined(UnaryReal::FRAC_1_PI);
-    const FRAC_2_PI: Self = Defined(UnaryReal::FRAC_2_PI);
-    const FRAC_2_SQRT_PI: Self = Defined(UnaryReal::FRAC_2_SQRT_PI);
-    const FRAC_PI_2: Self = Defined(UnaryReal::FRAC_PI_2);
-    const FRAC_PI_3: Self = Defined(UnaryReal::FRAC_PI_3);
-    const FRAC_PI_4: Self = Defined(UnaryReal::FRAC_PI_4);
-    const FRAC_PI_6: Self = Defined(UnaryReal::FRAC_PI_6);
-    const FRAC_PI_8: Self = Defined(UnaryReal::FRAC_PI_8);
-    const SQRT_2: Self = Defined(UnaryReal::SQRT_2);
-    const FRAC_1_SQRT_2: Self = Defined(UnaryReal::FRAC_1_SQRT_2);
-    const LN_2: Self = Defined(UnaryReal::LN_2);
-    const LN_10: Self = Defined(UnaryReal::LN_10);
-    const LOG2_E: Self = Defined(UnaryReal::LOG2_E);
-    const LOG10_E: Self = Defined(UnaryReal::LOG10_E);
+    const ZERO: Self = Defined(UnaryRealFunction::ZERO);
+    const ONE: Self = Defined(UnaryRealFunction::ONE);
+    const E: Self = Defined(UnaryRealFunction::E);
+    const PI: Self = Defined(UnaryRealFunction::PI);
+    const FRAC_1_PI: Self = Defined(UnaryRealFunction::FRAC_1_PI);
+    const FRAC_2_PI: Self = Defined(UnaryRealFunction::FRAC_2_PI);
+    const FRAC_2_SQRT_PI: Self = Defined(UnaryRealFunction::FRAC_2_SQRT_PI);
+    const FRAC_PI_2: Self = Defined(UnaryRealFunction::FRAC_PI_2);
+    const FRAC_PI_3: Self = Defined(UnaryRealFunction::FRAC_PI_3);
+    const FRAC_PI_4: Self = Defined(UnaryRealFunction::FRAC_PI_4);
+    const FRAC_PI_6: Self = Defined(UnaryRealFunction::FRAC_PI_6);
+    const FRAC_PI_8: Self = Defined(UnaryRealFunction::FRAC_PI_8);
+    const SQRT_2: Self = Defined(UnaryRealFunction::SQRT_2);
+    const FRAC_1_SQRT_2: Self = Defined(UnaryRealFunction::FRAC_1_SQRT_2);
+    const LN_2: Self = Defined(UnaryRealFunction::LN_2);
+    const LN_10: Self = Defined(UnaryRealFunction::LN_10);
+    const LOG2_E: Self = Defined(UnaryRealFunction::LOG2_E);
+    const LOG10_E: Self = Defined(UnaryRealFunction::LOG10_E);
 
     fn is_zero(self) -> bool {
         self.defined().map_or(false, |defined| defined.is_zero())
@@ -607,126 +607,126 @@ where
 
     #[cfg(feature = "std")]
     fn abs(self) -> Self {
-        self.map(UnaryReal::abs)
+        self.map(UnaryRealFunction::abs)
     }
 
     #[cfg(feature = "std")]
     fn floor(self) -> Self {
-        self.map(UnaryReal::floor)
+        self.map(UnaryRealFunction::floor)
     }
 
     #[cfg(feature = "std")]
     fn ceil(self) -> Self {
-        self.map(UnaryReal::ceil)
+        self.map(UnaryRealFunction::ceil)
     }
 
     #[cfg(feature = "std")]
     fn round(self) -> Self {
-        self.map(UnaryReal::round)
+        self.map(UnaryRealFunction::round)
     }
 
     #[cfg(feature = "std")]
     fn trunc(self) -> Self {
-        self.map(UnaryReal::trunc)
+        self.map(UnaryRealFunction::trunc)
     }
 
     #[cfg(feature = "std")]
     fn fract(self) -> Self {
-        self.map(UnaryReal::fract)
+        self.map(UnaryRealFunction::fract)
     }
 
     fn recip(self) -> Self::Codomain {
-        self.and_then(UnaryReal::recip)
+        self.and_then(UnaryRealFunction::recip)
     }
 
     #[cfg(feature = "std")]
     fn powi(self, n: i32) -> Self::Codomain {
-        self.and_then(|defined| UnaryReal::powi(defined, n))
+        self.and_then(|defined| UnaryRealFunction::powi(defined, n))
     }
 
     #[cfg(feature = "std")]
     fn sqrt(self) -> Self::Codomain {
-        self.and_then(UnaryReal::sqrt)
+        self.and_then(UnaryRealFunction::sqrt)
     }
 
     #[cfg(feature = "std")]
     fn cbrt(self) -> Self {
-        self.map(UnaryReal::cbrt)
+        self.map(UnaryRealFunction::cbrt)
     }
 
     #[cfg(feature = "std")]
     fn exp(self) -> Self::Codomain {
-        self.and_then(UnaryReal::exp)
+        self.and_then(UnaryRealFunction::exp)
     }
 
     #[cfg(feature = "std")]
     fn exp2(self) -> Self::Codomain {
-        self.and_then(UnaryReal::exp2)
+        self.and_then(UnaryRealFunction::exp2)
     }
 
     #[cfg(feature = "std")]
     fn exp_m1(self) -> Self::Codomain {
-        self.and_then(UnaryReal::exp_m1)
+        self.and_then(UnaryRealFunction::exp_m1)
     }
 
     #[cfg(feature = "std")]
     fn ln(self) -> Self::Codomain {
-        self.and_then(UnaryReal::ln)
+        self.and_then(UnaryRealFunction::ln)
     }
 
     #[cfg(feature = "std")]
     fn log2(self) -> Self::Codomain {
-        self.and_then(UnaryReal::log2)
+        self.and_then(UnaryRealFunction::log2)
     }
 
     #[cfg(feature = "std")]
     fn log10(self) -> Self::Codomain {
-        self.and_then(UnaryReal::log10)
+        self.and_then(UnaryRealFunction::log10)
     }
 
     #[cfg(feature = "std")]
     fn ln_1p(self) -> Self::Codomain {
-        self.and_then(UnaryReal::ln_1p)
+        self.and_then(UnaryRealFunction::ln_1p)
     }
 
     #[cfg(feature = "std")]
     fn to_degrees(self) -> Self::Codomain {
-        self.and_then(UnaryReal::to_degrees)
+        self.and_then(UnaryRealFunction::to_degrees)
     }
 
     #[cfg(feature = "std")]
     fn to_radians(self) -> Self {
-        self.map(UnaryReal::to_radians)
+        self.map(UnaryRealFunction::to_radians)
     }
 
     #[cfg(feature = "std")]
     fn sin(self) -> Self {
-        self.map(UnaryReal::sin)
+        self.map(UnaryRealFunction::sin)
     }
 
     #[cfg(feature = "std")]
     fn cos(self) -> Self {
-        self.map(UnaryReal::cos)
+        self.map(UnaryRealFunction::cos)
     }
 
     #[cfg(feature = "std")]
     fn tan(self) -> Self::Codomain {
-        self.and_then(UnaryReal::tan)
+        self.and_then(UnaryRealFunction::tan)
     }
 
     #[cfg(feature = "std")]
     fn asin(self) -> Self::Codomain {
-        self.and_then(UnaryReal::asin)
+        self.and_then(UnaryRealFunction::asin)
     }
 
     #[cfg(feature = "std")]
     fn acos(self) -> Self::Codomain {
-        self.and_then(UnaryReal::acos)
+        self.and_then(UnaryRealFunction::acos)
     }
 
     #[cfg(feature = "std")]
     fn atan(self) -> Self {
-        self.map(UnaryReal::atan)
+        self.map(UnaryRealFunction::atan)
     }
 
     #[cfg(feature = "std")]
@@ -742,32 +742,32 @@ where
 
     #[cfg(feature = "std")]
     fn sinh(self) -> Self {
-        self.map(UnaryReal::sinh)
+        self.map(UnaryRealFunction::sinh)
     }
 
     #[cfg(feature = "std")]
     fn cosh(self) -> Self {
-        self.map(UnaryReal::cosh)
+        self.map(UnaryRealFunction::cosh)
     }
 
     #[cfg(feature = "std")]
     fn tanh(self) -> Self {
-        self.map(UnaryReal::tanh)
+        self.map(UnaryRealFunction::tanh)
     }
 
     #[cfg(feature = "std")]
     fn asinh(self) -> Self::Codomain {
-        self.and_then(UnaryReal::asinh)
+        self.and_then(UnaryRealFunction::asinh)
     }
 
     #[cfg(feature = "std")]
     fn acosh(self) -> Self::Codomain {
-        self.and_then(UnaryReal::acosh)
+        self.and_then(UnaryRealFunction::acosh)
     }
 
     #[cfg(feature = "std")]
     fn atanh(self) -> Self::Codomain {
-        self.and_then(UnaryReal::atanh)
+        self.and_then(UnaryRealFunction::atanh)
     }
 }
 
