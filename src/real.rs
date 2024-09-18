@@ -178,11 +178,11 @@ pub enum Sign {
 }
 
 impl Sign {
-    pub fn is_positive(&self) -> bool {
+    pub fn is_non_zero_positive(&self) -> bool {
         matches!(self, Sign::Positive)
     }
 
-    pub fn is_negative(&self) -> bool {
+    pub fn is_non_zero_negative(&self) -> bool {
         matches!(self, Sign::Negative)
     }
 
