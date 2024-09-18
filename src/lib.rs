@@ -171,7 +171,7 @@ use crate::cmp::IntrinsicOrd;
 use crate::constraint::{IsExtendedReal, IsFloat, IsReal};
 use crate::divergence::OrPanic;
 use crate::proxy::Proxy;
-use crate::real::{BinaryReal, Function, Real, Sign, UnaryReal};
+use crate::real::{BinaryReal, Function, Sign, UnaryReal};
 
 mod sealed {
     use core::convert::Infallible;
@@ -208,26 +208,28 @@ pub type Total<T> = Proxy<T, IsFloat>;
 /// [`OrPanic`]: crate::divergence::OrPanic
 /// [`Proxy`]: crate::proxy::Proxy
 /// [`Total`]: crate::Total
-pub type NotNan<T, D = OrPanic> = Proxy<T, IsExtendedReal<D>>;
+pub type ExtendedReal<T, D = OrPanic> = Proxy<T, IsExtendedReal<D>>;
+
+pub type NotNan<T, D = OrPanic> = ExtendedReal<T, D>;
 
 /// 32-bit IEEE 754 floating-point representation that cannot be `NaN`.
-pub type N32<D = OrPanic> = NotNan<f32, D>;
+pub type E32<D = OrPanic> = ExtendedReal<f32, D>;
 /// 64-bit IEEE 754 floating-point representation that cannot be `NaN`.
-pub type N64<D = OrPanic> = NotNan<f64, D>;
+pub type E64<D = OrPanic> = ExtendedReal<f64, D>;
 
 /// IEEE 754 floating-point representation that must be a real number.
-pub type Finite<T, D = OrPanic> = Proxy<T, IsReal<D>>;
+pub type Real<T, D = OrPanic> = Proxy<T, IsReal<D>>;
 
 /// 32-bit IEEE 754 floating-point representation that must be a real number.
 ///
 /// The prefix "R" for _real_ is used instead of "F" for _finite_, because if "F" were used, then
 /// this name would be too similar to `f32`.
-pub type R32<D = OrPanic> = Finite<f32, D>;
+pub type R32<D = OrPanic> = Real<f32, D>;
 /// 64-bit IEEE 754 floating-point representation that must be a real number.
 ///
 /// The prefix "R" for _real_ is used instead of "F" for _finite_, because if "F" were used, then
 /// this name would be too similar to `f64`.
-pub type R64<D = OrPanic> = Finite<f64, D>;
+pub type R64<D = OrPanic> = Real<f64, D>;
 
 // TODO: Inverse the relationship between `Encoding` and `ToCanonicalBits` such that `Encoding`
 //       requires `ToCanonicalBits`.
@@ -411,9 +413,9 @@ impl Encoding for f64 {
 /// Types that implement this trait are represented using IEEE 754 encoding **and directly expose
 /// the complete details of that encoding**, including infinities, `NaN`s, and operations on real
 /// numbers.
-pub trait Float: Encoding + Infinite + IntrinsicOrd + Nan + Real<Codomain = Self> {}
+pub trait Float: Encoding + Infinite + IntrinsicOrd + Nan + real::Real<Codomain = Self> {}
 
-impl<T> Float for T where T: Encoding + Infinite + IntrinsicOrd + Nan + Real<Codomain = T> {}
+impl<T> Float for T where T: Encoding + Infinite + IntrinsicOrd + Nan + real::Real<Codomain = T> {}
 
 /// A primitive IEEE 754 floating-point type.
 pub trait Primitive: Copy + Sealed {}

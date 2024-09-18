@@ -56,8 +56,8 @@ use crate::real::{BinaryReal, Function, Sign, UnaryReal};
 #[cfg(feature = "std")]
 use crate::ForeignReal;
 use crate::{
-    with_binary_operations, with_primitives, Encoding, Finite, Float, ForeignFloat, Infinite, Nan,
-    NotNan, Primitive, ToCanonicalBits, Total,
+    with_binary_operations, with_primitives, Encoding, ExtendedReal, Float, ForeignFloat, Infinite,
+    Nan, Primitive, Real, ToCanonicalBits, Total,
 };
 
 pub type OutputOf<P> = divergence::OutputOf<DivergenceOf<P>, P, ErrorOf<P>>;
@@ -695,21 +695,21 @@ where
 
 impl<T, C> Copy for Proxy<T, C> where T: Copy {}
 
-impl<T> Debug for Finite<T>
+impl<T> Debug for Real<T>
 where
     T: Debug + Float + Primitive,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Finite").field(self.as_ref()).finish()
+        f.debug_tuple("Real").field(self.as_ref()).finish()
     }
 }
 
-impl<T> Debug for NotNan<T>
+impl<T> Debug for ExtendedReal<T>
 where
     T: Debug + Float + Primitive,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("NotNan").field(self.as_ref()).finish()
+        f.debug_tuple("ExtendedReal").field(self.as_ref()).finish()
     }
 }
 
@@ -1168,11 +1168,11 @@ where
     }
 }
 
-impl<T> From<Finite<T>> for NotNan<T>
+impl<T> From<Real<T>> for ExtendedReal<T>
 where
     T: Float + Primitive,
 {
-    fn from(other: Finite<T>) -> Self {
+    fn from(other: Real<T>) -> Self {
         Self::from_subset(other)
     }
 }
@@ -1199,20 +1199,20 @@ where
     }
 }
 
-impl<T> From<Finite<T>> for Total<T>
+impl<T> From<Real<T>> for Total<T>
 where
     T: Float + Primitive,
 {
-    fn from(other: Finite<T>) -> Self {
+    fn from(other: Real<T>) -> Self {
         Self::from_subset(other)
     }
 }
 
-impl<T> From<NotNan<T>> for Total<T>
+impl<T> From<ExtendedReal<T>> for Total<T>
 where
     T: Float + Primitive,
 {
-    fn from(other: NotNan<T>) -> Self {
+    fn from(other: ExtendedReal<T>) -> Self {
         Self::from_subset(other)
     }
 }
@@ -2052,8 +2052,8 @@ macro_rules! impl_foreign_real {
         with_primitives!(impl_foreign_real);
     };
     (primitive => $t:ty) => {
-        impl_foreign_real!(proxy => Finite, primitive => $t);
-        impl_foreign_real!(proxy => NotNan, primitive => $t);
+        impl_foreign_real!(proxy => Real, primitive => $t);
+        impl_foreign_real!(proxy => ExtendedReal, primitive => $t);
     };
     (proxy => $p:ident, primitive => $t:ty) => {
         #[cfg(feature = "std")]
@@ -2264,8 +2264,8 @@ macro_rules! impl_try_from {
         with_primitives!(impl_try_from);
     };
     (primitive => $t:ty) => {
-        impl_try_from!(proxy => Finite, primitive => $t);
-        impl_try_from!(proxy => NotNan, primitive => $t);
+        impl_try_from!(proxy => Real, primitive => $t);
+        impl_try_from!(proxy => ExtendedReal, primitive => $t);
     };
     (proxy => $p:ident, primitive => $t:ty) => {
         impl<D> TryFrom<$t> for $p<$t, D>
@@ -2317,7 +2317,7 @@ impl_try_from!();
 #[cfg(test)]
 mod tests {
     use crate::divergence::OrPanic;
-    use crate::{Finite, Float, Infinite, Nan, NotNan, Real, Total, UnaryReal, N32, R32};
+    use crate::{ExtendedReal, Float, Infinite, Nan, Real, Real, Total, UnaryReal, E32, R32};
 
     #[test]
     fn total_no_panic_on_inf() {
@@ -2361,7 +2361,7 @@ mod tests {
 
     #[test]
     fn notnan_no_panic_on_inf() {
-        let x: N32 = 1.0.try_into().unwrap();
+        let x: E32 = 1.0.try_into().unwrap();
         let y = x / 0.0;
         assert!(Infinite::is_infinite(y));
     }
@@ -2369,7 +2369,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn notnan_panic_on_nan() {
-        let x: N32 = 0.0.try_into().unwrap();
+        let x: E32 = 0.0.try_into().unwrap();
         let _ = x / 0.0;
     }
 
@@ -2378,11 +2378,11 @@ mod tests {
     #[allow(clippy::float_cmp)]
     fn notnan_no_panic_from_inf_ref_slice() {
         let x = 1.0f64 / 0.0;
-        let y: &NotNan<_> = (&x).try_into().unwrap();
+        let y: &ExtendedReal<_> = (&x).try_into().unwrap();
         assert!(y.is_infinite());
 
         let xs = [0.0f64, 1.0 / 0.0];
-        let ys = NotNan::try_from_slice(&xs).unwrap();
+        let ys = ExtendedReal::try_from_slice(&xs).unwrap();
         assert_eq!(ys, &[0.0f64, Infinite::INFINITY]);
     }
 
@@ -2391,7 +2391,7 @@ mod tests {
     #[allow(clippy::zero_divided_by_zero)]
     fn notnan_panic_from_nan_ref() {
         let x = 0.0f64 / 0.0;
-        let _: &NotNan<_> = (&x).try_into().unwrap();
+        let _: &ExtendedReal<_> = (&x).try_into().unwrap();
     }
 
     #[test]
@@ -2399,7 +2399,7 @@ mod tests {
     #[allow(clippy::zero_divided_by_zero)]
     fn notnan_panic_from_nan_slice() {
         let xs = [1.0f64, 0.0f64 / 0.0];
-        let _ = NotNan::<f64>::try_from_slice(&xs).unwrap();
+        let _ = ExtendedReal::<f64>::try_from_slice(&xs).unwrap();
     }
 
     #[test]
@@ -2427,14 +2427,14 @@ mod tests {
     #[should_panic]
     fn finite_panic_from_inf_ref() {
         let x = 1.0f64 / 0.0;
-        let _: &Finite<_> = (&x).try_into().unwrap();
+        let _: &Real<_> = (&x).try_into().unwrap();
     }
 
     #[test]
     #[should_panic]
     fn finite_panic_from_inf_slice() {
         let xs = [1.0f64, 1.0f64 / 0.0];
-        let _ = Finite::<f64>::try_from_slice(&xs).unwrap();
+        let _ = Real::<f64>::try_from_slice(&xs).unwrap();
     }
 
     #[test]
@@ -2522,10 +2522,10 @@ mod tests {
         {
         }
 
-        let finite = Finite::<f32>::default();
+        let finite = Real::<f32>::default();
         as_real(finite);
 
-        let notnan = NotNan::<f32>::default();
+        let notnan = ExtendedReal::<f32>::default();
         as_infinite(notnan);
         as_real(notnan);
 
@@ -2540,9 +2540,9 @@ mod tests {
     fn fmt() {
         let x: Total<f32> = 1.0.into();
         format_args!("{0} {0:e} {0:E} {0:?} {0:#?}", x);
-        let y: NotNan<f32> = 1.0.try_into().unwrap();
+        let y: ExtendedReal<f32> = 1.0.try_into().unwrap();
         format_args!("{0} {0:e} {0:E} {0:?} {0:#?}", y);
-        let z: Finite<f32> = 1.0.try_into().unwrap();
+        let z: Real<f32> = 1.0.try_into().unwrap();
         format_args!("{0} {0:e} {0:E} {0:?} {0:#?}", z);
     }
 
@@ -2561,7 +2561,7 @@ mod tests {
     fn deserialize_panic_on_violation() {
         // TODO: See `SerdeContainer`. This does not test a value that violates `N32`'s
         //       constraints; instead, this simply fails to deserialize `f32` from `"null"`.
-        let _: N32 = serde_json::from_str("null").unwrap();
+        let _: E32 = serde_json::from_str("null").unwrap();
     }
 
     #[cfg(feature = "serialize-serde")]
@@ -2569,12 +2569,12 @@ mod tests {
     fn serialize() {
         assert_eq!(
             "1.0",
-            serde_json::to_string(&N32::<OrPanic>::assert(1.0)).unwrap()
+            serde_json::to_string(&E32::<OrPanic>::assert(1.0)).unwrap()
         );
         // TODO: See `SerdeContainer`.
         assert_eq!(
             "null",
-            serde_json::to_string(&N32::<OrPanic>::INFINITY).unwrap()
+            serde_json::to_string(&E32::<OrPanic>::INFINITY).unwrap()
         );
     }
 }
