@@ -20,7 +20,7 @@
 
 use core::hash::{Hash, Hasher};
 
-use crate::{Float, Primitive, ToCanonicalBits};
+use crate::{Primitive, ToCanonicalBits};
 
 /// An IEEE 754 encoded type that can be hashed.
 pub trait FloatHash {
@@ -31,7 +31,7 @@ pub trait FloatHash {
 
 impl<T> FloatHash for T
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
     fn float_hash<H>(&self, state: &mut H)
     where
@@ -43,7 +43,7 @@ where
 
 impl<T> FloatHash for [T]
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
     fn float_hash<H>(&self, state: &mut H)
     where

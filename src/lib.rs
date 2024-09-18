@@ -37,11 +37,11 @@
 //! Proxy types and their components are provided by the [`proxy`], [`constraint`], and
 //! [`divergence`] modules. Numerous type definitions are also provided in the crate root:
 //!
-//! | Type Definition | Subsets                                |
-//! |-----------------|----------------------------------------|
-//! | [`Total`]       | real numbers, infinities, not-a-number |
-//! | [`ExtendedReal`]      | real numbers, infinities               |
-//! | [`Real`]      | real numbers                           |
+//! | Type Definition  | Subsets                                |
+//! |------------------|----------------------------------------|
+//! | [`Total`]        | real numbers, infinities, not-a-number |
+//! | [`ExtendedReal`] | real numbers, infinities               |
+//! | [`Real`]         | real numbers                           |
 //!
 //! # Equivalence and Ordering
 //!
@@ -171,7 +171,7 @@ use crate::cmp::IntrinsicOrd;
 use crate::constraint::{IsExtendedReal, IsFloat, IsReal};
 use crate::divergence::OrPanic;
 use crate::proxy::Proxy;
-use crate::real::{BinaryRealFunction, Function, RealFunction, Sign, UnaryRealFunction};
+use crate::real::{BinaryRealFunction, Function, RealEndofunction, Sign, UnaryRealFunction};
 
 mod sealed {
     use core::convert::Infallible;
@@ -213,10 +213,8 @@ pub type R32<D = OrPanic> = Real<f32, D>;
 /// 64-bit IEEE 754 floating-point representation that must be a real number.
 pub type R64<D = OrPanic> = Real<f64, D>;
 
-// TODO: Inverse the relationship between `Encoding` and `ToCanonicalBits` such that `Encoding`
-//       requires `ToCanonicalBits`.
 /// Converts IEEE 754 floating-point values to a canonicalized form.
-pub trait ToCanonicalBits: Encoding {
+pub trait ToCanonicalBits: BaseEncoding {
     type Bits: PrimInt + Unsigned;
 
     /// Conversion to a canonical representation.
@@ -230,7 +228,7 @@ pub trait ToCanonicalBits: Encoding {
 // TODO: Implement this differently for differently sized types.
 impl<T> ToCanonicalBits for T
 where
-    T: Encoding + Nan + Primitive,
+    T: BaseEncoding + NanEncoding + Primitive,
 {
     type Bits = u64;
 
@@ -261,37 +259,16 @@ where
     }
 }
 
-/// IEEE 754 floating-point representations that expose infinities (`-INF` and `+INF`).
-// This trait is implemented by trivial `Copy` types.
-#[allow(clippy::wrong_self_convention)]
-pub trait Infinite: Sized {
-    const INFINITY: Self;
-    const NEG_INFINITY: Self;
-
-    fn is_infinite(self) -> bool;
-    fn is_finite(self) -> bool;
-}
-
-/// IEEE 754 floating-point representations that expose `NaN`s.
-// This trait is implemented by trivial `Copy` types.
-#[allow(clippy::wrong_self_convention)]
-pub trait Nan: Sized {
-    /// A representation of `NaN`.
-    ///
-    /// For primitive floating-point types, `NaN` is incomparable. Therefore, prefer the `is_nan`
-    /// predicate over direct comparisons with `NaN`.
-    const NAN: Self;
-
-    fn is_nan(self) -> bool;
-}
-
-/// IEEE 754 floating-point representations that expose general encoding.
+/// A type with an IEEE 754 floating-point representation that exposes its basic encoding.
 ///
-/// Provides values and operations that describe the encoding of an IEEE 754 floating-point value.
-/// The specific semantic values for infinities and `NaN`s are described by independent traits.
-// This trait is implemented by trivial `Copy` types.
+/// `BaseEncoding` types have a floating-point representation ([`binaryN`]), **but may not support
+/// nor expose other elements of the specification**. This trait describes the most basic
+/// non-computational elements of the encoding and does not specify the inhabitants of a type.
+///
+/// [`binaryN`]: https://en.wikipedia.org/wiki/IEEE_754#Basic_and_interchange_formats
+// CLIPPY: This trait is implemented by trivial `Copy` types.
 #[allow(clippy::wrong_self_convention)]
-pub trait Encoding: Sized {
+pub trait BaseEncoding: Sized {
     const MAX_FINITE: Self;
     const MIN_FINITE: Self;
     const MIN_POSITIVE_NORMAL: Self;
@@ -308,7 +285,7 @@ pub trait Encoding: Sized {
     fn integer_decode(self) -> (u64, i16, i8);
 }
 
-impl Encoding for f32 {
+impl BaseEncoding for f32 {
     const MAX_FINITE: Self = f32::MAX;
     const MIN_FINITE: Self = f32::MIN;
     const MIN_POSITIVE_NORMAL: Self = f32::MIN_POSITIVE;
@@ -349,7 +326,7 @@ impl Encoding for f32 {
     }
 }
 
-impl Encoding for f64 {
+impl BaseEncoding for f64 {
     const MAX_FINITE: Self = f64::MAX;
     const MIN_FINITE: Self = f64::MIN;
     const MIN_POSITIVE_NORMAL: Self = f64::MIN_POSITIVE;
@@ -390,17 +367,47 @@ impl Encoding for f64 {
     }
 }
 
-/// IEEE 754 floating-point representations.
+/// A type with an IEEE 754 floating-point representation that supports infinities.
 ///
-/// Types that implement this trait are represented using IEEE 754 encoding **and directly expose
-/// the complete details of that encoding**, including infinities, `NaN`s, and operations on real
-/// numbers.
-pub trait Float: Encoding + Infinite + IntrinsicOrd + Nan + RealFunction<Codomain = Self> {}
+/// `InfinityEncoding` types have `-INF` and `+INF` inhabitants.
+// CLIPPY: This trait is implemented by trivial `Copy` types.
+#[allow(clippy::wrong_self_convention)]
+pub trait InfinityEncoding: Sized {
+    const INFINITY: Self;
+    const NEG_INFINITY: Self;
 
-impl<T> Float for T where T: Encoding + Infinite + IntrinsicOrd + Nan + RealFunction<Codomain = T> {}
+    fn is_infinite(self) -> bool;
+    fn is_finite(self) -> bool;
+}
+
+/// A type with an IEEE 754 floating-point representation that supports `NaN`s.
+///
+/// `NanEncoding` types have `NaN` inhabitants.
+// CLIPPY: This trait is implemented by trivial `Copy` types.
+#[allow(clippy::wrong_self_convention)]
+pub trait NanEncoding: Sized {
+    /// A representation of `NaN`.
+    ///
+    /// For primitive floating-point types, `NaN` is incomparable. Therefore, prefer the `is_nan`
+    /// predicate over direct comparisons with `NaN`.
+    const NAN: Self;
+
+    fn is_nan(self) -> bool;
+}
 
 /// A primitive IEEE 754 floating-point type.
-pub trait Primitive: Copy + Sealed {}
+pub trait Primitive:
+    BaseEncoding
+    + Copy
+    + InfinityEncoding
+    + IntrinsicOrd
+    + NanEncoding
+    + PartialEq
+    + PartialOrd
+    + RealEndofunction
+    + Sealed
+{
+}
 
 // TODO: Remove this. Of course.
 fn _sanity() {
@@ -496,7 +503,7 @@ macro_rules! impl_primitive {
             type Codomain = $t;
         }
 
-        impl Infinite for $t {
+        impl InfinityEncoding for $t {
             const INFINITY: Self = <$t>::INFINITY;
             const NEG_INFINITY: Self = <$t>::NEG_INFINITY;
 
@@ -509,7 +516,7 @@ macro_rules! impl_primitive {
             }
         }
 
-        impl Nan for $t {
+        impl NanEncoding for $t {
             const NAN: Self = <$t>::NAN;
 
             fn is_nan(self) -> bool {

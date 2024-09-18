@@ -11,14 +11,14 @@
 //! that is not in this set is encountered. The following table summarizes the proxy type
 //! definitions and their constraints:
 //!
-//! | Type Definition  | Sized Definitions | Trait Implementations                      | Disallowed Values     |
-//! |------------------|-------------------|--------------------------------------------|-----------------------|
-//! | [`Total`]        |                   | `Encoding + Real + Infinite + Nan + Float` |                       |
-//! | [`ExtendedReal`] | `E32`, `E64`      | `Encoding + Real + Infinite`               | `NaN`                 |
-//! | [`Real`]         | `R32`, `R64`      | `Encoding + Real`                          | `NaN`, `-INF`, `+INF` |
+//! | Type Definition  | Sized Definitions | Trait Implementations                           | Disallowed Values     |
+//! |------------------|-------------------|-------------------------------------------------|-----------------------|
+//! | [`Total`]        |                   | `BaseEncoding + InfinityEncoding + NanEncoding` |                       |
+//! | [`ExtendedReal`] | `E32`, `E64`      | `BaseEncoding + InfinityEncoding`               | `NaN`                 |
+//! | [`Real`]         | `R32`, `R64`      | `BaseEncoding`                                  | `NaN`, `-INF`, `+INF` |
 //!
-//! The [`ExtendedReal`] and [`Real`] types disallow values that represent `NaN`, $\infin$, and
-//! $-\infin$. These types diverge if such a value is encountered, which may result in an error
+//! The [`ExtendedReal`] and [`Real`] types disallow values that represent not-a-number, $\infin$,
+//! and $-\infin$. These types diverge if such a value is encountered, which may result in an error
 //! encoding output (e.g., a `Result::Err`) or even a panic. Notably, the [`Total`] type applies no
 //! constraints and is infallible (never diverges).
 //!
@@ -59,8 +59,8 @@ use crate::real::{BinaryRealFunction, Function, Sign, UnaryRealFunction};
 #[cfg(feature = "std")]
 use crate::ForeignReal;
 use crate::{
-    with_binary_operations, with_primitives, Encoding, ExtendedReal, Float, ForeignFloat, Infinite,
-    Nan, Primitive, Real, ToCanonicalBits, Total,
+    with_binary_operations, with_primitives, BaseEncoding, ExtendedReal, ForeignFloat,
+    InfinityEncoding, NanEncoding, Primitive, Real, ToCanonicalBits, Total,
 };
 
 pub type OutputOf<P> = divergence::OutputOf<DivergenceOf<P>, P, ErrorOf<P>>;
@@ -73,7 +73,7 @@ pub type ExpressionOf<P> = Expression<P, ErrorOf<P>>;
 ///
 /// [`Proxy`]: crate::proxy::Proxy
 pub trait ClosedProxy: Sized {
-    type Primitive: Float + Primitive;
+    type Primitive: Primitive;
     type Constraint: Constraint;
 }
 
@@ -104,7 +104,7 @@ struct SerdeContainer<T> {
 #[cfg(feature = "serialize-serde")]
 impl<T, C> From<Proxy<T, C>> for SerdeContainer<T>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     fn from(proxy: Proxy<T, C>) -> Self {
@@ -136,10 +136,10 @@ where
     feature = "serialize-serde",
     serde(
         bound(
-            deserialize = "T: serde::Deserialize<'de> + Float + Primitive, \
+            deserialize = "T: serde::Deserialize<'de> + Primitive, \
                            C: Constraint, \
                            C::Error: Display",
-            serialize = "T: Float + Primitive + serde::Serialize, \
+            serialize = "T: Primitive + serde::Serialize, \
                          C: Constraint"
         ),
         try_from = "SerdeContainer<T>",
@@ -199,7 +199,7 @@ impl<T, C> Proxy<T, C> {
 
 impl<T, C> Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     /// Fallibly constructs a proxy from a primitive IEEE 754 floating-point value.
@@ -400,7 +400,7 @@ where
 
 impl<T, C> Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     /// Constructs a proxy from a primitive IEEE 754 floating-point value.
@@ -484,7 +484,7 @@ where
 
 impl<T> Total<T>
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
     /// Converts a slice of primitive IEEE 754 floating-point values into a slice of `Total`s.
     ///
@@ -515,7 +515,7 @@ where
 #[cfg(feature = "approx")]
 impl<T, C> AbsDiffEq for Proxy<T, C>
 where
-    T: AbsDiffEq<Epsilon = T> + Float + Primitive,
+    T: AbsDiffEq<Epsilon = T> + Primitive,
     C: Constraint,
 {
     type Epsilon = Self;
@@ -532,7 +532,7 @@ where
 
 impl<T, C> Add for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     type Output = OutputOf<Self>;
@@ -544,7 +544,7 @@ where
 
 impl<T, C> Add<T> for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     type Output = OutputOf<Self>;
@@ -556,7 +556,7 @@ where
 
 impl<T, C, E> AddAssign for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Error = E>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -567,7 +567,7 @@ where
 
 impl<T, C, E> AddAssign<T> for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Error = E>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -584,7 +584,7 @@ impl<T, C> AsRef<T> for Proxy<T, C> {
 
 impl<T, C> BinaryRealFunction for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     #[cfg(feature = "std")]
@@ -620,7 +620,7 @@ where
 
 impl<T, C> BinaryRealFunction<T> for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     #[cfg(feature = "std")]
@@ -656,14 +656,14 @@ where
 
 impl<T, C> Bounded for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
     fn min_value() -> Self {
-        Encoding::MIN_FINITE
+        BaseEncoding::MIN_FINITE
     }
 
     fn max_value() -> Self {
-        Encoding::MAX_FINITE
+        BaseEncoding::MAX_FINITE
     }
 }
 
@@ -681,7 +681,7 @@ where
 
 impl<T, C> ClosedProxy for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     type Primitive = T;
@@ -690,7 +690,7 @@ where
 
 impl<T, C> Function for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     type Codomain = OutputOf<Self>;
@@ -700,7 +700,7 @@ impl<T, C> Copy for Proxy<T, C> where T: Copy {}
 
 impl<T> Debug for Real<T>
 where
-    T: Debug + Float + Primitive,
+    T: Debug + Primitive,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_tuple("Real").field(self.as_ref()).finish()
@@ -709,7 +709,7 @@ where
 
 impl<T> Debug for ExtendedReal<T>
 where
-    T: Debug + Float + Primitive,
+    T: Debug + Primitive,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_tuple("ExtendedReal").field(self.as_ref()).finish()
@@ -718,7 +718,7 @@ where
 
 impl<T> Debug for Total<T>
 where
-    T: Debug + Float + Primitive,
+    T: Debug + Primitive,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_tuple("Total").field(self.as_ref()).finish()
@@ -727,7 +727,7 @@ where
 
 impl<T, C> Default for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     fn default() -> Self {
@@ -747,7 +747,7 @@ where
 
 impl<T, C> Div for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     type Output = OutputOf<Self>;
@@ -759,7 +759,7 @@ where
 
 impl<T, C> Div<T> for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     type Output = OutputOf<Self>;
@@ -771,7 +771,7 @@ where
 
 impl<T, C, E> DivAssign for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Error = E>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -782,7 +782,7 @@ where
 
 impl<T, C, E> DivAssign<T> for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Error = E>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -791,9 +791,9 @@ where
     }
 }
 
-impl<T, C> Encoding for Proxy<T, C>
+impl<T, C> BaseEncoding for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
     const MAX_FINITE: Self = Proxy::unchecked(T::MAX_FINITE);
     const MIN_FINITE: Self = Proxy::unchecked(T::MIN_FINITE);
@@ -826,12 +826,12 @@ where
     }
 }
 
-impl<T, C> Eq for Proxy<T, C> where T: Float + Primitive {}
+impl<T, C> Eq for Proxy<T, C> where T: Primitive {}
 
 // TODO: Bounds.
 impl<T, C> FloatConst for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     fn E() -> Self {
@@ -901,16 +901,16 @@ where
 
 impl<T, C, E> ForeignFloat for Proxy<T, C>
 where
-    T: IntrinsicOrd + Float + ForeignFloat + Num + NumCast + Primitive,
+    T: IntrinsicOrd + ForeignFloat + Num + NumCast + Primitive,
     C: Constraint<Error = E> + Member<InfinitySet> + Member<NanSet>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
     fn infinity() -> Self {
-        Infinite::INFINITY
+        InfinityEncoding::INFINITY
     }
 
     fn neg_infinity() -> Self {
-        Infinite::NEG_INFINITY
+        InfinityEncoding::NEG_INFINITY
     }
 
     fn is_infinite(self) -> bool {
@@ -922,7 +922,7 @@ where
     }
 
     fn nan() -> Self {
-        Nan::NAN
+        NanEncoding::NAN
     }
 
     fn is_nan(self) -> bool {
@@ -930,19 +930,19 @@ where
     }
 
     fn max_value() -> Self {
-        Encoding::MAX_FINITE
+        BaseEncoding::MAX_FINITE
     }
 
     fn min_value() -> Self {
-        Encoding::MIN_FINITE
+        BaseEncoding::MIN_FINITE
     }
 
     fn min_positive_value() -> Self {
-        Encoding::MIN_POSITIVE_NORMAL
+        BaseEncoding::MIN_POSITIVE_NORMAL
     }
 
     fn epsilon() -> Self {
-        Encoding::EPSILON
+        BaseEncoding::EPSILON
     }
 
     fn min(self, other: Self) -> Self {
@@ -1173,7 +1173,7 @@ where
 
 impl<T> From<Real<T>> for ExtendedReal<T>
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
     fn from(other: Real<T>) -> Self {
         Self::from_subset(other)
@@ -1182,7 +1182,7 @@ where
 
 impl<'a, T> From<&'a T> for &'a Total<T>
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
     fn from(inner: &'a T) -> Self {
         // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
@@ -1193,7 +1193,7 @@ where
 
 impl<'a, T> From<&'a mut T> for &'a mut Total<T>
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
     fn from(inner: &'a mut T) -> Self {
         // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
@@ -1204,7 +1204,7 @@ where
 
 impl<T> From<Real<T>> for Total<T>
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
     fn from(other: Real<T>) -> Self {
         Self::from_subset(other)
@@ -1213,7 +1213,7 @@ where
 
 impl<T> From<ExtendedReal<T>> for Total<T>
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
     fn from(other: ExtendedReal<T>) -> Self {
         Self::from_subset(other)
@@ -1240,7 +1240,7 @@ where
 
 impl<T> From<T> for Total<T>
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
     fn from(inner: T) -> Self {
         Self::unchecked(inner)
@@ -1249,7 +1249,7 @@ where
 
 impl<T, C> FromPrimitive for Proxy<T, C>
 where
-    T: Float + FromPrimitive + Primitive,
+    T: FromPrimitive + Primitive,
     C: Constraint,
 {
     fn from_i8(value: i8) -> Option<Self> {
@@ -1303,7 +1303,7 @@ where
 
 impl<T, C, E> FromStr for Proxy<T, C>
 where
-    T: Float + FromStr + Primitive,
+    T: FromStr + Primitive,
     C: Constraint<Error = E>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -1316,7 +1316,7 @@ where
 
 impl<T, C> Hash for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     fn hash<H>(&self, state: &mut H)
@@ -1327,9 +1327,9 @@ where
     }
 }
 
-impl<T, C> Infinite for Proxy<T, C>
+impl<T, C> InfinityEncoding for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint + Member<InfinitySet>,
 {
     const INFINITY: Self = Proxy::unchecked(T::INFINITY);
@@ -1346,7 +1346,7 @@ where
 
 impl<T, C> LowerExp for Proxy<T, C>
 where
-    T: Float + LowerExp + Primitive,
+    T: LowerExp + Primitive,
     C: Constraint,
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
@@ -1356,7 +1356,7 @@ where
 
 impl<T, C> Mul for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     type Output = OutputOf<Self>;
@@ -1368,7 +1368,7 @@ where
 
 impl<T, C> Mul<T> for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     type Output = OutputOf<Self>;
@@ -1380,7 +1380,7 @@ where
 
 impl<T, C, E> MulAssign for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Error = E>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -1391,7 +1391,7 @@ where
 
 impl<T, C, E> MulAssign<T> for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Error = E>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -1400,9 +1400,9 @@ where
     }
 }
 
-impl<T, C> Nan for Proxy<T, C>
+impl<T, C> NanEncoding for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint + Member<NanSet>,
 {
     const NAN: Self = Proxy::unchecked(T::NAN);
@@ -1414,7 +1414,7 @@ where
 
 impl<T, C> Neg for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     type Output = Self;
@@ -1426,7 +1426,7 @@ where
 
 impl<T, C, E> Num for Proxy<T, C>
 where
-    T: Float + Primitive + Num,
+    T: Primitive + Num,
     C: Constraint<Error = E>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -1442,7 +1442,7 @@ where
 
 impl<T, C> NumCast for Proxy<T, C>
 where
-    T: Float + NumCast + Primitive + ToPrimitive,
+    T: NumCast + Primitive + ToPrimitive,
     C: Constraint,
 {
     fn from<U>(value: U) -> Option<Self>
@@ -1455,7 +1455,7 @@ where
 
 impl<T, C, E> One for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Error = E>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -1466,7 +1466,7 @@ where
 
 impl<T, C> Ord for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     fn cmp(&self, other: &Self) -> Ordering {
@@ -1476,7 +1476,7 @@ where
 
 impl<T, C> PartialEq for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
     fn eq(&self, other: &Self) -> bool {
         FloatEq::float_eq(self.as_ref(), other.as_ref())
@@ -1485,7 +1485,7 @@ where
 
 impl<T, C> PartialEq<T> for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     fn eq(&self, other: &T) -> bool {
@@ -1500,7 +1500,7 @@ where
 
 impl<T, C> PartialOrd for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -1510,7 +1510,7 @@ where
 
 impl<T, C> PartialOrd<T> for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     fn partial_cmp(&self, other: &T) -> Option<Ordering> {
@@ -1522,7 +1522,7 @@ where
 
 impl<T, C, E> Product for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Error = E>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -1537,7 +1537,7 @@ where
 #[cfg(feature = "approx")]
 impl<T, C> RelativeEq for Proxy<T, C>
 where
-    T: Float + Primitive + RelativeEq<Epsilon = T>,
+    T: Primitive + RelativeEq<Epsilon = T>,
     C: Constraint,
 {
     fn default_max_relative() -> Self::Epsilon {
@@ -1560,7 +1560,7 @@ where
 
 impl<T, C> Rem for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     type Output = OutputOf<Self>;
@@ -1572,7 +1572,7 @@ where
 
 impl<T, C> Rem<T> for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     type Output = OutputOf<Self>;
@@ -1584,7 +1584,7 @@ where
 
 impl<T, C, E> RemAssign for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Error = E>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -1595,7 +1595,7 @@ where
 
 impl<T, C, E> RemAssign<T> for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Error = E>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -1606,7 +1606,7 @@ where
 
 impl<T, C, E> Signed for Proxy<T, C>
 where
-    T: Float + Primitive + Signed,
+    T: Primitive + Signed,
     C: Constraint<Error = E>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -1633,7 +1633,7 @@ where
 
 impl<T, C> Sub for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     type Output = OutputOf<Self>;
@@ -1645,7 +1645,7 @@ where
 
 impl<T, C> Sub<T> for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     type Output = OutputOf<Self>;
@@ -1657,7 +1657,7 @@ where
 
 impl<T, C, E> SubAssign for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Error = E>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -1668,7 +1668,7 @@ where
 
 impl<T, C, E> SubAssign<T> for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Error = E>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -1679,7 +1679,7 @@ where
 
 impl<T, C, E> Sum for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Error = E>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -1693,7 +1693,7 @@ where
 
 impl<T, C> ToCanonicalBits for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     type Bits = <T as ToCanonicalBits>::Bits;
@@ -1705,7 +1705,7 @@ where
 
 impl<T, C> ToPrimitive for Proxy<T, C>
 where
-    T: Float + Primitive + ToPrimitive,
+    T: Primitive + ToPrimitive,
     C: Constraint,
 {
     fn to_i8(&self) -> Option<i8> {
@@ -1760,7 +1760,7 @@ where
 #[cfg(feature = "serialize-serde")]
 impl<T, C> TryFrom<SerdeContainer<T>> for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     type Error = C::Error;
@@ -1773,7 +1773,7 @@ where
 #[cfg(feature = "approx")]
 impl<T, C> UlpsEq for Proxy<T, C>
 where
-    T: Float + Primitive + UlpsEq<Epsilon = T>,
+    T: Primitive + UlpsEq<Epsilon = T>,
     C: Constraint,
 {
     fn default_max_ulps() -> u32 {
@@ -1788,7 +1788,7 @@ where
 
 impl<T, C> UnaryRealFunction for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     const ZERO: Self = Proxy::unchecked(UnaryRealFunction::ZERO);
@@ -1985,7 +1985,7 @@ where
 
 impl<T, C> UpperExp for Proxy<T, C>
 where
-    T: Float + Primitive + UpperExp,
+    T: Primitive + UpperExp,
     C: Constraint,
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
@@ -1995,7 +1995,7 @@ where
 
 impl<T, C, E> Zero for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Error = E>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -2066,19 +2066,19 @@ macro_rules! impl_foreign_real {
             divergence::ContinueOf<D>: NonResidual<Self, ErrorOf<Self>>,
         {
             fn max_value() -> Self {
-                Encoding::MAX_FINITE
+                BaseEncoding::MAX_FINITE
             }
 
             fn min_value() -> Self {
-                Encoding::MIN_FINITE
+                BaseEncoding::MIN_FINITE
             }
 
             fn min_positive_value() -> Self {
-                Encoding::MIN_POSITIVE_NORMAL
+                BaseEncoding::MIN_POSITIVE_NORMAL
             }
 
             fn epsilon() -> Self {
-                Encoding::EPSILON
+                BaseEncoding::EPSILON
             }
 
             fn min(self, other: Self) -> Self {
@@ -2321,20 +2321,20 @@ impl_try_from!();
 mod tests {
     use crate::divergence::OrPanic;
     use crate::real::{RealFunction, UnaryRealFunction};
-    use crate::{ExtendedReal, Float, Infinite, Nan, Real, Total, E32, R32};
+    use crate::{ExtendedReal, InfinityEncoding, NanEncoding, Real, Total, E32, R32};
 
     #[test]
     fn total_no_panic_on_inf() {
         let x: Total<f32> = 1.0.into();
         let y = x / 0.0;
-        assert!(Infinite::is_infinite(y));
+        assert!(InfinityEncoding::is_infinite(y));
     }
 
     #[test]
     fn total_no_panic_on_nan() {
         let x: Total<f32> = 0.0.into();
         let y = x / 0.0;
-        assert!(Nan::is_nan(y));
+        assert!(NanEncoding::is_nan(y));
     }
 
     // This is the most comprehensive and general test of reference conversions, as there are no
@@ -2367,7 +2367,7 @@ mod tests {
     fn notnan_no_panic_on_inf() {
         let x: E32 = 1.0.try_into().unwrap();
         let y = x / 0.0;
-        assert!(Infinite::is_infinite(y));
+        assert!(InfinityEncoding::is_infinite(y));
     }
 
     #[test]
@@ -2387,7 +2387,7 @@ mod tests {
 
         let xs = [0.0f64, 1.0 / 0.0];
         let ys = ExtendedReal::try_from_slice(&xs).unwrap();
-        assert_eq!(ys, &[0.0f64, Infinite::INFINITY]);
+        assert_eq!(ys, &[0.0f64, InfinityEncoding::INFINITY]);
     }
 
     #[test]
@@ -2450,7 +2450,8 @@ mod tests {
         let y: Total<f32> = (0.0 / 0.0).into();
         assert_eq!(x, y);
 
-        let z: Total<f32> = (<f32 as Infinite>::INFINITY + <f32 as Infinite>::NEG_INFINITY).into();
+        let z: Total<f32> =
+            (<f32 as InfinityEncoding>::INFINITY + <f32 as InfinityEncoding>::NEG_INFINITY).into();
         assert_eq!(x, z);
 
         #[cfg(feature = "std")]
@@ -2502,21 +2503,15 @@ mod tests {
     // TODO: This test is questionable.
     #[test]
     fn impl_traits() {
-        fn as_float<T>(_: T)
-        where
-            T: Float,
-        {
-        }
-
         fn as_infinite<T>(_: T)
         where
-            T: Infinite,
+            T: InfinityEncoding,
         {
         }
 
         fn as_nan<T>(_: T)
         where
-            T: Nan,
+            T: NanEncoding,
         {
         }
 
@@ -2534,10 +2529,8 @@ mod tests {
         as_real(notnan);
 
         let ordered = Total::<f32>::default();
-        as_float(ordered);
         as_infinite(ordered);
         as_nan(ordered);
-        as_real(ordered);
     }
 
     #[test]

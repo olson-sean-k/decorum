@@ -3,7 +3,7 @@
 use core::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 use crate::cmp::IntrinsicOrd;
-use crate::{Float, Primitive};
+use crate::Primitive;
 
 pub trait Function {
     type Codomain;
@@ -146,26 +146,26 @@ impl<T> RealEndofunction for T where T: Endofunction + RealFunction {}
 
 pub trait FloatFunction<T>: BinaryRealFunction<T> + Into<T> + RealFunction + TryFrom<T>
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
 }
 
 impl<T, U> FloatFunction<T> for U
 where
-    T: Float + Primitive,
+    T: Primitive,
     U: BinaryRealFunction<T> + Into<T> + RealFunction + TryFrom<T>,
 {
 }
 
 pub trait FloatEndofunction<T>: RealEndofunction + FloatFunction<T>
 where
-    T: Float + Primitive,
+    T: Primitive,
 {
 }
 
 impl<T, U> FloatEndofunction<T> for U
 where
-    T: Float + Primitive,
+    T: Primitive,
     U: Endofunction + FloatFunction<T>,
 {
 }

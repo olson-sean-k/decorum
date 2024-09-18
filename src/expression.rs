@@ -11,7 +11,7 @@ use crate::constraint::Constraint;
 use crate::divergence::{AsExpression, OrError};
 use crate::proxy::{ErrorOf, ExpressionOf, Proxy};
 use crate::real::{BinaryRealFunction, Function, Sign, UnaryRealFunction};
-use crate::{with_binary_operations, with_primitives, Float, Infinite, Primitive};
+use crate::{with_binary_operations, with_primitives, InfinityEncoding, Primitive};
 
 pub use Expression::Defined;
 pub use Expression::Undefined;
@@ -248,7 +248,7 @@ impl<'a, T, E> Expression<&'a mut T, E> {
 impl<T, C> BinaryRealFunction for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Divergence = OrError<AsExpression>>,
 {
     #[cfg(feature = "std")]
@@ -285,7 +285,7 @@ where
 impl<T, C> BinaryRealFunction<T> for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Divergence = OrError<AsExpression>>,
 {
     #[cfg(feature = "std")]
@@ -340,7 +340,7 @@ where
 impl<T, C> BinaryRealFunction<Proxy<T, C>> for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Divergence = OrError<AsExpression>>,
 {
     #[cfg(feature = "std")]
@@ -377,7 +377,7 @@ where
 impl<T, C> BinaryRealFunction<ExpressionOf<Proxy<T, C>>> for Proxy<T, C>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Divergence = OrError<AsExpression>>,
 {
     #[cfg(feature = "std")]
@@ -413,7 +413,7 @@ where
 
 impl<T, C> From<T> for Expression<Proxy<T, C>, ErrorOf<Proxy<T, C>>>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     fn from(inner: T) -> Self {
@@ -424,7 +424,7 @@ where
 impl<'a, T, C> From<&'a T> for ExpressionOf<Proxy<T, C>>
 where
     Proxy<T, C>: TryFrom<&'a T, Error = C::Error>,
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Divergence = OrError<AsExpression>>,
 {
     fn from(inner: &'a T) -> Self {
@@ -435,7 +435,7 @@ where
 impl<'a, T, C> From<&'a mut T> for ExpressionOf<Proxy<T, C>>
 where
     Proxy<T, C>: TryFrom<&'a mut T, Error = C::Error>,
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Divergence = OrError<AsExpression>>,
 {
     fn from(inner: &'a mut T) -> Self {
@@ -445,7 +445,7 @@ where
 
 impl<T, C> From<Proxy<T, C>> for Expression<Proxy<T, C>, ErrorOf<Proxy<T, C>>>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint,
 {
     fn from(proxy: Proxy<T, C>) -> Self {
@@ -489,21 +489,21 @@ impl<T, E> FromResidual for Expression<T, E> {
 impl<T, C> Function for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: UndefinedError,
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Divergence = OrError<AsExpression>>,
 {
     type Codomain = Self;
 }
 
-impl<T, C> Infinite for ExpressionOf<Proxy<T, C>>
+impl<T, C> InfinityEncoding for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: Copy,
-    Proxy<T, C>: Infinite,
-    T: Float + Primitive,
+    Proxy<T, C>: InfinityEncoding,
+    T: Primitive,
     C: Constraint<Divergence = OrError<AsExpression>>,
 {
-    const INFINITY: Self = Defined(Infinite::INFINITY);
-    const NEG_INFINITY: Self = Defined(Infinite::NEG_INFINITY);
+    const INFINITY: Self = Defined(InfinityEncoding::INFINITY);
+    const NEG_INFINITY: Self = Defined(InfinityEncoding::NEG_INFINITY);
 
     fn is_infinite(self) -> bool {
         self.defined()
@@ -517,7 +517,7 @@ where
 
 impl<T, C> Neg for ExpressionOf<Proxy<T, C>>
 where
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Divergence = OrError<AsExpression>>,
 {
     type Output = Self;
@@ -571,7 +571,7 @@ impl<T, E> ops::Try for Expression<T, E> {
 impl<T, C> UnaryRealFunction for ExpressionOf<Proxy<T, C>>
 where
     ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
-    T: Float + Primitive,
+    T: Primitive,
     C: Constraint<Divergence = OrError<AsExpression>>,
 {
     const ZERO: Self = Defined(UnaryRealFunction::ZERO);
@@ -804,7 +804,7 @@ macro_rules! impl_binary_operation {
 
         impl<T, C> $trait<ExpressionOf<Self>> for Proxy<T, C>
         where
-            T: Float + Primitive,
+            T: Primitive,
             C: Constraint<Divergence = OrError<AsExpression>>,
         {
             type Output = ExpressionOf<Self>;
@@ -818,7 +818,7 @@ macro_rules! impl_binary_operation {
 
         impl<T, C> $trait<Proxy<T, C>> for ExpressionOf<Proxy<T, C>>
         where
-            T: Float + Primitive,
+            T: Primitive,
             C: Constraint<Divergence = OrError<AsExpression>>,
         {
             type Output = Self;
@@ -832,7 +832,7 @@ macro_rules! impl_binary_operation {
 
         impl<T, C> $trait<ExpressionOf<Proxy<T, C>>> for ExpressionOf<Proxy<T, C>>
         where
-            T: Float + Primitive,
+            T: Primitive,
             C: Constraint<Divergence = OrError<AsExpression>>,
         {
             type Output = Self;
@@ -846,7 +846,7 @@ macro_rules! impl_binary_operation {
 
         impl<T, C> $trait<T> for ExpressionOf<Proxy<T, C>>
         where
-            T: Float + Primitive,
+            T: Primitive,
             C: Constraint<Divergence = OrError<AsExpression>>,
         {
             type Output = Self;

@@ -28,7 +28,7 @@
 //! ```rust
 //! use core::cmp::Ordering;
 //! use decorum::cmp::FloatOrd;
-//! use decorum::Nan;
+//! use decorum::NanEncoding;
 //!
 //! let x = f64::NAN;
 //! let y = 1.0f64;
@@ -43,12 +43,12 @@
 //!
 //! ```rust
 //! use decorum::cmp;
-//! use decorum::Nan;
+//! use decorum::NanEncoding;
 //!
 //! let x = f64::NAN;
 //! let y = 1.0f64;
 //!
-//! // `Nan` is incomparable and represents an undefined computation with respect to ordering, so
+//! // `NaN` is incomparable and represents an undefined computation with respect to ordering, so
 //! // `min` is assigned a `NaN` value in this example.
 //! let min = cmp::min_or_undefined(x, y);
 //! ```
@@ -64,7 +64,7 @@ use core::cmp::Ordering;
 use crate::constraint::Constraint;
 use crate::expression::{Defined, Expression, Undefined};
 use crate::proxy::Proxy;
-use crate::{with_primitives, Float, Nan, Primitive, ToCanonicalBits};
+use crate::{with_primitives, NanEncoding, Primitive, ToCanonicalBits};
 
 /// Total equivalence relation of IEEE 754 floating-point encoded types.
 ///
@@ -84,7 +84,6 @@ use crate::{with_primitives, Float, Nan, Primitive, ToCanonicalBits};
 ///
 /// ```rust
 /// use decorum::cmp::FloatEq;
-/// use decorum::Infinite;
 ///
 /// let x = 0.0f64 / 0.0; // `NaN`.
 /// let y = f64::INFINITY - f64::INFINITY; // `NaN`.
@@ -97,7 +96,7 @@ pub trait FloatEq {
 
 impl<T> FloatEq for T
 where
-    T: Float + Primitive,
+    T: Primitive + ToCanonicalBits,
 {
     fn float_eq(&self, other: &Self) -> bool {
         self.to_canonical_bits() == other.to_canonical_bits()
@@ -133,7 +132,7 @@ pub trait FloatOrd {
 
 impl<T> FloatOrd for T
 where
-    T: Float + Primitive,
+    T: Primitive + ToCanonicalBits,
 {
     fn float_cmp(&self, other: &Self) -> Ordering {
         match self.partial_cmp(other) {
@@ -225,7 +224,7 @@ pub trait IntrinsicOrd: PartialOrd + Sized {
     ///
     /// ```rust
     /// use decorum::cmp::{self, IntrinsicOrd};
-    /// use decorum::{Nan, Total};
+    /// use decorum::{NanEncoding, Total};
     ///
     /// let x: Total<f64> = 0.0.into();
     /// let y: Total<f64> = (0.0 / 0.0).into(); // `NaN`.
@@ -299,7 +298,7 @@ where
 
 impl<T, C> IntrinsicOrd for Proxy<T, C>
 where
-    T: Float + Primitive,
+    T: IntrinsicOrd + Primitive,
     C: Constraint,
 {
     fn is_undefined(&self) -> bool {
@@ -395,7 +394,7 @@ macro_rules! impl_float_intrinsic_ord {
                 match partial_min_max(self, other) {
                     // `NaN`s cannot be compared, so `min` and `max` cannot be undefined here.
                     Some((min, max)) => (*min, *max),
-                    _ => (Nan::NAN, Nan::NAN),
+                    _ => (NanEncoding::NAN, NanEncoding::NAN),
                 }
             }
         }
@@ -442,7 +441,7 @@ mod tests {
     use num_traits::{One, Zero};
 
     use crate::cmp::{self, FloatEq, IntrinsicOrd};
-    use crate::{Nan, Total};
+    use crate::{NanEncoding, Total};
 
     #[test]
     #[allow(clippy::eq_op)]
