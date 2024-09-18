@@ -156,13 +156,6 @@ pub mod hash;
 pub mod proxy;
 pub mod real;
 
-#[cfg(not(feature = "std"))]
-pub(crate) use num_traits::float::FloatCore as ForeignFloat;
-#[cfg(feature = "std")]
-pub(crate) use num_traits::real::Real as ForeignReal;
-#[cfg(feature = "std")]
-pub(crate) use num_traits::Float as ForeignFloat;
-
 use core::mem;
 use core::num::FpCategory;
 use num_traits::{PrimInt, Unsigned};
