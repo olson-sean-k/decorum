@@ -39,13 +39,13 @@ Configure the behavior of an IEEE 754 floating-point representation:
 
 ```rust
 pub mod real {
-    use decorum::constraint::FiniteConstraint;
+    use decorum::constraint::IsReal;
     use decorum::divergence::{AsResult, OrError};
     use decorum::proxy::{OutputOf, Proxy};
 
     // A 64-bit floating point type that must represent a real number and returns
     // `Result`s from fallible operations.
-    pub type Real = Proxy<f64, FiniteConstraint<OrError<AsResult>>>;
+    pub type Real = Proxy<f64, IsReal<OrError<AsResult>>>;
     pub type Result = OutputOf<Real>;
 }
 
@@ -81,12 +81,12 @@ occurs, which can be useful for conditional compilation and builds wherein
 configured using two mechanisms: _constraints_ and _divergence_.
 
 ```rust
-use decorum::constraint::FiniteConstraint;
+use decorum::constraint::IsReal;
 use decorum::divergence::OrPanic;
 use decorum::proxy::Proxy;
 
 // `Real` must represent a real number and otherwise panics.
-pub type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
+pub type Real = Proxy<f64, IsReal<OrPanic>>;
 ```
 
 Constraints specify a subset of floating-point values that a proxy may
@@ -102,13 +102,13 @@ Constraints can be used to strictly represent real numbers, extended reals, or
 complete but totally ordered IEEE 754 types (i.e., no constraints). Available
 constraints are summarized below:
 
-| Constraint         | Members                                 | Fallible  |
-|--------------------|-----------------------------------------|-----------|
-| `UnitConstraint`   | real numbers, infinities, not-a-numbers | no        |
-| `NotNanConstraint` | real numbers, infinities                | yes       |
-| `FiniteConstraint` | real numbers                            | yes       |
+| Constraint       | Members                                 | Fallible  |
+|------------------|-----------------------------------------|-----------|
+| `IsFloat`        | real numbers, infinities, not-a-numbers | no        |
+| `IsExtendedReal` | real numbers, infinities                | yes       |
+| `IsReal`         | real numbers                            | yes       |
 
-`UnitConstraint` supports all IEEE 754 floating-point values and so applies no
+`IsFloat` supports all IEEE 754 floating-point values and so applies no
 constraint at all. As such, it has no fallible operations w.r.t. the constraint
 and does not accept a divergence.
 
@@ -148,13 +148,13 @@ improves the ergonomics of error handling by implementing mathematical traits
 such that it can be used directly in expressions and defer error checking.
 
 ```rust
-use decorum::constraint::FiniteConstraint;
+use decorum::constraint::IsReal;
 use decorum::divergence::{AsExpression, OrError};
 use decorum::proxy::{OutputOf, Proxy};
 use decorum::real::UnaryReal as _;
 use decorum::try_expression;
 
-pub type Real = Proxy<f64, FiniteConstraint<OrError<AsExpression>>>;
+pub type Real = Proxy<f64, IsReal<OrError<AsExpression>>>;
 pub type Expr = OutputOf<Real>;
 
 pub fn f(x: Real, y: Real) -> Expr {
@@ -222,9 +222,9 @@ ordering](https://en.wikipedia.org/wiki/NaN#Comparison_with_NaN).
 
 Some proxy types disallow unordered `NaN` values and therefore support a total
 ordering based on the ordered subset of non-`NaN` floating-point values. Proxy
-types that use `UnitConstraint` (such as the `Total` type definition) support
-`NaN` but use the total ordering described above to implement the standard `Eq`,
-`Hash`, and `Ord` traits.
+types that use `IsFloat` (such as the `Total` type definition) support `NaN` but
+use the total ordering described above to implement the standard `Eq`, `Hash`,
+and `Ord` traits.
 
 The following traits can be used to compare and hash primitive floating-point
 values (including slices) using this non-standard relation.

@@ -196,15 +196,15 @@ pub type Total<T> = Proxy<T, IsFloat>;
 
 /// IEEE 754 floating-point representation that cannot be `NaN`.
 ///
-/// This [`Proxy`] type applies the [`NotNanConstraint`] and [diverges][`divergence`] if a `NaN`
-/// value is encountered. **The default divergence of this definition is [`OrPanic`], which panics
-/// when the constraint is violated.**
+/// This [`Proxy`] type applies the [`IsExtendedReal`] constraint and [diverges][`divergence`] if a
+/// `NaN` value is encountered. **The default divergence of this definition is [`OrPanic`], which
+/// panics when the constraint is violated.**
 ///
 /// Like [`Total`], `NotNan` defines equivalence and total ordering, but need not consider `NaN`
 /// and so uses only standard IEEE 754 floating-point semantics.
 ///
 /// [`divergence`]: crate::divergence
-/// [`NotNanConstraint`]: crate::constraint::NotNanConstraint
+/// [`IsExtendedReal`]: crate::constraint::IsExtendedReal
 /// [`OrPanic`]: crate::divergence::OrPanic
 /// [`Proxy`]: crate::proxy::Proxy
 /// [`Total`]: crate::Total

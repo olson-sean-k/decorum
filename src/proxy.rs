@@ -207,7 +207,7 @@ where
     /// # Errors
     ///
     /// Returns an error if the primitive floating-point value does not satisfy the constraints of
-    /// the proxy. Note that the error type of [`UnitConstraint`] is [`Infallible`] and the
+    /// the proxy. Note that the error type of the [`IsFloat`] constraint is [`Infallible`] and the
     /// construction of [`Total`]s cannot fail here.
     ///
     /// # Examples
@@ -245,9 +245,9 @@ where
     ///
     /// [`divergence`]: crate::divergence
     /// [`Infallible`]: core::convert::Infallible
+    /// [`IsFloat`]: crate::constraint::IsFloat
     /// [`Result`]: core::result::Result
     /// [`Total`]: crate::Total
-    /// [`UnitConstraint`]: crate::constraint::UnitConstraint
     pub fn try_new(inner: T) -> Result<Self, C::Error> {
         C::check(inner).map(|_| Proxy {
             inner,
@@ -356,8 +356,8 @@ where
     /// Converts a slice of primitive IEEE 754 floating-point values into a slice of proxies.
     ///
     /// This conversion must check the constraints of the proxy against each floating-point value
-    /// and so has `O(N)` time complexity. **When using [`UnitConstraint`], prefer the infallible
-    /// and `O(1)` [`from_slice`] function.**
+    /// and so has `O(N)` time complexity. **When using the [`IsFloat`] constraint, prefer the
+    /// infallible and `O(1)` [`from_slice`] function.**
     ///
     /// # Errors
     ///
@@ -365,7 +365,7 @@ where
     /// the constraints of the proxy.
     ///
     /// [`from_slice`]: crate::Total::from_slice
-    /// [`UnitConstraint`]: crate::constraint::UnitConstraint
+    /// [`IsFloat`]: crate::constraint::IsFloat
     pub fn try_from_slice<'a>(slice: &'a [T]) -> Result<&'a [Self], C::Error> {
         slice.iter().try_for_each(|inner| C::check(*inner))?;
         // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
@@ -377,8 +377,8 @@ where
     /// of proxies.
     ///
     /// This conversion must check the constraints of the proxy against each floating-point value
-    /// and so has `O(N)` time complexity. **When using [`UnitConstraint`], prefer the infallible
-    /// and `O(1)` [`from_mut_slice`] function.**
+    /// and so has `O(N)` time complexity. **When using the [`IsFloat`] constraint, prefer the
+    /// infallible and `O(1)` [`from_mut_slice`] function.**
     ///
     /// # Errors
     ///
@@ -386,7 +386,7 @@ where
     /// slice do not satisfy the constraints of the proxy.
     ///
     /// [`from_mut_slice`]: crate::Total::from_mut_slice
-    /// [`UnitConstraint`]: crate::constraint::UnitConstraint
+    /// [`IsFloat`]: crate::constraint::IsFloat
     pub fn try_from_mut_slice<'a>(slice: &'a mut [T]) -> Result<&'a mut [Self], C::Error> {
         slice.iter().try_for_each(|inner| C::check(*inner))?;
         // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
