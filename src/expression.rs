@@ -60,13 +60,13 @@ macro_rules! try_expression {
 /// immediate matching and trying of `Result`s.
 ///
 /// ```rust
-/// use decorum::constraint::FiniteConstraint;
+/// use decorum::constraint::IsReal;
 /// use decorum::divergence::OrError;
 /// use decorum::proxy::{OutputOf, Proxy};
 /// use decorum::real::UnaryReal;
 /// use decorum::try_expression;
 ///
-/// pub type Real = Proxy<f64, FiniteConstraint<OrError>>;
+/// pub type Real = Proxy<f64, IsReal<OrError>>;
 /// pub type Expr = OutputOf<Real>;
 ///
 /// # fn fallible() -> Expr {
@@ -83,12 +83,12 @@ macro_rules! try_expression {
 /// ```
 ///
 /// ```rust
-/// use decorum::constraint::FiniteConstraint;
+/// use decorum::constraint::IsReal;
 /// use decorum::divergence::{AsResult, OrError};
 /// use decorum::proxy::{OutputOf, Proxy};
 /// use decorum::real::UnaryReal;
 ///
-/// pub type Real = Proxy<f64, FiniteConstraint<OrError<AsResult>>>;
+/// pub type Real = Proxy<f64, IsReal<OrError<AsResult>>>;
 /// pub type RealResult = OutputOf<Real>;
 ///
 /// # fn fallible() -> RealResult {
@@ -110,12 +110,12 @@ macro_rules! try_expression {
 /// supports the try operator `?`.
 ///
 /// ```rust,ignore
-/// use decorum::constraint::FiniteConstraint;
+/// use decorum::constraint::IsReal;
 /// use decorum::divergence::{AsExpression, OrError};
 /// use decorum::proxy::{OutputOf, Proxy};
 /// use decorum::real::UnaryReal;
 ///
-/// pub type Real = Proxy<f64, FiniteConstraint<OrError<AsExpression>>>;
+/// pub type Real = Proxy<f64, IsReal<OrError<AsExpression>>>;
 /// pub type Expr = OutputOf<Real>;
 ///
 /// # fn fallible() -> Expr {

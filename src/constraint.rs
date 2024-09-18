@@ -56,9 +56,9 @@ pub(crate) trait Description {
 #[derive(Clone, Copy, Debug)]
 pub enum ConstraintError {
     #[cfg_attr(feature = "std", error(transparent))]
-    Nan(NanError),
+    NotExtendedReal(NotExtendedRealError),
     #[cfg_attr(feature = "std", error(transparent))]
-    NotFinite(NotFiniteError),
+    NotReal(NotRealError),
 }
 
 #[cfg(not(feature = "std"))]
@@ -68,66 +68,66 @@ impl Display for ConstraintError {
             f,
             "{}",
             match self {
-                ConstraintError::Nan(_) => NanError::DESCRIPTION,
-                ConstraintError::NotFinite(_) => NotFiniteError::DESCRIPTION,
+                ConstraintError::NotExtendedReal(_) => NotExtendedRealError::DESCRIPTION,
+                ConstraintError::NotReal(_) => NotRealError::DESCRIPTION,
             },
         )
     }
 }
 
-impl From<NanError> for ConstraintError {
-    fn from(error: NanError) -> Self {
-        ConstraintError::Nan(error)
+impl From<NotExtendedRealError> for ConstraintError {
+    fn from(error: NotExtendedRealError) -> Self {
+        ConstraintError::NotExtendedReal(error)
     }
 }
 
-impl From<NotFiniteError> for ConstraintError {
-    fn from(error: NotFiniteError) -> Self {
-        ConstraintError::NotFinite(error)
+impl From<NotRealError> for ConstraintError {
+    fn from(error: NotRealError) -> Self {
+        ConstraintError::NotReal(error)
     }
 }
 
 #[cfg_attr(feature = "std", derive(Error))]
-#[cfg_attr(feature = "std", error("{}", NanError::DESCRIPTION))]
+#[cfg_attr(feature = "std", error("{}", NotExtendedRealError::DESCRIPTION))]
 #[derive(Clone, Copy, Debug)]
-pub struct NanError;
+pub struct NotExtendedRealError;
 
-impl Description for NanError {
+impl Description for NotExtendedRealError {
     const DESCRIPTION: &'static str = "floating-point value must be an extended real";
 }
 
 #[cfg(not(feature = "std"))]
-impl Display for NanError {
+impl Display for NotExtendedRealError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", NanError::DESCRIPTION)
+        write!(f, "{}", NotExtendedRealError::DESCRIPTION)
     }
 }
 
-impl UndefinedError for NanError {
+impl UndefinedError for NotExtendedRealError {
     fn undefined() -> Self {
-        NanError
+        NotExtendedRealError
     }
 }
 
 #[cfg_attr(feature = "std", derive(Error))]
-#[cfg_attr(feature = "std", error("{}", NotFiniteError::DESCRIPTION))]
+#[cfg_attr(feature = "std", error("{}", NotRealError::DESCRIPTION))]
 #[derive(Clone, Copy, Debug)]
-pub struct NotFiniteError;
+pub struct NotRealError;
 
-impl Description for NotFiniteError {
+impl Description for NotRealError {
     const DESCRIPTION: &'static str = "floating-point value must be a real";
 }
 
 #[cfg(not(feature = "std"))]
-impl Display for NotFiniteError {
+impl Display for NotRealError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", NotFiniteError::DESCRIPTION)
+        write!(f, "{}", NotRealError::DESCRIPTION)
     }
 }
 
-impl UndefinedError for NotFiniteError {
+impl UndefinedError for NotRealError {
     fn undefined() -> Self {
-        NotFiniteError
+        NotRealError
     }
 }
 
@@ -192,11 +192,10 @@ pub trait Constraint: Member<RealSet> {
     }
 }
 
-/// Constraint that disallows **no** IEEE 754 floating-point values.
 #[derive(Debug)]
-pub enum UnitConstraint {}
+pub enum IsFloat {}
 
-impl Constraint for UnitConstraint {
+impl Constraint for IsFloat {
     // Branching in the `Divergence` is completely bypassed in this implementation.
     type Divergence = OrPanic;
     type Error = Infallible;
@@ -220,35 +219,36 @@ impl Constraint for UnitConstraint {
     }
 }
 
-impl Member<InfinitySet> for UnitConstraint {}
+impl Member<InfinitySet> for IsFloat {}
 
-impl Member<NanSet> for UnitConstraint {}
+impl Member<NanSet> for IsFloat {}
 
-impl Member<RealSet> for UnitConstraint {}
+impl Member<RealSet> for IsFloat {}
 
-impl Sealed for UnitConstraint {}
+impl Sealed for IsFloat {}
 
-impl<D> SupersetOf<FiniteConstraint<D>> for UnitConstraint {}
+impl<D> SupersetOf<IsReal<D>> for IsFloat {}
 
-impl<D> SupersetOf<NotNanConstraint<D>> for UnitConstraint {}
+impl<D> SupersetOf<IsExtendedReal<D>> for IsFloat {}
 
-/// Constraint that disallows IEEE 754 `NaN` values.
 #[derive(Debug)]
-pub struct NotNanConstraint<D>(PhantomData<fn() -> D>, Infallible);
+pub struct IsExtendedReal<D>(PhantomData<fn() -> D>, Infallible);
 
-impl<D> Constraint for NotNanConstraint<D>
+pub type NotNan<D> = IsExtendedReal<D>;
+
+impl<D> Constraint for IsExtendedReal<D>
 where
     D: Divergence,
 {
     type Divergence = D;
-    type Error = NanError;
+    type Error = NotExtendedRealError;
 
     fn check<T>(inner: T) -> Result<(), Self::Error>
     where
         T: Float + Primitive,
     {
         if inner.is_nan() {
-            Err(NanError)
+            Err(NotExtendedRealError)
         }
         else {
             Ok(())
@@ -256,31 +256,30 @@ where
     }
 }
 
-impl<D> Member<InfinitySet> for NotNanConstraint<D> {}
+impl<D> Member<InfinitySet> for IsExtendedReal<D> {}
 
-impl<D> Member<RealSet> for NotNanConstraint<D> {}
+impl<D> Member<RealSet> for IsExtendedReal<D> {}
 
-impl<D> Sealed for NotNanConstraint<D> {}
+impl<D> Sealed for IsExtendedReal<D> {}
 
-impl<D> SupersetOf<FiniteConstraint<D>> for NotNanConstraint<D> {}
+impl<D> SupersetOf<IsReal<D>> for IsExtendedReal<D> {}
 
-/// Constraint that disallows IEEE 754 `NaN`, `+INF`, and `-INF` values.
 #[derive(Debug)]
-pub struct FiniteConstraint<D>(PhantomData<fn() -> D>, Infallible);
+pub struct IsReal<D>(PhantomData<fn() -> D>, Infallible);
 
-impl<D> Constraint for FiniteConstraint<D>
+impl<D> Constraint for IsReal<D>
 where
     D: Divergence,
 {
     type Divergence = D;
-    type Error = NotFiniteError;
+    type Error = NotRealError;
 
     fn check<T>(inner: T) -> Result<(), Self::Error>
     where
         T: Float + Primitive,
     {
         if inner.is_nan() || inner.is_infinite() {
-            Err(NotFiniteError)
+            Err(NotRealError)
         }
         else {
             Ok(())
@@ -288,6 +287,6 @@ where
     }
 }
 
-impl<D> Member<RealSet> for FiniteConstraint<D> {}
+impl<D> Member<RealSet> for IsReal<D> {}
 
-impl<D> Sealed for FiniteConstraint<D> {}
+impl<D> Sealed for IsReal<D> {}

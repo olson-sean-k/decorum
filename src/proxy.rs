@@ -215,11 +215,11 @@ where
     /// Constructing proxies from primitive floating-point values:
     ///
     /// ```rust
-    /// use decorum::constraint::FiniteConstraint;
+    /// use decorum::constraint::IsReal;
     /// use decorum::divergence::OrPanic;
     /// use decorum::proxy::Proxy;
     ///
-    /// type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
+    /// type Real = Proxy<f64, IsReal<OrPanic>>;
     ///
     /// fn f(x: Real) -> Real {
     ///     x * 2.0
@@ -233,13 +233,13 @@ where
     /// A proxy construction that fails:
     ///
     /// ```rust,should_panic
-    /// use decorum::constraint::FiniteConstraint;
+    /// use decorum::constraint::IsReal;
     /// use decorum::divergence::OrPanic;
     /// use decorum::proxy::Proxy;
     ///
-    /// type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
+    /// type Real = Proxy<f64, IsReal<OrPanic>>;
     ///
-    /// // `FiniteConstraint` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
+    /// // `IsReal` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
     /// let x = Real::try_new(0.0 / 0.0).unwrap(); // Panics when unwrapping.
     /// ```
     ///
@@ -272,11 +272,11 @@ where
     /// Constructing proxies from primitive floating-point values:
     ///
     /// ```rust
-    /// use decorum::constraint::FiniteConstraint;
+    /// use decorum::constraint::IsReal;
     /// use decorum::divergence::OrPanic;
     /// use decorum::proxy::Proxy;
     ///
-    /// type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
+    /// type Real = Proxy<f64, IsReal<OrPanic>>;
     ///
     /// fn f(x: Real) -> Real {
     ///     x * 2.0
@@ -288,13 +288,13 @@ where
     /// A proxy construction that fails:
     ///
     /// ```rust,should_panic
-    /// use decorum::constraint::FiniteConstraint;
+    /// use decorum::constraint::IsReal;
     /// use decorum::divergence::OrPanic;
     /// use decorum::proxy::Proxy;
     ///
-    /// type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
+    /// type Real = Proxy<f64, IsReal<OrPanic>>;
     ///
-    /// // `FiniteConstraint` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
+    /// // `IsReal` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
     /// let x = Real::assert(0.0 / 0.0); // Panics.
     /// ```
     ///
@@ -427,12 +427,12 @@ where
     /// Fallibly constructing proxies from primitive floating-point values:
     ///
     /// ```rust
-    /// use decorum::constraint::FiniteConstraint;
+    /// use decorum::constraint::IsReal;
     /// use decorum::divergence::{AsResult, OrError};
     /// use decorum::proxy::Proxy;
     ///
     /// // The branch type of `Real` is `Result`.
-    /// type Real = Proxy<f64, FiniteConstraint<OrError<AsResult>>>;
+    /// type Real = Proxy<f64, IsReal<OrError<AsResult>>>;
     ///
     /// let x = Real::new(2.0).unwrap(); // The output type of `new` is `Result` per `TryResult`.
     /// ```
@@ -440,12 +440,12 @@ where
     /// Asserting proxy construction from primitive floating-point values:
     ///
     /// ```rust,should_panic
-    /// use decorum::constraint::FiniteConstraint;
+    /// use decorum::constraint::IsReal;
     /// use decorum::divergence::OrPanic;
     /// use decorum::proxy::Proxy;
     ///
     /// // The branch type of `OrPanic` is `Real`.
-    /// type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
+    /// type Real = Proxy<f64, IsReal<OrPanic>>;
     ///
     /// let x = Real::new(2.0); // The output type of `new` is `Real` per `OrPanic`.
     /// let y = Real::new(0.0 / 0.0); // Panics.
