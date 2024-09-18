@@ -6,30 +6,30 @@
 //! of IEEE 754 floating-point values and each constraint has associated [`Proxy`] type
 //! definitions for convenience:
 //!
-//! | Constraint         | Divergent | Type Definition | Disallowed Values     |
-//! |--------------------|-----------|-----------------|-----------------------|
-//! | [`IsFloat`]        | no        | [`Total`]       |                       |
-//! | [`IsExtendedReal`] | yes       | [`NotNan`]      | `NaN`                 |
-//! | [`IsReal`]         | yes       | [`Finite`]      | `NaN`, `+INF`, `-INF` |
+//! | Constraint         | Divergent | Type Definition  | Disallowed Values     |
+//! |--------------------|-----------|------------------|-----------------------|
+//! | [`IsFloat`]        | no        | [`Total`]        |                       |
+//! | [`IsExtendedReal`] | yes       | [`ExtendedReal`] | `NaN`                 |
+//! | [`IsReal`]         | yes       | [`Real`]         | `NaN`, `+INF`, `-INF` |
 //!
 //! [`IsFloat`] and [`Total`] apply no constraints on floating-point values. Unlike primitive
 //! floating-point types however, [`Total`] defines equivalence and total ordering to `NaN`, which
 //! allows it to implement related standard traits like `Eq`, `Hash`, and `Ord`.
 //!
-//! [`NotNan`], [`Finite`], and their corresponding constraints disallow certain IEEE 754 values.
+//! [`ExtendedReal`], [`Real`], and their corresponding constraints disallow certain IEEE 754 values.
 //! Because the output of some floating-point operations may yield these values (even when the
 //! inputs are real numbers), these constraints must specify a [divergence][`divergence`], which
 //! determines the behavior of [`Proxy`]s when such a value is encountered.
 //!
 //! [`cmp`]: crate::cmp
 //! [`divergence`]: crate::divergence
-//! [`Finite`]: crate::Finite
+//! [`ExtendedReal`]: crate::ExtendedReal
 //! [`IsExtendedReal`]: crate::constraint::IsExtendedReal
 //! [`IsFloat`]: crate::constraint::IsFloat
 //! [`IsReal`]: crate::constraint::IsReal
-//! [`NotNan`]: crate::NotNan
 //! [`OrPanic`]: crate::divergence::OrPanic
 //! [`Proxy`]: crate::proxy::Proxy
+//! [`Real`]: crate::Real
 //! [`Total`]: crate::Total
 
 use core::convert::Infallible;
