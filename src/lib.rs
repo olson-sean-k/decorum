@@ -171,7 +171,7 @@ use crate::cmp::IntrinsicOrd;
 use crate::constraint::{IsExtendedReal, IsFloat, IsReal};
 use crate::divergence::OrPanic;
 use crate::proxy::Proxy;
-use crate::real::{BinaryRealFunction, Function, RealFunction, Sign, UnaryRealFunction};
+use crate::real::{BinaryRealFunction, Function, RealEndofunction, Sign, UnaryRealFunction};
 
 mod sealed {
     use core::convert::Infallible;
@@ -213,10 +213,8 @@ pub type R32<D = OrPanic> = Real<f32, D>;
 /// 64-bit IEEE 754 floating-point representation that must be a real number.
 pub type R64<D = OrPanic> = Real<f64, D>;
 
-// TODO: Inverse the relationship between `Encoding` and `ToCanonicalBits` such that `Encoding`
-//       requires `ToCanonicalBits`.
 /// Converts IEEE 754 floating-point values to a canonicalized form.
-pub trait ToCanonicalBits: Encoding {
+pub trait ToCanonicalBits: BaseEncoding {
     type Bits: PrimInt + Unsigned;
 
     /// Conversion to a canonical representation.
@@ -230,7 +228,7 @@ pub trait ToCanonicalBits: Encoding {
 // TODO: Implement this differently for differently sized types.
 impl<T> ToCanonicalBits for T
 where
-    T: Encoding + Nan + Primitive,
+    T: BaseEncoding + NanEncoding + Primitive,
 {
     type Bits = u64;
 
@@ -261,37 +259,13 @@ where
     }
 }
 
-/// IEEE 754 floating-point representations that expose infinities (`-INF` and `+INF`).
-// This trait is implemented by trivial `Copy` types.
-#[allow(clippy::wrong_self_convention)]
-pub trait Infinite: Sized {
-    const INFINITY: Self;
-    const NEG_INFINITY: Self;
-
-    fn is_infinite(self) -> bool;
-    fn is_finite(self) -> bool;
-}
-
-/// IEEE 754 floating-point representations that expose `NaN`s.
-// This trait is implemented by trivial `Copy` types.
-#[allow(clippy::wrong_self_convention)]
-pub trait Nan: Sized {
-    /// A representation of `NaN`.
-    ///
-    /// For primitive floating-point types, `NaN` is incomparable. Therefore, prefer the `is_nan`
-    /// predicate over direct comparisons with `NaN`.
-    const NAN: Self;
-
-    fn is_nan(self) -> bool;
-}
-
 /// IEEE 754 floating-point representations that expose general encoding.
 ///
 /// Provides values and operations that describe the encoding of an IEEE 754 floating-point value.
 /// The specific semantic values for infinities and `NaN`s are described by independent traits.
-// This trait is implemented by trivial `Copy` types.
+// CLIPPY: This trait is implemented by trivial `Copy` types.
 #[allow(clippy::wrong_self_convention)]
-pub trait Encoding: Sized {
+pub trait BaseEncoding: Sized {
     const MAX_FINITE: Self;
     const MIN_FINITE: Self;
     const MIN_POSITIVE_NORMAL: Self;
@@ -308,7 +282,7 @@ pub trait Encoding: Sized {
     fn integer_decode(self) -> (u64, i16, i8);
 }
 
-impl Encoding for f32 {
+impl BaseEncoding for f32 {
     const MAX_FINITE: Self = f32::MAX;
     const MIN_FINITE: Self = f32::MIN;
     const MIN_POSITIVE_NORMAL: Self = f32::MIN_POSITIVE;
@@ -349,7 +323,7 @@ impl Encoding for f32 {
     }
 }
 
-impl Encoding for f64 {
+impl BaseEncoding for f64 {
     const MAX_FINITE: Self = f64::MAX;
     const MIN_FINITE: Self = f64::MIN;
     const MIN_POSITIVE_NORMAL: Self = f64::MIN_POSITIVE;
@@ -390,17 +364,43 @@ impl Encoding for f64 {
     }
 }
 
-/// IEEE 754 floating-point representations.
-///
-/// Types that implement this trait are represented using IEEE 754 encoding **and directly expose
-/// the complete details of that encoding**, including infinities, `NaN`s, and operations on real
-/// numbers.
-pub trait Float: Encoding + Infinite + IntrinsicOrd + Nan + RealFunction<Codomain = Self> {}
+/// IEEE 754 floating-point representations that expose infinities (`-INF` and `+INF`).
+// CLIPPY: This trait is implemented by trivial `Copy` types.
+#[allow(clippy::wrong_self_convention)]
+pub trait InfinityEncoding: Sized {
+    const INFINITY: Self;
+    const NEG_INFINITY: Self;
 
-impl<T> Float for T where T: Encoding + Infinite + IntrinsicOrd + Nan + RealFunction<Codomain = T> {}
+    fn is_infinite(self) -> bool;
+    fn is_finite(self) -> bool;
+}
+
+/// IEEE 754 floating-point representations that expose `NaN`s.
+// CLIPPY: This trait is implemented by trivial `Copy` types.
+#[allow(clippy::wrong_self_convention)]
+pub trait NanEncoding: Sized {
+    /// A representation of `NaN`.
+    ///
+    /// For primitive floating-point types, `NaN` is incomparable. Therefore, prefer the `is_nan`
+    /// predicate over direct comparisons with `NaN`.
+    const NAN: Self;
+
+    fn is_nan(self) -> bool;
+}
 
 /// A primitive IEEE 754 floating-point type.
-pub trait Primitive: Copy + Sealed {}
+pub trait Primitive:
+    BaseEncoding
+    + Copy
+    + InfinityEncoding
+    + IntrinsicOrd
+    + NanEncoding
+    + PartialEq
+    + PartialOrd
+    + RealEndofunction
+    + Sealed
+{
+}
 
 // TODO: Remove this. Of course.
 fn _sanity() {
@@ -496,7 +496,7 @@ macro_rules! impl_primitive {
             type Codomain = $t;
         }
 
-        impl Infinite for $t {
+        impl InfinityEncoding for $t {
             const INFINITY: Self = <$t>::INFINITY;
             const NEG_INFINITY: Self = <$t>::NEG_INFINITY;
 
@@ -509,7 +509,7 @@ macro_rules! impl_primitive {
             }
         }
 
-        impl Nan for $t {
+        impl NanEncoding for $t {
             const NAN: Self = <$t>::NAN;
 
             fn is_nan(self) -> bool {

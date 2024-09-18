@@ -44,7 +44,7 @@ use crate::cmp::UndefinedError;
 use crate::divergence::{Divergence, OrPanic, OutputOf};
 use crate::proxy::ClosedProxy;
 use crate::sealed::Sealed;
-use crate::{Float, Primitive};
+use crate::Primitive;
 
 pub(crate) trait Description {
     const DESCRIPTION: &'static str;
@@ -178,11 +178,11 @@ pub trait Constraint: Member<RealSet> {
     // this function only expresses the membership of the given value and no other.
     fn check<T>(inner: T) -> Result<(), Self::Error>
     where
-        T: Float + Primitive;
+        T: Primitive;
 
     fn map<T, U, F>(inner: T, f: F) -> OutputOf<Self::Divergence, U, Self::Error>
     where
-        T: Float + Primitive,
+        T: Primitive,
         U: ClosedProxy<Constraint = Self, Primitive = T>,
         F: FnOnce(T) -> U,
     {
@@ -201,7 +201,7 @@ impl Constraint for IsFloat {
     #[inline(always)]
     fn check<T>(_inner: T) -> Result<(), Self::Error>
     where
-        T: Float + Primitive,
+        T: Primitive,
     {
         Ok(())
     }
@@ -209,7 +209,7 @@ impl Constraint for IsFloat {
     #[inline(always)]
     fn map<T, U, F>(inner: T, f: F) -> U
     where
-        T: Float + Primitive,
+        T: Primitive,
         U: ClosedProxy<Constraint = Self, Primitive = T>,
         F: FnOnce(T) -> U,
     {
@@ -243,7 +243,7 @@ where
 
     fn check<T>(inner: T) -> Result<(), Self::Error>
     where
-        T: Float + Primitive,
+        T: Primitive,
     {
         if inner.is_nan() {
             Err(NotExtendedRealError)
@@ -274,7 +274,7 @@ where
 
     fn check<T>(inner: T) -> Result<(), Self::Error>
     where
-        T: Float + Primitive,
+        T: Primitive,
     {
         if inner.is_nan() || inner.is_infinite() {
             Err(NotRealError)
