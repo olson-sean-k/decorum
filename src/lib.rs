@@ -78,11 +78,11 @@
 //! they can be used fluently in numeric expressions without matching or trying.
 //!
 //! ```rust
-//! use decorum::constraint::FiniteConstraint;
+//! use decorum::constraint::IsReal;
 //! use decorum::divergence::OrError;
 //! use decorum::proxy::{OutputOf, Proxy};
 //!
-//! type Real = Proxy<f64, FiniteConstraint<OrError>>;
+//! type Real = Proxy<f64, IsReal<OrError>>;
 //! type Expr = OutputOf<Real>;
 //!
 //! fn f(x: Real, y: Real) -> Expr {
@@ -100,12 +100,12 @@
 //! that the try operator `?` may be used instead.
 //!
 //! ```rust,ignore
-//! use decorum::constraint::FiniteConstraint;
+//! use decorum::constraint::IsReal;
 //! use decorum::divergence::OrError;
 //! use decorum::proxy::{OutputOf, Proxy};
 //! use decorum::real::UnaryReal;
 //!
-//! type Real = Proxy<f64, FiniteConstraint<OrError>>;
+//! type Real = Proxy<f64, IsReal<OrError>>;
 //! type Expr = OutputOf<Real>;
 //!
 //! # fn fallible() -> Expr {
@@ -168,7 +168,7 @@ use core::num::FpCategory;
 use num_traits::{PrimInt, Unsigned};
 
 use crate::cmp::IntrinsicOrd;
-use crate::constraint::{FiniteConstraint, NotNanConstraint, UnitConstraint};
+use crate::constraint::{IsExtendedReal, IsFloat, IsReal};
 use crate::divergence::OrPanic;
 use crate::proxy::Proxy;
 use crate::real::{BinaryReal, Function, Real, Sign, UnaryReal};
@@ -192,23 +192,23 @@ use crate::sealed::Sealed;
 /// [`Eq`]: core::cmp::Eq
 /// [`Ord`]: core::cmp::Ord
 /// [`Proxy`]: crate::proxy::Proxy
-pub type Total<T> = Proxy<T, UnitConstraint>;
+pub type Total<T> = Proxy<T, IsFloat>;
 
 /// IEEE 754 floating-point representation that cannot be `NaN`.
 ///
-/// This [`Proxy`] type applies the [`NotNanConstraint`] and [diverges][`divergence`] if a `NaN`
-/// value is encountered. **The default divergence of this definition is [`OrPanic`], which panics
-/// when the constraint is violated.**
+/// This [`Proxy`] type applies the [`IsExtendedReal`] constraint and [diverges][`divergence`] if a
+/// `NaN` value is encountered. **The default divergence of this definition is [`OrPanic`], which
+/// panics when the constraint is violated.**
 ///
 /// Like [`Total`], `NotNan` defines equivalence and total ordering, but need not consider `NaN`
 /// and so uses only standard IEEE 754 floating-point semantics.
 ///
 /// [`divergence`]: crate::divergence
-/// [`NotNanConstraint`]: crate::constraint::NotNanConstraint
+/// [`IsExtendedReal`]: crate::constraint::IsExtendedReal
 /// [`OrPanic`]: crate::divergence::OrPanic
 /// [`Proxy`]: crate::proxy::Proxy
 /// [`Total`]: crate::Total
-pub type NotNan<T, D = OrPanic> = Proxy<T, NotNanConstraint<D>>;
+pub type NotNan<T, D = OrPanic> = Proxy<T, IsExtendedReal<D>>;
 
 /// 32-bit IEEE 754 floating-point representation that cannot be `NaN`.
 pub type N32<D = OrPanic> = NotNan<f32, D>;
@@ -216,7 +216,7 @@ pub type N32<D = OrPanic> = NotNan<f32, D>;
 pub type N64<D = OrPanic> = NotNan<f64, D>;
 
 /// IEEE 754 floating-point representation that must be a real number.
-pub type Finite<T, D = OrPanic> = Proxy<T, FiniteConstraint<D>>;
+pub type Finite<T, D = OrPanic> = Proxy<T, IsReal<D>>;
 
 /// 32-bit IEEE 754 floating-point representation that must be a real number.
 ///
@@ -422,7 +422,7 @@ pub trait Primitive: Copy + Sealed {}
 fn _sanity() {
     use crate::real::FloatEndoreal;
 
-    type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
+    type Real = Proxy<f64, IsReal<OrPanic>>;
 
     fn f<T>(x: T) -> T
     where

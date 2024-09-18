@@ -39,13 +39,13 @@
 //! The following example illustrates how to define a [`Proxy`] type.
 //!
 //! ```rust
-//! use decorum::constraint::NotNanConstraint;
+//! use decorum::constraint::IsNotNan;
 //! use decorum::divergence::{AsSelf, OrPanic};
 //! use decorum::proxy::Proxy;
 //!
 //! // A 32-bit floating-point representation that must be a real number or an infinity. Panics if
 //! // constructed from a `NaN`.
-//! pub type ExtendedReal = Proxy<f32, NotNanConstraint<OrPanic<AsSelf>>>;
+//! pub type ExtendedReal = Proxy<f32, IsNotNan<OrPanic<AsSelf>>>;
 //! ```
 //!
 //! The following example demonstrates a conditionally compiled `Real` type definition with a
@@ -54,7 +54,7 @@
 //!
 //! ```rust
 //! pub mod real {
-//!     use decorum::constraint::FiniteConstraint;
+//!     use decorum::constraint::IsReal;
 //!     use decorum::divergence::{self, AsResult};
 //!     use decorum::proxy::{OutputOf, Proxy};
 //!
@@ -63,7 +63,7 @@
 //!     #[cfg(not(debug_assertions))]
 //!     type OrDiverge = divergence::OrError<AsResult>;
 //!
-//!     pub type Real = Proxy<f64, FiniteConstraint<OrDiverge>>;
+//!     pub type Real = Proxy<f64, IsReal<OrDiverge>>;
 //!     pub type Result = OutputOf<Real>;
 //! }
 //!

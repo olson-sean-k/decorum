@@ -4,35 +4,33 @@
 //! Constraints determine when, if ever, a particular floating-point value is considered an error
 //! and so construction must [diverge][`divergence`]. Constraints are defined in terms of subsets
 //! of IEEE 754 floating-point values and each constraint has associated [`Proxy`] type
-//! definitions:
+//! definitions for convenience:
 //!
-//! | Constraint           | Divergent | Type Definition | Disallowed Values     |
-//! |----------------------|-----------|-----------------|-----------------------|
-//! | [`UnitConstraint`]   | no        | [`Total`]       |                       |
-//! | [`NotNanConstraint`] | yes       | [`NotNan`]      | `NaN`                 |
-//! | [`FiniteConstraint`] | yes       | [`Finite`]      | `NaN`, `+INF`, `-INF` |
+//! | Constraint         | Divergent | Type Definition | Disallowed Values     |
+//! |--------------------|-----------|-----------------|-----------------------|
+//! | [`IsFloat`]        | no        | [`Total`]       |                       |
+//! | [`IsExtendedReal`] | yes       | [`NotNan`]      | `NaN`                 |
+//! | [`IsReal`]         | yes       | [`Finite`]      | `NaN`, `+INF`, `-INF` |
 //!
-//! [`UnitConstraint`] and [`Total`] apply no constraints on floating-point values. Unlike
-//! primitive floating-point types however, [`Total`] defines equivalence and total ordering to
-//! `NaN`, which allows it to implement numerous standard traits like `Eq`, `Hash`, and `Ord`.
+//! [`IsFloat`] and [`Total`] apply no constraints on floating-point values. Unlike primitive
+//! floating-point types however, [`Total`] defines equivalence and total ordering to `NaN`, which
+//! allows it to implement related standard traits like `Eq`, `Hash`, and `Ord`.
 //!
 //! [`NotNan`], [`Finite`], and their corresponding constraints disallow certain IEEE 754 values.
 //! Because the output of some floating-point operations may yield these values (even when the
 //! inputs are real numbers), these constraints must specify a [divergence][`divergence`], which
-//! determines the behavior of [`Proxy`]s when such a value is encountered. These proxy type
-//! definitions specify the [`OrPanic`] divergence by default, **which panics when a disallowed
-//! value is encountered.**
+//! determines the behavior of [`Proxy`]s when such a value is encountered.
 //!
 //! [`cmp`]: crate::cmp
 //! [`divergence`]: crate::divergence
 //! [`Finite`]: crate::Finite
-//! [`FiniteConstraint`]: crate::constraint::FiniteConstraint
+//! [`IsExtendedReal`]: crate::constraint::IsExtendedReal
+//! [`IsFloat`]: crate::constraint::IsFloat
+//! [`IsReal`]: crate::constraint::IsReal
 //! [`NotNan`]: crate::NotNan
-//! [`NotNanConstraint`]: crate::constraint::NotNanConstraint
 //! [`OrPanic`]: crate::divergence::OrPanic
 //! [`Proxy`]: crate::proxy::Proxy
 //! [`Total`]: crate::Total
-//! [`UnitConstraint`]: crate::constraint::UnitConstraint
 
 use core::convert::Infallible;
 #[cfg(not(feature = "std"))]
@@ -56,9 +54,9 @@ pub(crate) trait Description {
 #[derive(Clone, Copy, Debug)]
 pub enum ConstraintError {
     #[cfg_attr(feature = "std", error(transparent))]
-    Nan(NanError),
+    NotExtendedReal(NotExtendedRealError),
     #[cfg_attr(feature = "std", error(transparent))]
-    NotFinite(NotFiniteError),
+    NotReal(NotRealError),
 }
 
 #[cfg(not(feature = "std"))]
@@ -68,66 +66,66 @@ impl Display for ConstraintError {
             f,
             "{}",
             match self {
-                ConstraintError::Nan(_) => NanError::DESCRIPTION,
-                ConstraintError::NotFinite(_) => NotFiniteError::DESCRIPTION,
+                ConstraintError::NotExtendedReal(_) => NotExtendedRealError::DESCRIPTION,
+                ConstraintError::NotReal(_) => NotRealError::DESCRIPTION,
             },
         )
     }
 }
 
-impl From<NanError> for ConstraintError {
-    fn from(error: NanError) -> Self {
-        ConstraintError::Nan(error)
+impl From<NotExtendedRealError> for ConstraintError {
+    fn from(error: NotExtendedRealError) -> Self {
+        ConstraintError::NotExtendedReal(error)
     }
 }
 
-impl From<NotFiniteError> for ConstraintError {
-    fn from(error: NotFiniteError) -> Self {
-        ConstraintError::NotFinite(error)
+impl From<NotRealError> for ConstraintError {
+    fn from(error: NotRealError) -> Self {
+        ConstraintError::NotReal(error)
     }
 }
 
 #[cfg_attr(feature = "std", derive(Error))]
-#[cfg_attr(feature = "std", error("{}", NanError::DESCRIPTION))]
+#[cfg_attr(feature = "std", error("{}", NotExtendedRealError::DESCRIPTION))]
 #[derive(Clone, Copy, Debug)]
-pub struct NanError;
+pub struct NotExtendedRealError;
 
-impl Description for NanError {
+impl Description for NotExtendedRealError {
     const DESCRIPTION: &'static str = "floating-point value must be an extended real";
 }
 
 #[cfg(not(feature = "std"))]
-impl Display for NanError {
+impl Display for NotExtendedRealError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", NanError::DESCRIPTION)
+        write!(f, "{}", NotExtendedRealError::DESCRIPTION)
     }
 }
 
-impl UndefinedError for NanError {
+impl UndefinedError for NotExtendedRealError {
     fn undefined() -> Self {
-        NanError
+        NotExtendedRealError
     }
 }
 
 #[cfg_attr(feature = "std", derive(Error))]
-#[cfg_attr(feature = "std", error("{}", NotFiniteError::DESCRIPTION))]
+#[cfg_attr(feature = "std", error("{}", NotRealError::DESCRIPTION))]
 #[derive(Clone, Copy, Debug)]
-pub struct NotFiniteError;
+pub struct NotRealError;
 
-impl Description for NotFiniteError {
+impl Description for NotRealError {
     const DESCRIPTION: &'static str = "floating-point value must be a real";
 }
 
 #[cfg(not(feature = "std"))]
-impl Display for NotFiniteError {
+impl Display for NotRealError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", NotFiniteError::DESCRIPTION)
+        write!(f, "{}", NotRealError::DESCRIPTION)
     }
 }
 
-impl UndefinedError for NotFiniteError {
+impl UndefinedError for NotRealError {
     fn undefined() -> Self {
-        NotFiniteError
+        NotRealError
     }
 }
 
@@ -192,11 +190,10 @@ pub trait Constraint: Member<RealSet> {
     }
 }
 
-/// Constraint that disallows **no** IEEE 754 floating-point values.
 #[derive(Debug)]
-pub enum UnitConstraint {}
+pub enum IsFloat {}
 
-impl Constraint for UnitConstraint {
+impl Constraint for IsFloat {
     // Branching in the `Divergence` is completely bypassed in this implementation.
     type Divergence = OrPanic;
     type Error = Infallible;
@@ -220,35 +217,36 @@ impl Constraint for UnitConstraint {
     }
 }
 
-impl Member<InfinitySet> for UnitConstraint {}
+impl Member<InfinitySet> for IsFloat {}
 
-impl Member<NanSet> for UnitConstraint {}
+impl Member<NanSet> for IsFloat {}
 
-impl Member<RealSet> for UnitConstraint {}
+impl Member<RealSet> for IsFloat {}
 
-impl Sealed for UnitConstraint {}
+impl Sealed for IsFloat {}
 
-impl<D> SupersetOf<FiniteConstraint<D>> for UnitConstraint {}
+impl<D> SupersetOf<IsReal<D>> for IsFloat {}
 
-impl<D> SupersetOf<NotNanConstraint<D>> for UnitConstraint {}
+impl<D> SupersetOf<IsExtendedReal<D>> for IsFloat {}
 
-/// Constraint that disallows IEEE 754 `NaN` values.
 #[derive(Debug)]
-pub struct NotNanConstraint<D>(PhantomData<fn() -> D>, Infallible);
+pub struct IsExtendedReal<D>(PhantomData<fn() -> D>, Infallible);
 
-impl<D> Constraint for NotNanConstraint<D>
+pub type IsNotNan<D> = IsExtendedReal<D>;
+
+impl<D> Constraint for IsExtendedReal<D>
 where
     D: Divergence,
 {
     type Divergence = D;
-    type Error = NanError;
+    type Error = NotExtendedRealError;
 
     fn check<T>(inner: T) -> Result<(), Self::Error>
     where
         T: Float + Primitive,
     {
         if inner.is_nan() {
-            Err(NanError)
+            Err(NotExtendedRealError)
         }
         else {
             Ok(())
@@ -256,31 +254,30 @@ where
     }
 }
 
-impl<D> Member<InfinitySet> for NotNanConstraint<D> {}
+impl<D> Member<InfinitySet> for IsExtendedReal<D> {}
 
-impl<D> Member<RealSet> for NotNanConstraint<D> {}
+impl<D> Member<RealSet> for IsExtendedReal<D> {}
 
-impl<D> Sealed for NotNanConstraint<D> {}
+impl<D> Sealed for IsExtendedReal<D> {}
 
-impl<D> SupersetOf<FiniteConstraint<D>> for NotNanConstraint<D> {}
+impl<D> SupersetOf<IsReal<D>> for IsExtendedReal<D> {}
 
-/// Constraint that disallows IEEE 754 `NaN`, `+INF`, and `-INF` values.
 #[derive(Debug)]
-pub struct FiniteConstraint<D>(PhantomData<fn() -> D>, Infallible);
+pub struct IsReal<D>(PhantomData<fn() -> D>, Infallible);
 
-impl<D> Constraint for FiniteConstraint<D>
+impl<D> Constraint for IsReal<D>
 where
     D: Divergence,
 {
     type Divergence = D;
-    type Error = NotFiniteError;
+    type Error = NotRealError;
 
     fn check<T>(inner: T) -> Result<(), Self::Error>
     where
         T: Float + Primitive,
     {
         if inner.is_nan() || inner.is_infinite() {
-            Err(NotFiniteError)
+            Err(NotRealError)
         }
         else {
             Ok(())
@@ -288,6 +285,6 @@ where
     }
 }
 
-impl<D> Member<RealSet> for FiniteConstraint<D> {}
+impl<D> Member<RealSet> for IsReal<D> {}
 
-impl<D> Sealed for FiniteConstraint<D> {}
+impl<D> Sealed for IsReal<D> {}

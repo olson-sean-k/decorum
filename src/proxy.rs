@@ -207,7 +207,7 @@ where
     /// # Errors
     ///
     /// Returns an error if the primitive floating-point value does not satisfy the constraints of
-    /// the proxy. Note that the error type of [`UnitConstraint`] is [`Infallible`] and the
+    /// the proxy. Note that the error type of the [`IsFloat`] constraint is [`Infallible`] and the
     /// construction of [`Total`]s cannot fail here.
     ///
     /// # Examples
@@ -215,11 +215,11 @@ where
     /// Constructing proxies from primitive floating-point values:
     ///
     /// ```rust
-    /// use decorum::constraint::FiniteConstraint;
+    /// use decorum::constraint::IsReal;
     /// use decorum::divergence::OrPanic;
     /// use decorum::proxy::Proxy;
     ///
-    /// type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
+    /// type Real = Proxy<f64, IsReal<OrPanic>>;
     ///
     /// fn f(x: Real) -> Real {
     ///     x * 2.0
@@ -233,21 +233,21 @@ where
     /// A proxy construction that fails:
     ///
     /// ```rust,should_panic
-    /// use decorum::constraint::FiniteConstraint;
+    /// use decorum::constraint::IsReal;
     /// use decorum::divergence::OrPanic;
     /// use decorum::proxy::Proxy;
     ///
-    /// type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
+    /// type Real = Proxy<f64, IsReal<OrPanic>>;
     ///
-    /// // `FiniteConstraint` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
+    /// // `IsReal` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
     /// let x = Real::try_new(0.0 / 0.0).unwrap(); // Panics when unwrapping.
     /// ```
     ///
     /// [`divergence`]: crate::divergence
     /// [`Infallible`]: core::convert::Infallible
+    /// [`IsFloat`]: crate::constraint::IsFloat
     /// [`Result`]: core::result::Result
     /// [`Total`]: crate::Total
-    /// [`UnitConstraint`]: crate::constraint::UnitConstraint
     pub fn try_new(inner: T) -> Result<Self, C::Error> {
         C::check(inner).map(|_| Proxy {
             inner,
@@ -272,11 +272,11 @@ where
     /// Constructing proxies from primitive floating-point values:
     ///
     /// ```rust
-    /// use decorum::constraint::FiniteConstraint;
+    /// use decorum::constraint::IsReal;
     /// use decorum::divergence::OrPanic;
     /// use decorum::proxy::Proxy;
     ///
-    /// type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
+    /// type Real = Proxy<f64, IsReal<OrPanic>>;
     ///
     /// fn f(x: Real) -> Real {
     ///     x * 2.0
@@ -288,13 +288,13 @@ where
     /// A proxy construction that fails:
     ///
     /// ```rust,should_panic
-    /// use decorum::constraint::FiniteConstraint;
+    /// use decorum::constraint::IsReal;
     /// use decorum::divergence::OrPanic;
     /// use decorum::proxy::Proxy;
     ///
-    /// type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
+    /// type Real = Proxy<f64, IsReal<OrPanic>>;
     ///
-    /// // `FiniteConstraint` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
+    /// // `IsReal` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
     /// let x = Real::assert(0.0 / 0.0); // Panics.
     /// ```
     ///
@@ -356,8 +356,8 @@ where
     /// Converts a slice of primitive IEEE 754 floating-point values into a slice of proxies.
     ///
     /// This conversion must check the constraints of the proxy against each floating-point value
-    /// and so has `O(N)` time complexity. **When using [`UnitConstraint`], prefer the infallible
-    /// and `O(1)` [`from_slice`] function.**
+    /// and so has `O(N)` time complexity. **When using the [`IsFloat`] constraint, prefer the
+    /// infallible and `O(1)` [`from_slice`] function.**
     ///
     /// # Errors
     ///
@@ -365,7 +365,7 @@ where
     /// the constraints of the proxy.
     ///
     /// [`from_slice`]: crate::Total::from_slice
-    /// [`UnitConstraint`]: crate::constraint::UnitConstraint
+    /// [`IsFloat`]: crate::constraint::IsFloat
     pub fn try_from_slice<'a>(slice: &'a [T]) -> Result<&'a [Self], C::Error> {
         slice.iter().try_for_each(|inner| C::check(*inner))?;
         // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
@@ -377,8 +377,8 @@ where
     /// of proxies.
     ///
     /// This conversion must check the constraints of the proxy against each floating-point value
-    /// and so has `O(N)` time complexity. **When using [`UnitConstraint`], prefer the infallible
-    /// and `O(1)` [`from_mut_slice`] function.**
+    /// and so has `O(N)` time complexity. **When using the [`IsFloat`] constraint, prefer the
+    /// infallible and `O(1)` [`from_mut_slice`] function.**
     ///
     /// # Errors
     ///
@@ -386,7 +386,7 @@ where
     /// slice do not satisfy the constraints of the proxy.
     ///
     /// [`from_mut_slice`]: crate::Total::from_mut_slice
-    /// [`UnitConstraint`]: crate::constraint::UnitConstraint
+    /// [`IsFloat`]: crate::constraint::IsFloat
     pub fn try_from_mut_slice<'a>(slice: &'a mut [T]) -> Result<&'a mut [Self], C::Error> {
         slice.iter().try_for_each(|inner| C::check(*inner))?;
         // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
@@ -427,12 +427,12 @@ where
     /// Fallibly constructing proxies from primitive floating-point values:
     ///
     /// ```rust
-    /// use decorum::constraint::FiniteConstraint;
+    /// use decorum::constraint::IsReal;
     /// use decorum::divergence::{AsResult, OrError};
     /// use decorum::proxy::Proxy;
     ///
     /// // The branch type of `Real` is `Result`.
-    /// type Real = Proxy<f64, FiniteConstraint<OrError<AsResult>>>;
+    /// type Real = Proxy<f64, IsReal<OrError<AsResult>>>;
     ///
     /// let x = Real::new(2.0).unwrap(); // The output type of `new` is `Result` per `TryResult`.
     /// ```
@@ -440,12 +440,12 @@ where
     /// Asserting proxy construction from primitive floating-point values:
     ///
     /// ```rust,should_panic
-    /// use decorum::constraint::FiniteConstraint;
+    /// use decorum::constraint::IsReal;
     /// use decorum::divergence::OrPanic;
     /// use decorum::proxy::Proxy;
     ///
     /// // The branch type of `OrPanic` is `Real`.
-    /// type Real = Proxy<f64, FiniteConstraint<OrPanic>>;
+    /// type Real = Proxy<f64, IsReal<OrPanic>>;
     ///
     /// let x = Real::new(2.0); // The output type of `new` is `Real` per `OrPanic`.
     /// let y = Real::new(0.0 / 0.0); // Panics.
