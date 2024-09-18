@@ -103,7 +103,7 @@
 //! use decorum::constraint::IsReal;
 //! use decorum::divergence::OrError;
 //! use decorum::proxy::{OutputOf, Proxy};
-//! use decorum::real::UnaryReal;
+//! use decorum::real::UnaryRealFunction;
 //!
 //! type Real = Proxy<f64, IsReal<OrError>>;
 //! type Expr = OutputOf<Real>;
@@ -171,7 +171,7 @@ use crate::cmp::IntrinsicOrd;
 use crate::constraint::{IsExtendedReal, IsFloat, IsReal};
 use crate::divergence::OrPanic;
 use crate::proxy::Proxy;
-use crate::real::{BinaryReal, Function, Sign, UnaryReal};
+use crate::real::{BinaryRealFunction, Function, RealFunction, Sign, UnaryRealFunction};
 
 mod sealed {
     use core::convert::Infallible;
@@ -395,36 +395,36 @@ impl Encoding for f64 {
 /// Types that implement this trait are represented using IEEE 754 encoding **and directly expose
 /// the complete details of that encoding**, including infinities, `NaN`s, and operations on real
 /// numbers.
-pub trait Float: Encoding + Infinite + IntrinsicOrd + Nan + real::Real<Codomain = Self> {}
+pub trait Float: Encoding + Infinite + IntrinsicOrd + Nan + RealFunction<Codomain = Self> {}
 
-impl<T> Float for T where T: Encoding + Infinite + IntrinsicOrd + Nan + real::Real<Codomain = T> {}
+impl<T> Float for T where T: Encoding + Infinite + IntrinsicOrd + Nan + RealFunction<Codomain = T> {}
 
 /// A primitive IEEE 754 floating-point type.
 pub trait Primitive: Copy + Sealed {}
 
 // TODO: Remove this. Of course.
 fn _sanity() {
-    use crate::real::FloatEndoreal;
+    use crate::real::FloatEndofunction;
 
     type Real = Proxy<f64, IsReal<OrPanic>>;
 
     fn f<T>(x: T) -> T
     where
-        T: FloatEndoreal<f64>,
+        T: FloatEndofunction<f64>,
     {
         -x
     }
 
     fn g<T, U>(x: T, y: U) -> T
     where
-        T: BinaryReal<U> + FloatEndoreal<f64>,
+        T: BinaryRealFunction<U> + FloatEndofunction<f64>,
     {
         (x + T::ONE) * y
     }
 
     fn h<T>(x: T, y: T) -> T
     where
-        T: FloatEndoreal<f64>,
+        T: FloatEndofunction<f64>,
     {
         x + y
     }
@@ -460,6 +460,42 @@ macro_rules! impl_primitive {
         with_primitives!(impl_primitive);
     };
     (primitive => $t:ident) => {
+        impl BinaryRealFunction<$t> for $t {
+            #[cfg(feature = "std")]
+            fn div_euclid(self, n: Self) -> Self::Codomain {
+                <$t>::div_euclid(self, n)
+            }
+
+            #[cfg(feature = "std")]
+            fn rem_euclid(self, n: Self) -> Self::Codomain {
+                <$t>::rem_euclid(self, n)
+            }
+
+            #[cfg(feature = "std")]
+            fn pow(self, n: Self) -> Self::Codomain {
+                <$t>::powf(self, n)
+            }
+
+            #[cfg(feature = "std")]
+            fn log(self, base: Self) -> Self::Codomain {
+                <$t>::log(self, base)
+            }
+
+            #[cfg(feature = "std")]
+            fn hypot(self, other: Self) -> Self::Codomain {
+                <$t>::hypot(self, other)
+            }
+
+            #[cfg(feature = "std")]
+            fn atan2(self, other: Self) -> Self {
+                <$t>::atan2(self, other)
+            }
+        }
+
+        impl Function for $t {
+            type Codomain = $t;
+        }
+
         impl Infinite for $t {
             const INFINITY: Self = <$t>::INFINITY;
             const NEG_INFINITY: Self = <$t>::NEG_INFINITY;
@@ -483,13 +519,9 @@ macro_rules! impl_primitive {
 
         impl Primitive for $t {}
 
-        impl Function for $t {
-            type Codomain = $t;
-        }
-
         impl Sealed for $t {}
 
-        impl UnaryReal for $t {
+        impl UnaryRealFunction for $t {
             // TODO: The propagation from a constant in a module requires that this macro accept an
             //       `ident` token rather than a `ty` token. Use `ty` if these constants become
             //       associated constants of the primitive types.
@@ -689,38 +721,6 @@ macro_rules! impl_primitive {
             #[cfg(feature = "std")]
             fn atanh(self) -> Self::Codomain {
                 <$t>::atanh(self)
-            }
-        }
-
-        impl BinaryReal<$t> for $t {
-            #[cfg(feature = "std")]
-            fn div_euclid(self, n: Self) -> Self::Codomain {
-                <$t>::div_euclid(self, n)
-            }
-
-            #[cfg(feature = "std")]
-            fn rem_euclid(self, n: Self) -> Self::Codomain {
-                <$t>::rem_euclid(self, n)
-            }
-
-            #[cfg(feature = "std")]
-            fn pow(self, n: Self) -> Self::Codomain {
-                <$t>::powf(self, n)
-            }
-
-            #[cfg(feature = "std")]
-            fn log(self, base: Self) -> Self::Codomain {
-                <$t>::log(self, base)
-            }
-
-            #[cfg(feature = "std")]
-            fn hypot(self, other: Self) -> Self::Codomain {
-                <$t>::hypot(self, other)
-            }
-
-            #[cfg(feature = "std")]
-            fn atan2(self, other: Self) -> Self {
-                <$t>::atan2(self, other)
             }
         }
     };

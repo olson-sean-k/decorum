@@ -67,7 +67,7 @@
 //!     pub type Result = OutputOf<Real>;
 //! }
 //!
-//! use decorum::real::UnaryReal as _;
+//! use decorum::real::UnaryRealFunction;
 //!
 //! use real::Real;
 //!

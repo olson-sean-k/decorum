@@ -1,9 +1,9 @@
-//! APIs describing real numbers and interactions with IEEE 754 floating-point types.
+//! Constants and functions over real numbers.
 
 use core::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 use crate::cmp::IntrinsicOrd;
-use crate::{Float, Infinite, Primitive};
+use crate::{Float, Primitive};
 
 pub trait Function {
     type Codomain;
@@ -15,7 +15,7 @@ impl<T> Endofunction for T where T: Function<Codomain = T> {}
 
 // This trait is implemented by trivial `Copy` types.
 #[allow(clippy::wrong_self_convention)]
-pub trait UnaryReal:
+pub trait UnaryRealFunction:
     Function + IntrinsicOrd + Neg<Output = Self> + PartialEq + PartialOrd + Sized
 {
     const ZERO: Self;
@@ -112,13 +112,13 @@ pub trait UnaryReal:
 // NOTE: Because `T` is not constrained, it isn't possible for functions that always map reals to
 //       reals to express their output as `Self`. The `T` input may not be real and that may result
 //       in a non-real output.
-pub trait BinaryReal<T = Self>:
+pub trait BinaryRealFunction<T = Self>:
     Add<T, Output = Self::Codomain>
     + Div<T, Output = Self::Codomain>
     + Mul<T, Output = Self::Codomain>
     + Rem<T, Output = Self::Codomain>
     + Sub<T, Output = Self::Codomain>
-    + UnaryReal
+    + UnaryRealFunction
 {
     #[cfg(feature = "std")]
     fn div_euclid(self, n: T) -> Self::Codomain; // Undefined.
@@ -136,41 +136,37 @@ pub trait BinaryReal<T = Self>:
     fn atan2(self, other: T) -> Self::Codomain;
 }
 
-pub trait Real: BinaryReal<Self> {}
+pub trait RealFunction: BinaryRealFunction<Self> {}
 
-impl<T> Real for T where T: BinaryReal<T> {}
+impl<T> RealFunction for T where T: BinaryRealFunction<T> {}
 
-pub trait ExtendedReal: Infinite + Real {}
+pub trait RealEndofunction: Endofunction + RealFunction {}
 
-impl<T> ExtendedReal for T where T: Infinite + Real {}
+impl<T> RealEndofunction for T where T: Endofunction + RealFunction {}
 
-pub trait Endoreal: Endofunction + Real {}
-
-impl<T> Endoreal for T where T: Endofunction + Real {}
-
-pub trait FloatReal<T>: BinaryReal<T> + Into<T> + Real + TryFrom<T>
+pub trait FloatFunction<T>: BinaryRealFunction<T> + Into<T> + RealFunction + TryFrom<T>
 where
     T: Float + Primitive,
 {
 }
 
-impl<T, U> FloatReal<T> for U
+impl<T, U> FloatFunction<T> for U
 where
     T: Float + Primitive,
-    U: BinaryReal<T> + Into<T> + Real + TryFrom<T>,
+    U: BinaryRealFunction<T> + Into<T> + RealFunction + TryFrom<T>,
 {
 }
 
-pub trait FloatEndoreal<T>: Endoreal + FloatReal<T>
+pub trait FloatEndofunction<T>: RealEndofunction + FloatFunction<T>
 where
     T: Float + Primitive,
 {
 }
 
-impl<T, U> FloatEndoreal<T> for U
+impl<T, U> FloatEndofunction<T> for U
 where
     T: Float + Primitive,
-    U: Endofunction + FloatReal<T>,
+    U: Endofunction + FloatFunction<T>,
 {
 }
 
