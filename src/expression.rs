@@ -474,9 +474,14 @@ impl<T, E> From<Expression<T, E>> for Result<T, E> {
 #[cfg(all(nightly, feature = "unstable"))]
 impl<T, E> FromResidual for Expression<T, E> {
     fn from_residual(residual: Expression<Infallible, E>) -> Self {
+        use core::hint;
+
+        #[allow(unreachable_patterns)]
         match residual {
             Undefined(undefined) => Undefined(undefined),
-            _ => unreachable!(),
+            // SAFETY: `Infallible` is uninhabited, so it is not possible to construct the
+            //         `Defined` variant here.
+            Defined(_) => unsafe { hint::unreachable_unchecked() },
         }
     }
 }
