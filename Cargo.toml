@@ -29,9 +29,21 @@ rustdoc-args = [
 ]
 
 [features]
-default = ["approx", "serialize-serde", "std"]
-serialize-serde = ["serde", "serde_derive"]
-std = ["approx/std", "num-traits/std", "serde/std", "thiserror"]
+default = [
+    "approx",
+    "serde",
+    "std"
+]
+serde = [
+    "dep:serde",
+    "dep:serde_derive"
+]
+std = [
+    "dep:thiserror",
+    "approx/std",
+    "num-traits/std",
+    "serde/std"
+]
 unstable = []
 
 [dependencies.approx]

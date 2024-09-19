@@ -49,7 +49,7 @@ use num_traits::Float;
 use num_traits::{
     Bounded, FloatConst, FromPrimitive, Num, NumCast, One, Signed, ToPrimitive, Zero,
 };
-#[cfg(feature = "serialize-serde")]
+#[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 
 use crate::cmp::{FloatEq, FloatOrd, IntrinsicOrd};
@@ -94,23 +94,23 @@ pub trait ClosedProxy: Sized {
 ///
 /// - https://github.com/serde-rs/serde/issues/642
 /// - https://github.com/serde-rs/serde/issues/939
-#[cfg(feature = "serialize-serde")]
+#[cfg(feature = "serde")]
 #[derive(Deserialize, Serialize)]
 #[serde(transparent)]
 #[derive(Clone, Copy)]
 #[repr(transparent)]
-struct SerdeContainer<T> {
+struct Serde<T> {
     inner: T,
 }
 
-#[cfg(feature = "serialize-serde")]
-impl<T, C> From<Proxy<T, C>> for SerdeContainer<T>
+#[cfg(feature = "serde")]
+impl<T, C> From<Proxy<T, C>> for Serde<T>
 where
     T: Primitive,
     C: Constraint,
 {
     fn from(proxy: Proxy<T, C>) -> Self {
-        SerdeContainer {
+        Serde {
             inner: proxy.into_inner(),
         }
     }
@@ -133,9 +133,9 @@ where
 /// [`Hash`]: core::hash::Hash
 /// [`Ord`]: core::cmp::Ord
 /// [`Total`]: crate::Total
-#[cfg_attr(feature = "serialize-serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(
-    feature = "serialize-serde",
+    feature = "serde",
     serde(
         bound(
             deserialize = "T: serde::Deserialize<'de> + Primitive, \
@@ -144,14 +144,14 @@ where
             serialize = "T: Primitive + serde::Serialize, \
                          C: Constraint"
         ),
-        try_from = "SerdeContainer<T>",
-        into = "SerdeContainer<T>"
+        try_from = "Serde<T>",
+        into = "Serde<T>"
     )
 )]
 #[repr(transparent)]
 pub struct Proxy<T, C> {
     inner: T,
-    #[cfg_attr(feature = "serialize-serde", serde(skip))]
+    #[cfg_attr(feature = "serde", serde(skip))]
     phantom: PhantomData<fn() -> C>,
 }
 
@@ -1760,15 +1760,15 @@ where
     }
 }
 
-#[cfg(feature = "serialize-serde")]
-impl<T, C> TryFrom<SerdeContainer<T>> for Proxy<T, C>
+#[cfg(feature = "serde")]
+impl<T, C> TryFrom<Serde<T>> for Proxy<T, C>
 where
     T: Primitive,
     C: Constraint,
 {
     type Error = C::Error;
 
-    fn try_from(container: SerdeContainer<T>) -> Result<Self, Self::Error> {
+    fn try_from(container: Serde<T>) -> Result<Self, Self::Error> {
         Self::try_new(container.inner)
     }
 }
@@ -2546,7 +2546,7 @@ mod tests {
         format_args!("{0} {0:e} {0:E} {0:?} {0:#?}", z);
     }
 
-    #[cfg(feature = "serialize-serde")]
+    #[cfg(feature = "serde")]
     #[test]
     fn deserialize() {
         assert_eq!(
@@ -2555,7 +2555,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "serialize-serde")]
+    #[cfg(feature = "serde")]
     #[test]
     #[should_panic]
     fn deserialize_panic_on_violation() {
@@ -2564,7 +2564,7 @@ mod tests {
         let _: E32 = serde_json::from_str("null").unwrap();
     }
 
-    #[cfg(feature = "serialize-serde")]
+    #[cfg(feature = "serde")]
     #[test]
     fn serialize() {
         assert_eq!(

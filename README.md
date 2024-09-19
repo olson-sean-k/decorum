@@ -305,12 +305,12 @@ where
 
 Decorum supports the following feature flags.
 
-| Feature           | Default | Description                                                  |
-|-------------------|---------|--------------------------------------------------------------|
-| `approx`          | yes     | Implements traits from [`approx`] for `Proxy` types.         |
-| `serialize-serde` | yes     | Implements traits from [`serde`] for `Proxy` types.          |
-| `std`             | yes     | Integrates the `std` library and enables dependent features. |
-| `unstable`        | no      | Enables features that require an unstable compiler.          |
+| Feature    | Default | Description                                                  |
+|------------|---------|--------------------------------------------------------------|
+| `approx`   | yes     | Implements traits from [`approx`] for `Proxy` types.         |
+| `serde`    | yes     | Implements traits from [`serde`] for `Proxy` types.          |
+| `std`      | yes     | Integrates the `std` library and enables dependent features. |
+| `unstable` | no      | Enables features that require an unstable compiler.          |
 
 [`approx`]: https://crates.io/crates/approx
 [`num-traits`]: https://crates.io/crates/num-traits
