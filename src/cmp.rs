@@ -314,7 +314,7 @@ where
             // This relies on the correctness of the implementation of `IntrinsicOrd` for `T`. For
             // constrained (and nonresidual) types like `ExtendedReal` and `Real`, `a` and `b` must
             // not be undefined (`NaN`) and so `min` and `max` also must not be undefined.
-            let nan = Proxy::<_, C>::unchecked(T::NAN);
+            let nan = Proxy::<_, C>::unchecked(T::NAN.into_inner());
             (nan, nan)
         }
         else {
@@ -394,7 +394,10 @@ macro_rules! impl_float_intrinsic_ord {
                 match partial_min_max(self, other) {
                     // `NaN`s cannot be compared, so `min` and `max` cannot be undefined here.
                     Some((min, max)) => (*min, *max),
-                    _ => (NanEncoding::NAN, NanEncoding::NAN),
+                    _ => (
+                        <$t as NanEncoding>::NAN.into_inner(),
+                        <$t as NanEncoding>::NAN.into_inner(),
+                    ),
                 }
             }
         }
