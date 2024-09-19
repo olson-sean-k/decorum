@@ -52,13 +52,13 @@ use num_traits::{
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 
-use crate::cmp::{FloatEq, FloatOrd, IntrinsicOrd};
+use crate::cmp::{CanonicalEq, CanonicalOrd, IntrinsicOrd};
 use crate::constraint::{
     Constraint, ExpectConstrained, InfinitySet, Member, NanSet, SubsetOf, SupersetOf,
 };
 use crate::divergence::{self, Divergence, NonResidual};
 use crate::expression::Expression;
-use crate::hash::FloatHash;
+use crate::hash::CanonicalHash;
 use crate::real::{BinaryRealFunction, Function, Sign, UnaryRealFunction};
 use crate::{
     with_binary_operations, with_primitives, BaseEncoding, ExtendedReal, InfinityEncoding,
@@ -116,6 +116,7 @@ where
     }
 }
 
+// TODO: Remove unnecessary input type parameter bounds on `impl`s.
 /// IEEE 754 floating-point proxy that provides total ordering, equivalence, hashing, constraints,
 /// and error handling.
 ///
@@ -1317,14 +1318,14 @@ where
 
 impl<T, C> Hash for Proxy<T, C>
 where
-    T: Primitive,
+    T: Primitive + ToCanonicalBits,
     C: Constraint,
 {
     fn hash<H>(&self, state: &mut H)
     where
         H: Hasher,
     {
-        FloatHash::float_hash(self.as_ref(), state);
+        self.hash_canonical_bits(state)
     }
 }
 
@@ -1473,16 +1474,16 @@ where
     C: Constraint,
 {
     fn cmp(&self, other: &Self) -> Ordering {
-        FloatOrd::float_cmp(self.as_ref(), other.as_ref())
+        CanonicalOrd::cmp_canonical_bits(self.as_ref(), other.as_ref())
     }
 }
 
 impl<T, C> PartialEq for Proxy<T, C>
 where
-    T: Primitive,
+    T: Primitive + ToCanonicalBits,
 {
     fn eq(&self, other: &Self) -> bool {
-        FloatEq::float_eq(self.as_ref(), other.as_ref())
+        self.eq_canonical_bits(other)
     }
 }
 
@@ -1696,8 +1697,7 @@ where
 
 impl<T, C> ToCanonicalBits for Proxy<T, C>
 where
-    T: Primitive,
-    C: Constraint,
+    T: Primitive + ToCanonicalBits,
 {
     type Bits = <T as ToCanonicalBits>::Bits;
 

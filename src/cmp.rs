@@ -2,7 +2,7 @@
 //!
 //! This module provides traits and functions for total ordering of floating-point values and
 //! handling partial ordering via intrinsic types. For primitive floating-point types, the
-//! following total ordering is provided via the [`FloatEq`] and [`FloatOrd`] traits:
+//! following total ordering is provided via the [`CanonicalEq`] and [`CanonicalOrd`] traits:
 //!
 //! $$-\infin<\cdots<0<\cdots<\infin<\text{NaN}$$
 //!
@@ -27,13 +27,13 @@
 //!
 //! ```rust
 //! use core::cmp::Ordering;
-//! use decorum::cmp::FloatOrd;
+//! use decorum::cmp::CanonicalOrd;
 //! use decorum::NanEncoding;
 //!
 //! let x = f64::NAN;
 //! let y = 1.0f64;
 //!
-//! let (min, max) = match x.float_cmp(&y) {
+//! let (min, max) = match x.cmp_canonical_bits(&y) {
 //!     Ordering::Less | Ordering::Equal => (x, y),
 //!     _ => (y, x),
 //! };
@@ -53,9 +53,9 @@
 //! let min = cmp::min_or_undefined(x, y);
 //! ```
 //!
+//! [`CanonicalEq`]: crate::cmp::CanonicalEq
+//! [`CanonicalOrd`]: crate::cmp::CanonicalOrd
 //! [`Eq`]: core::cmp::Eq
-//! [`FloatEq`]: crate::cmp::FloatEq
-//! [`FloatOrd`]: crate::cmp::FloatOrd
 //! [`Ord`]: core::cmp::Ord
 //! [`Total`]: crate::Total
 
@@ -68,8 +68,8 @@ use crate::{with_primitives, NanEncoding, Primitive, ToCanonicalBits};
 
 /// Total equivalence relation of IEEE 754 floating-point encoded types.
 ///
-/// `FloatEq` agrees with the total ordering provided by `FloatOrd`. See the module documentation
-/// for more. Given the set of `NaN` representations $N$, `FloatEq` expresses:
+/// `CanonicalEq` agrees with the total ordering provided by `CanonicalOrd`. See the module
+/// documentation for more. Given the set of `NaN` representations $N$, `CanonicalEq` expresses:
 ///
 /// $$
 /// \begin{aligned}
@@ -83,33 +83,46 @@ use crate::{with_primitives, NanEncoding, Primitive, ToCanonicalBits};
 /// Comparing `NaN`s using primitive floating-point types:
 ///
 /// ```rust
-/// use decorum::cmp::FloatEq;
+/// use decorum::cmp::CanonicalEq;
 ///
 /// let x = 0.0f64 / 0.0; // `NaN`.
 /// let y = f64::INFINITY - f64::INFINITY; // `NaN`.
 ///
-/// assert!(x.float_eq(&y));
+/// assert!(x.eq_canonical_bits(&y));
 /// ```
-pub trait FloatEq {
-    fn float_eq(&self, other: &Self) -> bool;
+pub trait CanonicalEq {
+    fn eq_canonical_bits(&self, other: &Self) -> bool;
 }
 
-impl<T> FloatEq for T
+impl<T> CanonicalEq for T
 where
-    T: Primitive + ToCanonicalBits,
+    T: ToCanonicalBits,
 {
-    fn float_eq(&self, other: &Self) -> bool {
+    fn eq_canonical_bits(&self, other: &Self) -> bool {
         self.to_canonical_bits() == other.to_canonical_bits()
     }
 }
 
-impl<T> FloatEq for [T]
+impl<T, const N: usize> CanonicalEq for [T; N]
 where
-    T: FloatEq,
+    T: CanonicalEq,
 {
-    fn float_eq(&self, other: &Self) -> bool {
+    fn eq_canonical_bits(&self, other: &Self) -> bool {
+        self.iter()
+            .zip(other.iter())
+            .all(|(a, b)| a.eq_canonical_bits(b))
+    }
+}
+
+impl<T> CanonicalEq for [T]
+where
+    T: CanonicalEq,
+{
+    fn eq_canonical_bits(&self, other: &Self) -> bool {
         if self.len() == other.len() {
-            self.iter().zip(other.iter()).all(|(a, b)| a.float_eq(b))
+            self.iter()
+                .zip(other.iter())
+                .all(|(a, b)| a.eq_canonical_bits(b))
         }
         else {
             false
@@ -119,22 +132,29 @@ where
 
 /// Total ordering of IEEE 754 floating-point encoded types.
 ///
-/// `FloatOrd` expresses the total ordering:
+/// `CanonicalOrd` expresses the total ordering:
 ///
 /// $$-\infin<\cdots<0<\cdots<\infin<\text{NaN}$$
 ///
 /// This trait can be used to compare primitive floating-point types without the need to wrap them
 /// within a proxy type. See the module documentation for more about the ordering used by
-/// `FloatOrd` and proxy types.
-pub trait FloatOrd {
-    fn float_cmp(&self, other: &Self) -> Ordering;
+/// `CanonicalOrd` and proxy types.
+pub trait CanonicalOrd {
+    // TODO: The naming convention for canonical forms and relations is a bit odd here: ordering
+    //       considers a notion of canonical semantics, but does not compare
+    //       `ToCanonicalBits::Bits`. Is there a convension that works better here? Alternatively,
+    //       is there a good name for this despite bucking the convention?
+    fn cmp_canonical_bits(&self, other: &Self) -> Ordering;
 }
 
-impl<T> FloatOrd for T
+impl<T> CanonicalOrd for T
 where
-    T: Primitive + ToCanonicalBits,
+    // This implementation is bound on `Primitive` rather than something more general to exclude
+    // `PartialOrd` implementations that do not comply with IEEE 754 floating-point partial
+    // ordering. This must be implemented independently for proxy types.
+    T: Primitive,
 {
-    fn float_cmp(&self, other: &Self) -> Ordering {
+    fn cmp_canonical_bits(&self, other: &Self) -> Ordering {
         match self.partial_cmp(other) {
             Some(ordering) => ordering,
             None => {
@@ -154,15 +174,15 @@ where
     }
 }
 
-impl<T> FloatOrd for [T]
+impl<T> CanonicalOrd for [T]
 where
-    T: FloatOrd,
+    T: CanonicalOrd,
 {
-    fn float_cmp(&self, other: &Self) -> Ordering {
+    fn cmp_canonical_bits(&self, other: &Self) -> Ordering {
         match self
             .iter()
             .zip(other.iter())
-            .map(|(a, b)| a.float_cmp(b))
+            .map(|(a, b)| a.cmp_canonical_bits(b))
             .find(|ordering| *ordering != Ordering::Equal)
         {
             Some(ordering) => ordering,
@@ -443,7 +463,7 @@ where
 mod tests {
     use num_traits::{One, Zero};
 
-    use crate::cmp::{self, FloatEq, IntrinsicOrd};
+    use crate::cmp::{self, CanonicalEq, IntrinsicOrd};
     use crate::{NanEncoding, Total};
 
     #[test]
@@ -455,8 +475,8 @@ mod tests {
         let xs = [1.0f64, f64::NAN, f64::INFINITY];
         let ys = [1.0f64, f64::NAN, f64::INFINITY];
 
-        assert!(x.float_eq(&y));
-        assert!(xs.float_eq(&ys));
+        assert!(x.eq_canonical_bits(&y));
+        assert!(xs.eq_canonical_bits(&ys));
     }
 
     #[test]

@@ -156,9 +156,8 @@ pub mod hash;
 pub mod proxy;
 pub mod real;
 
-use core::mem;
+use core::hash::Hash;
 use core::num::FpCategory;
-use num_traits::{PrimInt, Unsigned};
 
 use crate::cmp::IntrinsicOrd;
 use crate::constraint::{IsExtendedReal, IsFloat, IsReal};
@@ -209,8 +208,8 @@ pub type R32<D = OrPanic> = Real<f32, D>;
 pub type R64<D = OrPanic> = Real<f64, D>;
 
 /// Converts IEEE 754 floating-point values to a canonicalized form.
-pub trait ToCanonicalBits: BaseEncoding {
-    type Bits: PrimInt + Unsigned;
+pub trait ToCanonicalBits: BaseEncoding + Copy {
+    type Bits: Copy + Eq + Hash;
 
     /// Conversion to a canonical representation.
     ///
@@ -220,10 +219,10 @@ pub trait ToCanonicalBits: BaseEncoding {
     fn to_canonical_bits(self) -> Self::Bits;
 }
 
-// TODO: Implement this differently for differently sized types.
+// TODO: Implement this differently for differently sized primitive types.
 impl<T> ToCanonicalBits for T
 where
-    T: BaseEncoding + NanEncoding + Primitive,
+    T: Primitive,
 {
     type Bits = u64;
 
@@ -244,7 +243,7 @@ where
                 CANONICAL_ZERO_BITS
             }
             else {
-                let exponent = u64::from(unsafe { mem::transmute::<i16, u16>(exponent) });
+                let exponent = u64::from(exponent as u16);
                 let sign = u64::from(sign > 0);
                 (mantissa & MANTISSA_MASK)
                     | ((exponent << 52) & EXPONENT_MASK)
@@ -261,9 +260,7 @@ where
 /// non-computational elements of the encoding and does not specify the inhabitants of a type.
 ///
 /// [`binaryN`]: https://en.wikipedia.org/wiki/IEEE_754#Basic_and_interchange_formats
-// CLIPPY: This trait is implemented by trivial `Copy` types.
-#[allow(clippy::wrong_self_convention)]
-pub trait BaseEncoding: Sized {
+pub trait BaseEncoding: Copy {
     const MAX_FINITE: Self;
     const MIN_FINITE: Self;
     const MIN_POSITIVE_NORMAL: Self;
@@ -365,9 +362,7 @@ impl BaseEncoding for f64 {
 /// A type with an IEEE 754 floating-point representation that supports infinities.
 ///
 /// `InfinityEncoding` types have `-INF` and `+INF` inhabitants.
-// CLIPPY: This trait is implemented by trivial `Copy` types.
-#[allow(clippy::wrong_self_convention)]
-pub trait InfinityEncoding: Sized {
+pub trait InfinityEncoding: Copy {
     const INFINITY: Self;
     const NEG_INFINITY: Self;
 
@@ -378,9 +373,7 @@ pub trait InfinityEncoding: Sized {
 /// A type with an IEEE 754 floating-point representation that supports `NaN`s.
 ///
 /// `NanEncoding` types have `NaN` inhabitants.
-// CLIPPY: This trait is implemented by trivial `Copy` types.
-#[allow(clippy::wrong_self_convention)]
-pub trait NanEncoding: Sized {
+pub trait NanEncoding: Copy {
     /// The type of the arbitrary `Nan` representation [`NAN`].
     ///
     /// This may be an intermediate type other than `Self`. In particular, primitive IEEE 754

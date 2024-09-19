@@ -231,16 +231,16 @@ values (including slices) using this non-standard relation.
 
 | Floating-Point Trait | Standard Trait   |
 |----------------------|------------------|
-| `FloatEq`            | `Eq`             |
-| `FloatHash`          | `Hash`           |
-| `FloatOrd`           | `Ord`            |
+| `CanonicalEq`        | `Eq`             |
+| `CanonicalHash`      | `Hash`           |
+| `CanonicalOrd`       | `Ord`            |
 
 ```rust
-use decorum::cmp::FloatEq;
+use decorum::cmp::CanonicalEq;
 
 let x = 0.0f64 / 0.0f64; // `NaN`.
 let y = f64::INFINITY + f64::NEG_INFINITY; // `NaN`.
-assert!(x.float_eq(&y));
+assert!(x.eq_canonical_bits(&y));
 ```
 
 Decorum also provides the `IntrinsicOrd` trait and the `min_or_undefined` and

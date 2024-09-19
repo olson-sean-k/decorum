@@ -11,46 +11,49 @@
 //! \end{aligned}
 //! $$
 //!
-//! The [`FloatHash`] trait agrees with the ordering and equivalence relations of the [`FloatOrd`]
-//! and [`FloatEq`] traits.
+//! The [`CanonicalHash`] trait agrees with the ordering and equivalence relations of the
+//! [`CanonicalOrd`] and [`CanonicalEq`] traits.
 //!
-//! [`FloatEq`]: crate::cmp::FloatEq
-//! [`FloatHash`]: crate::hash::FloatHash
-//! [`FloatOrd`]: crate::cmp::FloatOrd
+//! [`CanonicalEq`]: crate::cmp::CanonicalEq
+//! [`CanonicalHash`]: crate::hash::CanonicalHash
+//! [`CanonicalOrd`]: crate::cmp::CanonicalOrd
 
 use core::hash::{Hash, Hasher};
 
-use crate::{Primitive, ToCanonicalBits};
+use crate::ToCanonicalBits;
 
-/// An IEEE 754 encoded type that can be hashed.
-pub trait FloatHash {
-    fn float_hash<H>(&self, state: &mut H)
+pub trait CanonicalHash {
+    fn hash_canonical_bits<H>(&self, state: &mut H)
     where
         H: Hasher;
 }
 
-impl<T> FloatHash for T
+// TODO: This implementation conflicts with implementations over references to a type `T` where
+//       `T: CanonicalHash`. However, this is because `rustc` claims that "sealed" traits can be
+//       implemented downstream, which isn't true. Write reference implementations when possible
+//       (or consider removing this blanket implementation).
+impl<T> CanonicalHash for T
 where
-    T: Primitive,
+    T: ToCanonicalBits,
 {
-    fn float_hash<H>(&self, state: &mut H)
+    fn hash_canonical_bits<H>(&self, state: &mut H)
     where
         H: Hasher,
     {
-        self.to_canonical_bits().hash(state);
+        self.to_canonical_bits().hash(state)
     }
 }
 
-impl<T> FloatHash for [T]
+impl<T> CanonicalHash for [T]
 where
-    T: Primitive,
+    T: CanonicalHash,
 {
-    fn float_hash<H>(&self, state: &mut H)
+    fn hash_canonical_bits<H>(&self, state: &mut H)
     where
         H: Hasher,
     {
-        for item in self.iter() {
-            item.float_hash(state);
+        for item in self {
+            item.hash_canonical_bits(state);
         }
     }
 }
