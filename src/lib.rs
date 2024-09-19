@@ -164,7 +164,9 @@ use crate::cmp::IntrinsicOrd;
 use crate::constraint::{IsExtendedReal, IsFloat, IsReal};
 use crate::divergence::OrPanic;
 use crate::proxy::Proxy;
-use crate::real::{BinaryRealFunction, Function, RealEndofunction, Sign, UnaryRealFunction};
+use crate::real::{
+    BinaryRealFunction, Endofunction, Function, RealFunction, Sign, UnaryRealFunction,
+};
 
 mod sealed {
     use core::convert::Infallible;
@@ -401,12 +403,13 @@ pub trait NanEncoding: Sized {
 pub trait Primitive:
     BaseEncoding
     + Copy
+    + Endofunction
     + InfinityEncoding
     + IntrinsicOrd
     + NanEncoding<Nan = Nan<Self>>
     + PartialEq
     + PartialOrd
-    + RealEndofunction
+    + RealFunction
     + Sealed
 {
 }
@@ -444,27 +447,27 @@ impl From<Nan<f64>> for f64 {
 
 // TODO: Remove this. Of course.
 fn _sanity() {
-    use crate::real::FloatEndofunction;
+    use crate::real::FloatFunction;
 
     type Real = Proxy<f64, IsReal<OrPanic>>;
 
     fn f<T>(x: T) -> T
     where
-        T: FloatEndofunction<f64>,
+        T: FloatFunction<f64>,
     {
         -x
     }
 
     fn g<T, U>(x: T, y: U) -> T
     where
-        T: BinaryRealFunction<U> + FloatEndofunction<f64>,
+        T: BinaryRealFunction<U> + Endofunction + FloatFunction<f64>,
     {
         (x + T::ONE) * y
     }
 
     fn h<T>(x: T, y: T) -> T
     where
-        T: FloatEndofunction<f64>,
+        T: Endofunction + FloatFunction<f64>,
     {
         x + y
     }

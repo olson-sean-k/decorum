@@ -140,10 +140,6 @@ pub trait RealFunction: BinaryRealFunction<Self> {}
 
 impl<T> RealFunction for T where T: BinaryRealFunction<T> {}
 
-pub trait RealEndofunction: Endofunction + RealFunction {}
-
-impl<T> RealEndofunction for T where T: Endofunction + RealFunction {}
-
 pub trait FloatFunction<T>: BinaryRealFunction<T> + Into<T> + RealFunction + TryFrom<T>
 where
     T: Primitive,
@@ -154,19 +150,6 @@ impl<T, U> FloatFunction<T> for U
 where
     T: Primitive,
     U: BinaryRealFunction<T> + Into<T> + RealFunction + TryFrom<T>,
-{
-}
-
-pub trait FloatEndofunction<T>: RealEndofunction + FloatFunction<T>
-where
-    T: Primitive,
-{
-}
-
-impl<T, U> FloatEndofunction<T> for U
-where
-    T: Primitive,
-    U: Endofunction + FloatFunction<T>,
 {
 }
 

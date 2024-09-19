@@ -253,11 +253,11 @@ do (unlike `f64::max`, etc.).
 
 ```rust
 use decorum::cmp;
-use decorum::real::{RealEndofunction, UnaryRealFunction};
+use decorum::real::{Endofunction, RealFunction, UnaryRealFunction};
 
 pub fn f<T>(x: T, y: T) -> T
 where
-    T: RealEndofunction,
+    T: Endofunction + RealFunction,
 {
     // If the comparison is undefined, then `min` is assigned some
     // representation of undefined. For floating-point types, `NaN` represents
@@ -284,12 +284,12 @@ programming. The following code demonstrates a function that accepts types that
 support floating-point infinities and real functions.
 
 ```rust
-use decorum::real::Endoreal;
-use decorum::Infinity;
+use decorum::real::{Endofunction, RealFunction};
+use decorum::InfinityEncoding;
 
 fn f<T>(x: T, y: T) -> T
 where
-    T: Infinity + Endoreal,
+    T: Endofunction + InfinityEncoding + RealFunction,
 {
     let z = x / y;
     if z.is_infinite() {
