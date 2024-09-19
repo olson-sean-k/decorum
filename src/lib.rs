@@ -379,11 +379,20 @@ pub trait InfinityEncoding: Sized {
 // CLIPPY: This trait is implemented by trivial `Copy` types.
 #[allow(clippy::wrong_self_convention)]
 pub trait NanEncoding: Sized {
-    /// A representation of `NaN`.
+    /// The type of the arbitrary `Nan` representation [`NAN`].
     ///
-    /// For primitive floating-point types, `NaN` is incomparable. Therefore, prefer the `is_nan`
-    /// predicate over direct comparisons with `NaN`.
-    const NAN: Self;
+    /// This may be an intermediate type other than `Self`. In particular, primitive IEEE 754
+    /// floating-point types represent `NaN` with the [`Nan`] type, which is incomparable and must
+    /// first be converted into its primitive types.
+    ///
+    /// For proxy types, which are totally ordered, this type satisfies the bound `Eq + Ord`.
+    ///
+    /// [`Nan`]: crate::Nan
+    /// [`NAN`]: crate::NanEncoding::NAN
+    type Nan;
+
+    /// An arbitrary representation of `NaN`.
+    const NAN: Self::Nan;
 
     fn is_nan(self) -> bool;
 }
@@ -394,12 +403,43 @@ pub trait Primitive:
     + Copy
     + InfinityEncoding
     + IntrinsicOrd
-    + NanEncoding
+    + NanEncoding<Nan = Nan<Self>>
     + PartialEq
     + PartialOrd
     + RealEndofunction
     + Sealed
 {
+}
+
+/// An incomparable primitive IEEE 754 floating-point `NaN`.
+#[derive(Clone, Copy, Debug)]
+#[repr(transparent)]
+pub struct Nan<T>
+where
+    T: Primitive,
+{
+    inner: T,
+}
+
+impl<T> Nan<T>
+where
+    T: Primitive,
+{
+    pub const fn into_inner(self) -> T {
+        self.inner
+    }
+}
+
+impl From<Nan<f32>> for f32 {
+    fn from(nan: Nan<f32>) -> Self {
+        nan.into_inner()
+    }
+}
+
+impl From<Nan<f64>> for f64 {
+    fn from(nan: Nan<f64>) -> Self {
+        nan.into_inner()
+    }
 }
 
 // TODO: Remove this. Of course.
@@ -510,7 +550,9 @@ macro_rules! impl_primitive {
         }
 
         impl NanEncoding for $t {
-            const NAN: Self = <$t>::NAN;
+            type Nan = Nan<$t>;
+
+            const NAN: Self::Nan = Nan { inner: <$t>::NAN };
 
             fn is_nan(self) -> bool {
                 self.is_nan()

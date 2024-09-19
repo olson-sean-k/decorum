@@ -853,7 +853,7 @@ where
     }
 
     fn nan() -> Self {
-        NanEncoding::NAN
+        <Self as NanEncoding>::NAN
     }
 
     fn is_nan(self) -> bool {
@@ -1406,7 +1406,9 @@ where
     T: Primitive,
     C: Constraint + Member<NanSet>,
 {
-    const NAN: Self = Proxy::unchecked(T::NAN);
+    type Nan = Self;
+
+    const NAN: Self::Nan = Proxy::unchecked(T::NAN.into_inner());
 
     fn is_nan(self) -> bool {
         self.into_inner().is_nan()
