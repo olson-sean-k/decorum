@@ -58,7 +58,7 @@ use crate::constraint::{
 };
 use crate::divergence::{self, Divergence, NonResidual};
 use crate::expression::Expression;
-use crate::hash::FloatHash;
+use crate::hash::CanonicalHash;
 use crate::real::{BinaryRealFunction, Function, Sign, UnaryRealFunction};
 use crate::{
     with_binary_operations, with_primitives, BaseEncoding, ExtendedReal, InfinityEncoding,
@@ -116,6 +116,7 @@ where
     }
 }
 
+// TODO: Remove unnecessary input type parameter bounds on `impl`s.
 /// IEEE 754 floating-point proxy that provides total ordering, equivalence, hashing, constraints,
 /// and error handling.
 ///
@@ -1317,14 +1318,15 @@ where
 
 impl<T, C> Hash for Proxy<T, C>
 where
-    T: Primitive,
+    T: Primitive + ToCanonicalBits,
+    T::Bits: Hash,
     C: Constraint,
 {
     fn hash<H>(&self, state: &mut H)
     where
         H: Hasher,
     {
-        FloatHash::float_hash(self.as_ref(), state);
+        self.hash_canonical_bits(state)
     }
 }
 
@@ -1696,7 +1698,7 @@ where
 
 impl<T, C> ToCanonicalBits for Proxy<T, C>
 where
-    T: Primitive,
+    T: Primitive + ToCanonicalBits,
     C: Constraint,
 {
     type Bits = <T as ToCanonicalBits>::Bits;

@@ -232,7 +232,7 @@ values (including slices) using this non-standard relation.
 | Floating-Point Trait | Standard Trait   |
 |----------------------|------------------|
 | `FloatEq`            | `Eq`             |
-| `FloatHash`          | `Hash`           |
+| `CanonicalHash`      | `Hash`           |
 | `FloatOrd`           | `Ord`            |
 
 ```rust
