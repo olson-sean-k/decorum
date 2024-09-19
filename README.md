@@ -197,14 +197,14 @@ available for specific configurations.
 | `into_superset`        | proxy     | proxy     |               |
 
 The following type definitions provide common proxy configurations. Each type
-implements different traits describing components of IEEE 754 floating-point
-based on the constraints of the proxy.
+implements different traits that describe the supported encoding and elements of
+IEEE 754 floating-point based on its constraints.
 
-| Type Definition | Sized Aliases | Trait Implementations                      | Illegal Values        |
-|-----------------|---------------|--------------------------------------------|-----------------------|
-| `Total`         |               | `Encoding + Real + Infinite + Nan + Float` |                       |
-| `ExtendedReal`  | `E32`, `E64`  | `Encoding + Real + Infinite`               | `NaN`                 |
-| `Real`          | `R32`, `R64`  | `Encoding + Real`                          | `NaN`, `-INF`, `+INF` |
+| Type Definition | Sized Aliases | Trait Implementations                           | Illegal Values        |
+|-----------------|---------------|-------------------------------------------------|-----------------------|
+| `Total`         |               | `BaseEncoding + InfinityEncoding + NanEncoding` |                       |
+| `ExtendedReal`  | `E32`, `E64`  | `BaseEncoding + InfinityEncoding`               | `NaN`                 |
+| `Real`          | `R32`, `R64`  | `BaseEncoding`                                  | `NaN`, `-INF`, `+INF` |
 
 ## Relations and Total Ordering
 

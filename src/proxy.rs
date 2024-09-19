@@ -11,14 +11,14 @@
 //! that is not in this set is encountered. The following table summarizes the proxy type
 //! definitions and their constraints:
 //!
-//! | Type Definition  | Sized Definitions | Trait Implementations                      | Disallowed Values     |
-//! |------------------|-------------------|--------------------------------------------|-----------------------|
-//! | [`Total`]        |                   | `Encoding + Real + Infinite + Nan + Float` |                       |
-//! | [`ExtendedReal`] | `E32`, `E64`      | `Encoding + Real + Infinite`               | `NaN`                 |
-//! | [`Real`]         | `R32`, `R64`      | `Encoding + Real`                          | `NaN`, `-INF`, `+INF` |
+//! | Type Definition  | Sized Definitions | Trait Implementations                           | Disallowed Values     |
+//! |------------------|-------------------|-------------------------------------------------|-----------------------|
+//! | [`Total`]        |                   | `BaseEncoding + InfinityEncoding + NanEncoding` |                       |
+//! | [`ExtendedReal`] | `E32`, `E64`      | `BaseEncoding + InfinityEncoding`               | `NaN`                 |
+//! | [`Real`]         | `R32`, `R64`      | `BaseEncoding`                                  | `NaN`, `-INF`, `+INF` |
 //!
-//! The [`ExtendedReal`] and [`Real`] types disallow values that represent `NaN`, $\infin$, and
-//! $-\infin$. These types diverge if such a value is encountered, which may result in an error
+//! The [`ExtendedReal`] and [`Real`] types disallow values that represent not-a-number, $\infin$,
+//! and $-\infin$. These types diverge if such a value is encountered, which may result in an error
 //! encoding output (e.g., a `Result::Err`) or even a panic. Notably, the [`Total`] type applies no
 //! constraints and is infallible (never diverges).
 //!

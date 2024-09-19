@@ -37,11 +37,11 @@
 //! Proxy types and their components are provided by the [`proxy`], [`constraint`], and
 //! [`divergence`] modules. Numerous type definitions are also provided in the crate root:
 //!
-//! | Type Definition | Subsets                                |
-//! |-----------------|----------------------------------------|
-//! | [`Total`]       | real numbers, infinities, not-a-number |
-//! | [`ExtendedReal`]      | real numbers, infinities               |
-//! | [`Real`]      | real numbers                           |
+//! | Type Definition  | Subsets                                |
+//! |------------------|----------------------------------------|
+//! | [`Total`]        | real numbers, infinities, not-a-number |
+//! | [`ExtendedReal`] | real numbers, infinities               |
+//! | [`Real`]         | real numbers                           |
 //!
 //! # Equivalence and Ordering
 //!
@@ -252,10 +252,13 @@ where
     }
 }
 
-/// IEEE 754 floating-point representations that expose general encoding.
+/// A type with an IEEE 754 floating-point representation that exposes its basic encoding.
 ///
-/// Provides values and operations that describe the encoding of an IEEE 754 floating-point value.
-/// The specific semantic values for infinities and `NaN`s are described by independent traits.
+/// `BaseEncoding` types have a floating-point representation ([`binaryN`]), **but may not support
+/// nor expose other elements of the specification**. This trait describes the most basic
+/// non-computational elements of the encoding and does not specify the inhabitants of a type.
+///
+/// [`binaryN`]: https://en.wikipedia.org/wiki/IEEE_754#Basic_and_interchange_formats
 // CLIPPY: This trait is implemented by trivial `Copy` types.
 #[allow(clippy::wrong_self_convention)]
 pub trait BaseEncoding: Sized {
@@ -357,7 +360,9 @@ impl BaseEncoding for f64 {
     }
 }
 
-/// IEEE 754 floating-point representations that expose infinities (`-INF` and `+INF`).
+/// A type with an IEEE 754 floating-point representation that supports infinities.
+///
+/// `InfinityEncoding` types have `-INF` and `+INF` inhabitants.
 // CLIPPY: This trait is implemented by trivial `Copy` types.
 #[allow(clippy::wrong_self_convention)]
 pub trait InfinityEncoding: Sized {
@@ -368,7 +373,9 @@ pub trait InfinityEncoding: Sized {
     fn is_finite(self) -> bool;
 }
 
-/// IEEE 754 floating-point representations that expose `NaN`s.
+/// A type with an IEEE 754 floating-point representation that supports `NaN`s.
+///
+/// `NanEncoding` types have `NaN` inhabitants.
 // CLIPPY: This trait is implemented by trivial `Copy` types.
 #[allow(clippy::wrong_self_convention)]
 pub trait NanEncoding: Sized {
