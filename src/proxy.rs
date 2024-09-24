@@ -52,7 +52,7 @@ use num_traits::{
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 
-use crate::cmp::{FloatEq, FloatOrd, IntrinsicOrd};
+use crate::cmp::{CanonicalEq, CanonicalOrd, IntrinsicOrd};
 use crate::constraint::{
     Constraint, ExpectConstrained, InfinitySet, Member, NanSet, SubsetOf, SupersetOf,
 };
@@ -1319,7 +1319,6 @@ where
 impl<T, C> Hash for Proxy<T, C>
 where
     T: Primitive + ToCanonicalBits,
-    T::Bits: Hash,
     C: Constraint,
 {
     fn hash<H>(&self, state: &mut H)
@@ -1475,16 +1474,16 @@ where
     C: Constraint,
 {
     fn cmp(&self, other: &Self) -> Ordering {
-        FloatOrd::float_cmp(self.as_ref(), other.as_ref())
+        CanonicalOrd::cmp_canonical_bits(self.as_ref(), other.as_ref())
     }
 }
 
 impl<T, C> PartialEq for Proxy<T, C>
 where
-    T: Primitive,
+    T: Primitive + ToCanonicalBits,
 {
     fn eq(&self, other: &Self) -> bool {
-        FloatEq::float_eq(self.as_ref(), other.as_ref())
+        self.eq_canonical_bits(other)
     }
 }
 
@@ -1699,7 +1698,6 @@ where
 impl<T, C> ToCanonicalBits for Proxy<T, C>
 where
     T: Primitive + ToCanonicalBits,
-    C: Constraint,
 {
     type Bits = <T as ToCanonicalBits>::Bits;
 

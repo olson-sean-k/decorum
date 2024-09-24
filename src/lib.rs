@@ -156,8 +156,8 @@ pub mod hash;
 pub mod proxy;
 pub mod real;
 
+use core::hash::Hash;
 use core::num::FpCategory;
-use num_traits::{PrimInt, Unsigned};
 
 use crate::cmp::IntrinsicOrd;
 use crate::constraint::{IsExtendedReal, IsFloat, IsReal};
@@ -209,7 +209,7 @@ pub type R64<D = OrPanic> = Real<f64, D>;
 
 /// Converts IEEE 754 floating-point values to a canonicalized form.
 pub trait ToCanonicalBits: BaseEncoding + Copy {
-    type Bits: PrimInt + Unsigned;
+    type Bits: Copy + Eq + Hash;
 
     /// Conversion to a canonical representation.
     ///

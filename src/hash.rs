@@ -12,11 +12,11 @@
 //! $$
 //!
 //! The [`CanonicalHash`] trait agrees with the ordering and equivalence relations of the
-//! [`FloatOrd`] and [`FloatEq`] traits.
+//! [`CanonicalOrd`] and [`CanonicalEq`] traits.
 //!
-//! [`FloatEq`]: crate::cmp::FloatEq
+//! [`CanonicalEq`]: crate::cmp::CanonicalEq
 //! [`CanonicalHash`]: crate::hash::CanonicalHash
-//! [`FloatOrd`]: crate::cmp::FloatOrd
+//! [`CanonicalOrd`]: crate::cmp::CanonicalOrd
 
 use core::hash::{Hash, Hasher};
 
@@ -35,7 +35,6 @@ pub trait CanonicalHash {
 impl<T> CanonicalHash for T
 where
     T: ToCanonicalBits,
-    T::Bits: Hash,
 {
     fn hash_canonical_bits<H>(&self, state: &mut H)
     where
