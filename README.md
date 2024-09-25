@@ -240,7 +240,7 @@ use decorum::cmp::CanonicalEq;
 
 let x = 0.0f64 / 0.0f64; // `NaN`.
 let y = f64::INFINITY + f64::NEG_INFINITY; // `NaN`.
-assert!(x.eq_canonical_bits(&y));
+assert!(x.eq_canonical(&y));
 ```
 
 Decorum also provides the `IntrinsicOrd` trait and the `min_or_undefined` and

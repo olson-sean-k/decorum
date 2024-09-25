@@ -20,10 +20,10 @@
 
 use core::hash::{Hash, Hasher};
 
-use crate::ToCanonicalBits;
+use crate::ToCanonical;
 
 pub trait CanonicalHash {
-    fn hash_canonical_bits<H>(&self, state: &mut H)
+    fn hash_canonical<H>(&self, state: &mut H)
     where
         H: Hasher;
 }
@@ -34,13 +34,13 @@ pub trait CanonicalHash {
 //       (or consider removing this blanket implementation).
 impl<T> CanonicalHash for T
 where
-    T: ToCanonicalBits,
+    T: ToCanonical,
 {
-    fn hash_canonical_bits<H>(&self, state: &mut H)
+    fn hash_canonical<H>(&self, state: &mut H)
     where
         H: Hasher,
     {
-        self.to_canonical_bits().hash(state)
+        self.to_canonical().hash(state)
     }
 }
 
@@ -48,12 +48,12 @@ impl<T> CanonicalHash for [T]
 where
     T: CanonicalHash,
 {
-    fn hash_canonical_bits<H>(&self, state: &mut H)
+    fn hash_canonical<H>(&self, state: &mut H)
     where
         H: Hasher,
     {
         for item in self {
-            item.hash_canonical_bits(state);
+            item.hash_canonical(state);
         }
     }
 }

@@ -62,7 +62,7 @@ use crate::hash::CanonicalHash;
 use crate::real::{BinaryRealFunction, Function, Sign, UnaryRealFunction};
 use crate::{
     with_binary_operations, with_primitives, BaseEncoding, ExtendedReal, InfinityEncoding,
-    NanEncoding, Primitive, Real, ToCanonicalBits, Total,
+    NanEncoding, Primitive, Real, ToCanonical, Total,
 };
 
 pub type OutputOf<P> = divergence::OutputOf<DivergenceOf<P>, P, ErrorOf<P>>;
@@ -1318,14 +1318,14 @@ where
 
 impl<T, C> Hash for Proxy<T, C>
 where
-    T: Primitive + ToCanonicalBits,
+    T: Primitive + ToCanonical,
     C: Constraint,
 {
     fn hash<H>(&self, state: &mut H)
     where
         H: Hasher,
     {
-        self.hash_canonical_bits(state)
+        self.hash_canonical(state)
     }
 }
 
@@ -1474,16 +1474,16 @@ where
     C: Constraint,
 {
     fn cmp(&self, other: &Self) -> Ordering {
-        CanonicalOrd::cmp_canonical_bits(self.as_ref(), other.as_ref())
+        CanonicalOrd::cmp_canonical(self.as_ref(), other.as_ref())
     }
 }
 
 impl<T, C> PartialEq for Proxy<T, C>
 where
-    T: Primitive + ToCanonicalBits,
+    T: Primitive + ToCanonical,
 {
     fn eq(&self, other: &Self) -> bool {
-        self.eq_canonical_bits(other)
+        self.eq_canonical(other)
     }
 }
 
@@ -1695,14 +1695,14 @@ where
     }
 }
 
-impl<T, C> ToCanonicalBits for Proxy<T, C>
+impl<T, C> ToCanonical for Proxy<T, C>
 where
-    T: Primitive + ToCanonicalBits,
+    T: Primitive + ToCanonical,
 {
-    type Bits = <T as ToCanonicalBits>::Bits;
+    type Canonical = <T as ToCanonical>::Canonical;
 
-    fn to_canonical_bits(self) -> Self::Bits {
-        self.inner.to_canonical_bits()
+    fn to_canonical(self) -> Self::Canonical {
+        self.inner.to_canonical()
     }
 }
 
