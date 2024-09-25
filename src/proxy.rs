@@ -52,7 +52,7 @@ use num_traits::{
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 
-use crate::cmp::{CanonicalEq, CanonicalOrd, IntrinsicOrd};
+use crate::cmp::{CanonicalEq, CanonicalOrd};
 use crate::constraint::{
     Constraint, ExpectConstrained, InfinitySet, Member, NanSet, SubsetOf, SupersetOf,
 };
@@ -104,11 +104,7 @@ struct Serde<T> {
 }
 
 #[cfg(feature = "serde")]
-impl<T, C> From<Proxy<T, C>> for Serde<T>
-where
-    T: Primitive,
-    C: Constraint,
-{
+impl<T, C> From<Proxy<T, C>> for Serde<T> {
     fn from(proxy: Proxy<T, C>) -> Self {
         Serde {
             inner: proxy.into_inner(),
@@ -205,6 +201,69 @@ where
     T: Primitive,
     C: Constraint,
 {
+    /// Constructs a proxy from a primitive IEEE 754 floating-point value.
+    ///
+    /// This function returns the output type of the [divergence] of the proxy and invokes its
+    /// error behavior if the floating-point value does not satisfy constraints. Note that this
+    /// function never fails for [`Total`], which has no constraints.
+    ///
+    /// The distinctions in output and behavior are static and are determined by the type
+    /// parameters of the `Proxy` type constructor.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if the primitive floating-point value does not satisfy the constraints
+    /// of the proxy **and** the [divergence] of the proxy panics. For example, the [`OrPanic`]
+    /// divergence asserts constraints and panics.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the primitive floating-point value does not satisfy the constraints of
+    /// the proxy **and** the [divergence] of the proxy encodes errors in its output type. For
+    /// example, the output type of the `OrError<AsExpression>` divergence is [`Expression`] and
+    /// this function returns the [`Undefined`] variant if the constraint is violated.
+    ///
+    /// # Examples
+    ///
+    /// Fallibly constructing proxies from primitive floating-point values:
+    ///
+    /// ```rust
+    /// use decorum::constraint::IsReal;
+    /// use decorum::divergence::{AsResult, OrError};
+    /// use decorum::proxy::Proxy;
+    ///
+    /// // The branch type of `Real` is `Result`.
+    /// type Real = Proxy<f64, IsReal<OrError<AsResult>>>;
+    ///
+    /// let x = Real::new(2.0).unwrap(); // The output type of `new` is `Result` per `TryResult`.
+    /// ```
+    ///
+    /// Asserting proxy construction from primitive floating-point values:
+    ///
+    /// ```rust,should_panic
+    /// use decorum::constraint::IsReal;
+    /// use decorum::divergence::OrPanic;
+    /// use decorum::proxy::Proxy;
+    ///
+    /// // The branch type of `OrPanic` is `Real`.
+    /// type Real = Proxy<f64, IsReal<OrPanic>>;
+    ///
+    /// let x = Real::new(2.0); // The output type of `new` is `Real` per `OrPanic`.
+    /// let y = Real::new(0.0 / 0.0); // Panics.
+    /// ```
+    ///
+    /// [`divergence`]: crate::divergence
+    /// [`Expression`]: crate::expression::Expression
+    /// [`OrPanic`]: crate::divergence::OrPanic
+    /// [`Total`]: crate::Total
+    /// [`Undefined`]: crate::expression::Expression::Undefined
+    pub fn new(inner: T) -> OutputOf<Self> {
+        C::map(inner, |inner| Proxy {
+            inner,
+            phantom: PhantomData,
+        })
+    }
+
     /// Fallibly constructs a proxy from a primitive IEEE 754 floating-point value.
     ///
     /// This construction mirrors the [`TryFrom`] implementation and is independent of the
@@ -310,6 +369,47 @@ where
         Self::try_new(inner).expect_constrained()
     }
 
+    /// Converts a slice of primitive IEEE 754 floating-point values into a slice of proxies.
+    ///
+    /// This conversion must check the constraints of the proxy against each floating-point value
+    /// and so has `O(N)` time complexity. **When using the [`IsFloat`] constraint, prefer the
+    /// infallible and `O(1)` [`from_slice`] function.**
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any of the primitive floating-point values in the slice do not satisfy
+    /// the constraints of the proxy.
+    ///
+    /// [`from_slice`]: crate::Total::from_slice
+    /// [`IsFloat`]: crate::constraint::IsFloat
+    pub fn try_from_slice<'a>(slice: &'a [T]) -> Result<&'a [Self], C::Error> {
+        slice.iter().try_for_each(|inner| C::check(*inner))?;
+        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
+        //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
+        Ok(unsafe { mem::transmute::<&'a [T], &'a [Self]>(slice) })
+    }
+
+    /// Converts a mutable slice of primitive IEEE 754 floating-point values into a mutable slice
+    /// of proxies.
+    ///
+    /// This conversion must check the constraints of the proxy against each floating-point value
+    /// and so has `O(N)` time complexity. **When using the [`IsFloat`] constraint, prefer the
+    /// infallible and `O(1)` [`from_mut_slice`] function.**
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any of the primitive floating-point values in the
+    /// slice do not satisfy the constraints of the proxy.
+    ///
+    /// [`from_mut_slice`]: crate::Total::from_mut_slice
+    /// [`IsFloat`]: crate::constraint::IsFloat
+    pub fn try_from_mut_slice<'a>(slice: &'a mut [T]) -> Result<&'a mut [Self], C::Error> {
+        slice.iter().try_for_each(|inner| C::check(*inner))?;
+        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
+        //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
+        Ok(unsafe { mem::transmute::<&'a mut [T], &'a mut [Self]>(slice) })
+    }
+
     /// Converts a proxy into another proxy that is capable of representing a superset of its
     /// values per its constraint.
     ///
@@ -357,116 +457,6 @@ where
     /// [`Expression`]: crate::expression::Expression
     pub fn into_expression(self) -> ExpressionOf<Self> {
         Expression::from(self)
-    }
-
-    /// Converts a slice of primitive IEEE 754 floating-point values into a slice of proxies.
-    ///
-    /// This conversion must check the constraints of the proxy against each floating-point value
-    /// and so has `O(N)` time complexity. **When using the [`IsFloat`] constraint, prefer the
-    /// infallible and `O(1)` [`from_slice`] function.**
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if any of the primitive floating-point values in the slice do not satisfy
-    /// the constraints of the proxy.
-    ///
-    /// [`from_slice`]: crate::Total::from_slice
-    /// [`IsFloat`]: crate::constraint::IsFloat
-    pub fn try_from_slice<'a>(slice: &'a [T]) -> Result<&'a [Self], C::Error> {
-        slice.iter().try_for_each(|inner| C::check(*inner))?;
-        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
-        //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
-        Ok(unsafe { mem::transmute::<&'a [T], &'a [Self]>(slice) })
-    }
-
-    /// Converts a mutable slice of primitive IEEE 754 floating-point values into a mutable slice
-    /// of proxies.
-    ///
-    /// This conversion must check the constraints of the proxy against each floating-point value
-    /// and so has `O(N)` time complexity. **When using the [`IsFloat`] constraint, prefer the
-    /// infallible and `O(1)` [`from_mut_slice`] function.**
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if any of the primitive floating-point values in the
-    /// slice do not satisfy the constraints of the proxy.
-    ///
-    /// [`from_mut_slice`]: crate::Total::from_mut_slice
-    /// [`IsFloat`]: crate::constraint::IsFloat
-    pub fn try_from_mut_slice<'a>(slice: &'a mut [T]) -> Result<&'a mut [Self], C::Error> {
-        slice.iter().try_for_each(|inner| C::check(*inner))?;
-        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
-        //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
-        Ok(unsafe { mem::transmute::<&'a mut [T], &'a mut [Self]>(slice) })
-    }
-}
-
-impl<T, C> Proxy<T, C>
-where
-    T: Primitive,
-    C: Constraint,
-{
-    /// Constructs a proxy from a primitive IEEE 754 floating-point value.
-    ///
-    /// This function returns the output type of the [divergence] of the proxy and invokes its
-    /// error behavior if the floating-point value does not satisfy constraints. Note that this
-    /// function never fails for [`Total`], which has no constraints.
-    ///
-    /// The distinctions in output and behavior are static and are determined by the type
-    /// parameters of the `Proxy` type constructor.
-    ///
-    /// # Panics
-    ///
-    /// This function panics if the primitive floating-point value does not satisfy the constraints
-    /// of the proxy **and** the [divergence] of the proxy panics. For example, the [`OrPanic`]
-    /// divergence asserts constraints and panics.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the primitive floating-point value does not satisfy the constraints of
-    /// the proxy **and** the [divergence] of the proxy encodes errors in its output type. For
-    /// example, the output type of the `OrError<AsExpression>` divergence is [`Expression`] and
-    /// this function returns the [`Undefined`] variant if the constraint is violated.
-    ///
-    /// # Examples
-    ///
-    /// Fallibly constructing proxies from primitive floating-point values:
-    ///
-    /// ```rust
-    /// use decorum::constraint::IsReal;
-    /// use decorum::divergence::{AsResult, OrError};
-    /// use decorum::proxy::Proxy;
-    ///
-    /// // The branch type of `Real` is `Result`.
-    /// type Real = Proxy<f64, IsReal<OrError<AsResult>>>;
-    ///
-    /// let x = Real::new(2.0).unwrap(); // The output type of `new` is `Result` per `TryResult`.
-    /// ```
-    ///
-    /// Asserting proxy construction from primitive floating-point values:
-    ///
-    /// ```rust,should_panic
-    /// use decorum::constraint::IsReal;
-    /// use decorum::divergence::OrPanic;
-    /// use decorum::proxy::Proxy;
-    ///
-    /// // The branch type of `OrPanic` is `Real`.
-    /// type Real = Proxy<f64, IsReal<OrPanic>>;
-    ///
-    /// let x = Real::new(2.0); // The output type of `new` is `Real` per `OrPanic`.
-    /// let y = Real::new(0.0 / 0.0); // Panics.
-    /// ```
-    ///
-    /// [`divergence`]: crate::divergence
-    /// [`Expression`]: crate::expression::Expression
-    /// [`OrPanic`]: crate::divergence::OrPanic
-    /// [`Total`]: crate::Total
-    /// [`Undefined`]: crate::expression::Expression::Undefined
-    pub fn new(inner: T) -> OutputOf<Self> {
-        C::map(inner, |inner| Proxy {
-            inner,
-            phantom: PhantomData,
-        })
     }
 
     pub(crate) fn map<F>(self, f: F) -> OutputOf<Self>
@@ -703,7 +693,7 @@ impl<T, C> Copy for Proxy<T, C> where T: Copy {}
 
 impl<T> Debug for Real<T>
 where
-    T: Debug + Primitive,
+    T: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_tuple("Real").field(self.as_ref()).finish()
@@ -712,7 +702,7 @@ where
 
 impl<T> Debug for ExtendedReal<T>
 where
-    T: Debug + Primitive,
+    T: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_tuple("ExtendedReal").field(self.as_ref()).finish()
@@ -721,7 +711,7 @@ where
 
 impl<T> Debug for Total<T>
 where
-    T: Debug + Primitive,
+    T: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_tuple("Total").field(self.as_ref()).finish()
@@ -833,7 +823,7 @@ impl<T, C> Eq for Proxy<T, C> where T: Primitive {}
 
 impl<T, C, E> Float for Proxy<T, C>
 where
-    T: IntrinsicOrd + Float + Num + NumCast + Primitive,
+    T: Float + Primitive,
     C: Constraint<Error = E> + Member<InfinitySet> + Member<NanSet>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -1222,19 +1212,13 @@ where
     }
 }
 
-impl<C> From<Proxy<f32, C>> for f32
-where
-    C: Constraint,
-{
+impl<C> From<Proxy<f32, C>> for f32 {
     fn from(proxy: Proxy<f32, C>) -> Self {
         proxy.into_inner()
     }
 }
 
-impl<C> From<Proxy<f64, C>> for f64
-where
-    C: Constraint,
-{
+impl<C> From<Proxy<f64, C>> for f64 {
     fn from(proxy: Proxy<f64, C>) -> Self {
         proxy.into_inner()
     }
@@ -1319,7 +1303,6 @@ where
 impl<T, C> Hash for Proxy<T, C>
 where
     T: Primitive + ToCanonical,
-    C: Constraint,
 {
     fn hash<H>(&self, state: &mut H)
     where
@@ -1349,7 +1332,6 @@ where
 impl<T, C> LowerExp for Proxy<T, C>
 where
     T: LowerExp + Primitive,
-    C: Constraint,
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.as_ref().fmt(f)
@@ -1419,18 +1401,18 @@ where
 impl<T, C> Neg for Proxy<T, C>
 where
     T: Primitive,
-    C: Constraint,
 {
     type Output = Self;
 
     fn neg(self) -> Self::Output {
+        // There is no constraint for which negating a value produces an invalid value.
         Proxy::unchecked(-self.into_inner())
     }
 }
 
 impl<T, C, E> Num for Proxy<T, C>
 where
-    T: Primitive + Num,
+    T: Num + Primitive,
     C: Constraint<Error = E>,
     divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
 {
@@ -1471,7 +1453,6 @@ where
 impl<T, C> Ord for Proxy<T, C>
 where
     T: Primitive,
-    C: Constraint,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         CanonicalOrd::cmp_canonical(self.as_ref(), other.as_ref())
@@ -1480,7 +1461,7 @@ where
 
 impl<T, C> PartialEq for Proxy<T, C>
 where
-    T: Primitive + ToCanonical,
+    T: Primitive,
 {
     fn eq(&self, other: &Self) -> bool {
         self.eq_canonical(other)
@@ -1505,7 +1486,6 @@ where
 impl<T, C> PartialOrd for Proxy<T, C>
 where
     T: Primitive,
-    C: Constraint,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -1697,7 +1677,7 @@ where
 
 impl<T, C> ToCanonical for Proxy<T, C>
 where
-    T: Primitive + ToCanonical,
+    T: Primitive,
 {
     type Canonical = <T as ToCanonical>::Canonical;
 
@@ -1709,7 +1689,6 @@ where
 impl<T, C> ToPrimitive for Proxy<T, C>
 where
     T: Primitive + ToPrimitive,
-    C: Constraint,
 {
     fn to_i8(&self) -> Option<i8> {
         self.as_ref().to_i8()
@@ -1988,8 +1967,7 @@ where
 
 impl<T, C> UpperExp for Proxy<T, C>
 where
-    T: Primitive + UpperExp,
-    C: Constraint,
+    T: UpperExp,
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.as_ref().fmt(f)
