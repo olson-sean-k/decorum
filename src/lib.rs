@@ -208,25 +208,24 @@ pub type R32<D = OrPanic> = Real<f32, D>;
 pub type R64<D = OrPanic> = Real<f64, D>;
 
 /// Converts IEEE 754 floating-point values to a canonicalized form.
-pub trait ToCanonicalBits: BaseEncoding + Copy {
-    type Bits: Copy + Eq + Hash;
+pub trait ToCanonical: BaseEncoding + Copy {
+    type Canonical: Copy + Eq + Hash;
 
     /// Conversion to a canonical representation.
     ///
-    /// This function collapses representations for real numbers, zeroes, infinities, and `NaN`s
-    /// into a canonical form such that every semantic value has a unique representation as
-    /// canonical bits.
-    fn to_canonical_bits(self) -> Self::Bits;
+    /// This function collapses real numbers, zeroes, infinities, and `NaN`s into a canonical form
+    /// such that every semantic value has a unique representation with an equivalence relation.
+    fn to_canonical(self) -> Self::Canonical;
 }
 
 // TODO: Implement this differently for differently sized primitive types.
-impl<T> ToCanonicalBits for T
+impl<T> ToCanonical for T
 where
     T: Primitive,
 {
-    type Bits = u64;
+    type Canonical = u64;
 
-    fn to_canonical_bits(self) -> Self::Bits {
+    fn to_canonical(self) -> Self::Canonical {
         const SIGN_MASK: u64 = 0x8000_0000_0000_0000;
         const EXPONENT_MASK: u64 = 0x7ff0_0000_0000_0000;
         const MANTISSA_MASK: u64 = 0x000f_ffff_ffff_ffff;

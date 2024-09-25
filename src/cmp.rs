@@ -33,7 +33,7 @@
 //! let x = f64::NAN;
 //! let y = 1.0f64;
 //!
-//! let (min, max) = match x.cmp_canonical_bits(&y) {
+//! let (min, max) = match x.cmp_canonical(&y) {
 //!     Ordering::Less | Ordering::Equal => (x, y),
 //!     _ => (y, x),
 //! };
@@ -64,7 +64,7 @@ use core::cmp::Ordering;
 use crate::constraint::Constraint;
 use crate::expression::{Defined, Expression, Undefined};
 use crate::proxy::Proxy;
-use crate::{with_primitives, NanEncoding, Primitive, ToCanonicalBits};
+use crate::{with_primitives, NanEncoding, Primitive, ToCanonical};
 
 /// Total equivalence relation of IEEE 754 floating-point encoded types.
 ///
@@ -88,18 +88,18 @@ use crate::{with_primitives, NanEncoding, Primitive, ToCanonicalBits};
 /// let x = 0.0f64 / 0.0; // `NaN`.
 /// let y = f64::INFINITY - f64::INFINITY; // `NaN`.
 ///
-/// assert!(x.eq_canonical_bits(&y));
+/// assert!(x.eq_canonical(&y));
 /// ```
 pub trait CanonicalEq {
-    fn eq_canonical_bits(&self, other: &Self) -> bool;
+    fn eq_canonical(&self, other: &Self) -> bool;
 }
 
 impl<T> CanonicalEq for T
 where
-    T: ToCanonicalBits,
+    T: ToCanonical,
 {
-    fn eq_canonical_bits(&self, other: &Self) -> bool {
-        self.to_canonical_bits() == other.to_canonical_bits()
+    fn eq_canonical(&self, other: &Self) -> bool {
+        self.to_canonical() == other.to_canonical()
     }
 }
 
@@ -107,10 +107,10 @@ impl<T, const N: usize> CanonicalEq for [T; N]
 where
     T: CanonicalEq,
 {
-    fn eq_canonical_bits(&self, other: &Self) -> bool {
+    fn eq_canonical(&self, other: &Self) -> bool {
         self.iter()
             .zip(other.iter())
-            .all(|(a, b)| a.eq_canonical_bits(b))
+            .all(|(a, b)| a.eq_canonical(b))
     }
 }
 
@@ -118,11 +118,11 @@ impl<T> CanonicalEq for [T]
 where
     T: CanonicalEq,
 {
-    fn eq_canonical_bits(&self, other: &Self) -> bool {
+    fn eq_canonical(&self, other: &Self) -> bool {
         if self.len() == other.len() {
             self.iter()
                 .zip(other.iter())
-                .all(|(a, b)| a.eq_canonical_bits(b))
+                .all(|(a, b)| a.eq_canonical(b))
         }
         else {
             false
@@ -140,11 +140,7 @@ where
 /// within a proxy type. See the module documentation for more about the ordering used by
 /// `CanonicalOrd` and proxy types.
 pub trait CanonicalOrd {
-    // TODO: The naming convention for canonical forms and relations is a bit odd here: ordering
-    //       considers a notion of canonical semantics, but does not compare
-    //       `ToCanonicalBits::Bits`. Is there a convension that works better here? Alternatively,
-    //       is there a good name for this despite bucking the convention?
-    fn cmp_canonical_bits(&self, other: &Self) -> Ordering;
+    fn cmp_canonical(&self, other: &Self) -> Ordering;
 }
 
 impl<T> CanonicalOrd for T
@@ -154,7 +150,7 @@ where
     // ordering. This must be implemented independently for proxy types.
     T: Primitive,
 {
-    fn cmp_canonical_bits(&self, other: &Self) -> Ordering {
+    fn cmp_canonical(&self, other: &Self) -> Ordering {
         match self.partial_cmp(other) {
             Some(ordering) => ordering,
             None => {
@@ -178,11 +174,11 @@ impl<T> CanonicalOrd for [T]
 where
     T: CanonicalOrd,
 {
-    fn cmp_canonical_bits(&self, other: &Self) -> Ordering {
+    fn cmp_canonical(&self, other: &Self) -> Ordering {
         match self
             .iter()
             .zip(other.iter())
-            .map(|(a, b)| a.cmp_canonical_bits(b))
+            .map(|(a, b)| a.cmp_canonical(b))
             .find(|ordering| *ordering != Ordering::Equal)
         {
             Some(ordering) => ordering,
@@ -475,8 +471,8 @@ mod tests {
         let xs = [1.0f64, f64::NAN, f64::INFINITY];
         let ys = [1.0f64, f64::NAN, f64::INFINITY];
 
-        assert!(x.eq_canonical_bits(&y));
-        assert!(xs.eq_canonical_bits(&ys));
+        assert!(x.eq_canonical(&y));
+        assert!(xs.eq_canonical(&ys));
     }
 
     #[test]
