@@ -129,7 +129,7 @@ then **the `OrPanic` divergence panics** while the `OrError` divergence
 constructs a value that encodes the error. The output type of fallible
 operations is determined by an _output kind_:
 
-| Branch         | Type                  | Continue        | Break          |
+| Output Kind    | Type                  | Continue        | Break          |
 |----------------|-----------------------|-----------------|----------------|
 | `AsSelf`       | `Self`                | `Self`          |                |
 | `AsOption`     | `Option<Self>`        | `Some(Self)`    | `None`         |
