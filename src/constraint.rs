@@ -33,9 +33,7 @@
 //! [`Total`]: crate::Total
 
 use core::convert::Infallible;
-#[cfg(not(feature = "std"))]
-use core::fmt::{self, Formatter};
-use core::fmt::{Debug, Display};
+use core::fmt::{self, Debug, Display, Formatter};
 use core::marker::PhantomData;
 #[cfg(feature = "std")]
 use thiserror::Error;
@@ -43,7 +41,7 @@ use thiserror::Error;
 use crate::cmp::UndefinedError;
 use crate::divergence::{Divergence, OrPanic, OutputOf};
 use crate::proxy::ClosedProxy;
-use crate::sealed::Sealed;
+use crate::sealed::{Sealed, StaticDebug};
 use crate::Primitive;
 
 pub(crate) trait Description {
@@ -168,7 +166,7 @@ where
 ///
 /// [`Member`]: crate::constraint::Member
 /// [`Proxy`]: crate::proxy::Proxy
-pub trait Constraint: Member<RealSet> {
+pub trait Constraint: Member<RealSet> + StaticDebug {
     type Divergence: Divergence;
     // TODO: Bound this on `core::Error` once it is stabilized.
     type Error: Debug + Display;
@@ -225,6 +223,12 @@ impl Member<RealSet> for IsFloat {}
 
 impl Sealed for IsFloat {}
 
+impl StaticDebug for IsFloat {
+    fn fmt(formatter: &mut Formatter<'_>) -> fmt::Result {
+        write!(formatter, "IsFloat")
+    }
+}
+
 impl<D> SupersetOf<IsReal<D>> for IsFloat {}
 
 impl<D> SupersetOf<IsExtendedReal<D>> for IsFloat {}
@@ -260,6 +264,17 @@ impl<D> Member<RealSet> for IsExtendedReal<D> {}
 
 impl<D> Sealed for IsExtendedReal<D> {}
 
+impl<D> StaticDebug for IsExtendedReal<D>
+where
+    D: StaticDebug,
+{
+    fn fmt(formatter: &mut Formatter<'_>) -> fmt::Result {
+        write!(formatter, "IsExtendedReal<")?;
+        D::fmt(formatter)?;
+        write!(formatter, ">")
+    }
+}
+
 impl<D> SupersetOf<IsReal<D>> for IsExtendedReal<D> {}
 
 #[derive(Debug)]
@@ -288,3 +303,14 @@ where
 impl<D> Member<RealSet> for IsReal<D> {}
 
 impl<D> Sealed for IsReal<D> {}
+
+impl<D> StaticDebug for IsReal<D>
+where
+    D: StaticDebug,
+{
+    fn fmt(formatter: &mut Formatter<'_>) -> fmt::Result {
+        write!(formatter, "IsReal<")?;
+        D::fmt(formatter)?;
+        write!(formatter, ">")
+    }
+}

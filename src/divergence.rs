@@ -97,15 +97,15 @@
 //         pub type Total = Constrained<f64, IsFloat>;
 
 use core::convert::Infallible;
-use core::fmt::Debug;
+use core::fmt::{self, Debug, Formatter};
 use core::marker::PhantomData;
 
 use crate::constraint::ExpectConstrained as _;
 use crate::expression::{Defined, Expression, Undefined};
-use crate::sealed::Sealed;
+use crate::sealed::{Sealed, StaticDebug};
 
 /// An output kind that can continue with an output.
-pub trait Continue: Sealed {
+pub trait Continue: Sealed + StaticDebug {
     type As<P, E>;
 
     fn continue_with_output<P, E>(output: P) -> Self::As<P, E>;
@@ -142,6 +142,12 @@ impl Continue for AsExpression {
 
 impl Sealed for AsExpression {}
 
+impl StaticDebug for AsExpression {
+    fn fmt(formatter: &mut Formatter<'_>) -> fmt::Result {
+        write!(formatter, "AsExpression")
+    }
+}
+
 #[derive(Debug)]
 pub enum AsOption {}
 
@@ -160,6 +166,12 @@ impl Continue for AsOption {
 }
 
 impl Sealed for AsOption {}
+
+impl StaticDebug for AsOption {
+    fn fmt(formatter: &mut Formatter<'_>) -> fmt::Result {
+        write!(formatter, "AsOption")
+    }
+}
 
 #[derive(Debug)]
 pub enum AsResult {}
@@ -180,6 +192,12 @@ impl Continue for AsResult {
 
 impl Sealed for AsResult {}
 
+impl StaticDebug for AsResult {
+    fn fmt(formatter: &mut Formatter<'_>) -> fmt::Result {
+        write!(formatter, "AsResult")
+    }
+}
+
 #[derive(Debug)]
 pub enum AsSelf {}
 
@@ -193,6 +211,12 @@ impl Continue for AsSelf {
 
 impl Sealed for AsSelf {}
 
+impl StaticDebug for AsSelf {
+    fn fmt(formatter: &mut Formatter<'_>) -> fmt::Result {
+        write!(formatter, "AsSelf")
+    }
+}
+
 /// Determines the output type and behavior of a [`Proxy`] when it is fallibly constructed.
 ///
 /// The output type is defined by an associated [output **kind**][`Continue`]. Regardless of this
@@ -203,7 +227,7 @@ impl Sealed for AsSelf {}
 /// [`divergence`]: crate::divergence
 /// [`Proxy`]: crate::proxy::Proxy
 /// [`Result`]: core::result::Result
-pub trait Divergence: Sealed {
+pub trait Divergence: Sealed + StaticDebug {
     type Continue: Continue;
 
     fn diverge<T, E>(result: Result<T, E>) -> <Self::Continue as Continue>::As<T, E>
@@ -225,6 +249,7 @@ pub type OutputOf<D, P, E> = <ContinueOf<D> as Continue>::As<P, E>;
 /// [`AsSelf`]: crate::divergence::AsSelf
 /// [`Proxy`]: crate::proxy::Proxy
 /// [`Result`]: core::result::Result
+#[derive(Debug)]
 pub struct OrPanic<K = AsSelf>(PhantomData<fn() -> K>, Infallible);
 
 impl<K> Divergence for OrPanic<K>
@@ -242,6 +267,17 @@ where
 }
 
 impl<K> Sealed for OrPanic<K> {}
+
+impl<K> StaticDebug for OrPanic<K>
+where
+    K: StaticDebug,
+{
+    fn fmt(formatter: &mut Formatter<'_>) -> fmt::Result {
+        write!(formatter, "OrPanic<")?;
+        K::fmt(formatter)?;
+        write!(formatter, ">")
+    }
+}
 
 /// Divergence that breaks on errors by constructing an error representation of its output type.
 ///
@@ -272,3 +308,14 @@ where
 }
 
 impl<K> Sealed for OrError<K> {}
+
+impl<K> StaticDebug for OrError<K>
+where
+    K: StaticDebug,
+{
+    fn fmt(formatter: &mut Formatter<'_>) -> fmt::Result {
+        write!(formatter, "OrError<")?;
+        K::fmt(formatter)?;
+        write!(formatter, ">")
+    }
+}

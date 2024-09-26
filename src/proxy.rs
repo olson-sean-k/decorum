@@ -54,12 +54,14 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::cmp::{CanonicalEq, CanonicalOrd};
 use crate::constraint::{
-    Constraint, ExpectConstrained, InfinitySet, Member, NanSet, SubsetOf, SupersetOf,
+    Constraint, ExpectConstrained, InfinitySet, IsExtendedReal, IsFloat, IsReal, Member, NanSet,
+    SubsetOf, SupersetOf,
 };
 use crate::divergence::{self, Divergence, NonResidual};
 use crate::expression::Expression;
 use crate::hash::CanonicalHash;
 use crate::real::{BinaryRealFunction, Function, Sign, UnaryRealFunction};
+use crate::sealed::StaticDebug;
 use crate::{
     with_binary_operations, with_primitives, BaseEncoding, ExtendedReal, InfinityEncoding,
     NanEncoding, Primitive, Real, ToCanonical, Total,
@@ -112,7 +114,6 @@ impl<T, C> From<Proxy<T, C>> for Serde<T> {
     }
 }
 
-// TODO: Remove unnecessary input type parameter bounds on `impl`s.
 /// IEEE 754 floating-point proxy that provides total ordering, equivalence, hashing, constraints,
 /// and error handling.
 ///
@@ -193,6 +194,61 @@ impl<T, C> Proxy<T, C> {
         F: FnOnce(T) -> U,
     {
         f(self.inner)
+    }
+}
+
+impl<T, C> Proxy<T, C>
+where
+    T: Debug,
+    C: StaticDebug,
+{
+    /// Writes a thorough [debugging][`Debug`] description of the proxy to the given [`Formatter`].
+    ///
+    /// This function is similar to [`debug`], but writes a verbose description of the proxy into a
+    /// [`Formatter`] rather than returning a [`Debug`] implementation.
+    ///
+    /// [`debug`]: crate::proxy::Proxy::debug
+    /// [`Debug`]: core::fmt::Debug
+    /// [`Formatter`]: core::fmt::Formatter
+    pub fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+        write!(formatter, "Proxy<")?;
+        C::fmt(formatter)?;
+        write!(formatter, ">({:?})", self.inner)
+    }
+
+    /// Gets a [`Debug`] implementation that thoroughly describes the proxy.
+    ///
+    /// Proxy types implement [`Display`] and [`Debug`], but these implementations omit more
+    /// specific information about [constraints][`constraint`] and [divergence]. This function
+    /// provides an instance of a verbose [`Debug`] type that more thoroughly describes the
+    /// behavior of the proxy.
+    ///
+    /// [`constraint`]: crate::constraint
+    /// [`Debug`]: core::fmt::Debug
+    /// [`Display`]: core::fmt::Display
+    /// [`divergence`]: crate::divergence
+    pub fn debug(&self) -> impl '_ + Copy + Debug {
+        struct Formatted<'a, T, C>(&'a Proxy<T, C>);
+
+        impl<'a, T, C> Clone for Formatted<'a, T, C> {
+            fn clone(&self) -> Self {
+                Formatted(self.0)
+            }
+        }
+
+        impl<'a, T, C> Copy for Formatted<'a, T, C> {}
+
+        impl<'a, T, C> Debug for Formatted<'a, T, C>
+        where
+            T: Debug,
+            C: StaticDebug,
+        {
+            fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+                Proxy::fmt(self.0, formatter)
+            }
+        }
+
+        Formatted(self)
     }
 }
 
@@ -691,30 +747,35 @@ where
 
 impl<T, C> Copy for Proxy<T, C> where T: Copy {}
 
-impl<T> Debug for Real<T>
+impl<T, D> Debug for Proxy<T, IsExtendedReal<D>>
 where
     T: Debug,
+    D: Divergence,
 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Real").field(self.as_ref()).finish()
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_tuple("ExtendedReal")
+            .field(self.as_ref())
+            .finish()
     }
 }
 
-impl<T> Debug for ExtendedReal<T>
+impl<T> Debug for Proxy<T, IsFloat>
 where
     T: Debug,
 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("ExtendedReal").field(self.as_ref()).finish()
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+        formatter.debug_tuple("Total").field(self.as_ref()).finish()
     }
 }
 
-impl<T> Debug for Total<T>
+impl<T, D> Debug for Proxy<T, IsReal<D>>
 where
     T: Debug,
+    D: Divergence,
 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Total").field(self.as_ref()).finish()
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+        formatter.debug_tuple("Real").field(self.as_ref()).finish()
     }
 }
 
@@ -2300,8 +2361,7 @@ impl_try_from!();
 
 #[cfg(test)]
 mod tests {
-    use crate::divergence::OrPanic;
-    use crate::real::{RealFunction, UnaryRealFunction};
+    use crate::real::RealFunction;
     use crate::{ExtendedReal, InfinityEncoding, NanEncoding, Real, Total, E32, R32};
 
     #[test]
@@ -2367,7 +2427,7 @@ mod tests {
         assert!(y.is_infinite());
 
         let xs = [0.0f64, 1.0 / 0.0];
-        let ys = ExtendedReal::try_from_slice(&xs).unwrap();
+        let ys = ExtendedReal::<f64>::try_from_slice(&xs).unwrap();
         assert_eq!(ys, &[0.0f64, InfinityEncoding::INFINITY]);
     }
 
@@ -2437,6 +2497,8 @@ mod tests {
 
         #[cfg(feature = "std")]
         {
+            use crate::real::UnaryRealFunction;
+
             let w: Total<f32> = (UnaryRealFunction::sqrt(-1.0f32)).into();
             assert_eq!(x, w);
         }
@@ -2545,6 +2607,8 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn serialize() {
+        use crate::divergence::OrPanic;
+
         assert_eq!(
             "1.0",
             serde_json::to_string(&E32::<OrPanic>::assert(1.0)).unwrap()

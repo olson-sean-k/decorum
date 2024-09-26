@@ -169,10 +169,15 @@ use crate::real::{
 
 mod sealed {
     use core::convert::Infallible;
+    use core::fmt::{self, Formatter};
 
     pub trait Sealed {}
 
     impl Sealed for Infallible {}
+
+    pub trait StaticDebug {
+        fn fmt(formatter: &mut Formatter<'_>) -> fmt::Result;
+    }
 }
 use crate::sealed::Sealed;
 
