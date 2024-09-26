@@ -2050,17 +2050,17 @@ where
     }
 }
 
-macro_rules! impl_binary_operation {
+macro_rules! impl_binary_operation_for_proxy {
     () => {
-        with_binary_operations!(impl_binary_operation);
+        with_binary_operations!(impl_binary_operation_for_proxy);
     };
     (operation => $trait:ident :: $method:ident) => {
-        impl_binary_operation!(operation => $trait :: $method, |left, right| {
+        impl_binary_operation_for_proxy!(operation => $trait :: $method, |left, right| {
             right.map(|inner| $trait::$method(left, inner))
         });
     };
     (operation => $trait:ident :: $method:ident, |$left:ident, $right:ident| $f:block) => {
-        macro_rules! impl_primitive_binary_operation {
+        macro_rules! impl_primitive_binary_operation_for_proxy {
             (primitive => $t:ty) => {
                 impl<C> $trait<Proxy<$t, C>> for $t
                 where
@@ -2076,29 +2076,26 @@ macro_rules! impl_binary_operation {
                 }
             };
         }
-        with_primitives!(impl_primitive_binary_operation);
+        with_primitives!(impl_primitive_binary_operation_for_proxy);
     };
 }
-impl_binary_operation!();
+impl_binary_operation_for_proxy!();
 
-/// Implements the `Real` trait from [`num-traits`](https://crates.io/crates/num-traits) in terms
-/// of Decorum's numeric traits. Does nothing if the `std` feature is disabled.
+/// Implements the `Real` trait from [`num-traits`](https://crates.io/crates/num-traits) for
+/// non-`NaN` proxy types. Does nothing if the `std` feature is disabled.
 ///
-/// This is not generic, because the blanket implementation provided by `num-traits` prevents a
-/// constraint-based implementation. Instead, this macro must be applied manually to each proxy
-/// type exported by Decorum that is `Real` but not `Float`.
+/// A blanket implementation is not possible, because it conflicts with a very general blanket
+/// implementation provided by [`num-traits`]. See the following issues:
 ///
-/// See the following issues:
-///
-///   https://github.com/olson-sean-k/decorum/issues/10
-///   https://github.com/rust-num/num-traits/issues/49
-macro_rules! impl_foreign_real {
+/// - https://github.com/olson-sean-k/decorum/issues/10
+/// - https://github.com/rust-num/num-traits/issues/49
+macro_rules! impl_num_traits_real_for_proxy {
     () => {
-        with_primitives!(impl_foreign_real);
+        with_primitives!(impl_num_traits_real_for_proxy);
     };
     (primitive => $t:ty) => {
-        impl_foreign_real!(proxy => Real, primitive => $t);
-        impl_foreign_real!(proxy => ExtendedReal, primitive => $t);
+        impl_num_traits_real_for_proxy!(proxy => Real, primitive => $t);
+        impl_num_traits_real_for_proxy!(proxy => ExtendedReal, primitive => $t);
     };
     (proxy => $p:ident, primitive => $t:ty) => {
         #[cfg(feature = "std")]
@@ -2300,17 +2297,17 @@ macro_rules! impl_foreign_real {
         }
     };
 }
-impl_foreign_real!();
+impl_num_traits_real_for_proxy!();
 
-// `TryFrom` cannot be implemented over an open type `T` and cannot be implemented for general
-// constraints, because it would conflict with the `From` implementation for `Total`.
-macro_rules! impl_try_from {
+// `TryFrom` cannot be implemented over an open type `T` and cannot be implemented for constraints
+// in general, because it would conflict with the `From` implementation for `Total`.
+macro_rules! impl_try_from_for_proxy {
     () => {
-        with_primitives!(impl_try_from);
+        with_primitives!(impl_try_from_for_proxy);
     };
     (primitive => $t:ty) => {
-        impl_try_from!(proxy => Real, primitive => $t);
-        impl_try_from!(proxy => ExtendedReal, primitive => $t);
+        impl_try_from_for_proxy!(proxy => Real, primitive => $t);
+        impl_try_from_for_proxy!(proxy => ExtendedReal, primitive => $t);
     };
     (proxy => $p:ident, primitive => $t:ty) => {
         impl<D> TryFrom<$t> for $p<$t, D>
@@ -2357,7 +2354,7 @@ macro_rules! impl_try_from {
         }
     };
 }
-impl_try_from!();
+impl_try_from_for_proxy!();
 
 #[cfg(test)]
 mod tests {

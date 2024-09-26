@@ -366,20 +366,20 @@ where
     }
 }
 
-macro_rules! impl_total_intrinsic_ord {
+macro_rules! impl_intrinsic_ord_for_total_primitive {
     () => {
-        impl_total_intrinsic_ord!(primitive => isize);
-        impl_total_intrinsic_ord!(primitive => i8);
-        impl_total_intrinsic_ord!(primitive => i16);
-        impl_total_intrinsic_ord!(primitive => i32);
-        impl_total_intrinsic_ord!(primitive => i64);
-        impl_total_intrinsic_ord!(primitive => i128);
-        impl_total_intrinsic_ord!(primitive => usize);
-        impl_total_intrinsic_ord!(primitive => u8);
-        impl_total_intrinsic_ord!(primitive => u16);
-        impl_total_intrinsic_ord!(primitive => u32);
-        impl_total_intrinsic_ord!(primitive => u64);
-        impl_total_intrinsic_ord!(primitive => u128);
+        impl_intrinsic_ord_for_total_primitive!(primitive => isize);
+        impl_intrinsic_ord_for_total_primitive!(primitive => i8);
+        impl_intrinsic_ord_for_total_primitive!(primitive => i16);
+        impl_intrinsic_ord_for_total_primitive!(primitive => i32);
+        impl_intrinsic_ord_for_total_primitive!(primitive => i64);
+        impl_intrinsic_ord_for_total_primitive!(primitive => i128);
+        impl_intrinsic_ord_for_total_primitive!(primitive => usize);
+        impl_intrinsic_ord_for_total_primitive!(primitive => u8);
+        impl_intrinsic_ord_for_total_primitive!(primitive => u16);
+        impl_intrinsic_ord_for_total_primitive!(primitive => u32);
+        impl_intrinsic_ord_for_total_primitive!(primitive => u64);
+        impl_intrinsic_ord_for_total_primitive!(primitive => u128);
     };
     (primitive => $t:ty) => {
         impl IntrinsicOrd for $t {
@@ -394,11 +394,11 @@ macro_rules! impl_total_intrinsic_ord {
         }
     };
 }
-impl_total_intrinsic_ord!();
+impl_intrinsic_ord_for_total_primitive!();
 
-macro_rules! impl_float_intrinsic_ord {
+macro_rules! impl_intrinsic_ord_for_float_primitive {
     () => {
-        with_primitives!(impl_float_intrinsic_ord);
+        with_primitives!(impl_intrinsic_ord_for_float_primitive);
     };
     (primitive => $t:ty) => {
         impl IntrinsicOrd for $t {
@@ -419,7 +419,7 @@ macro_rules! impl_float_intrinsic_ord {
         }
     };
 }
-impl_float_intrinsic_ord!();
+impl_intrinsic_ord_for_float_primitive!();
 
 /// Partial maximum of types with intrinsic representations for undefined.
 ///

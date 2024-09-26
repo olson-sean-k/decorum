@@ -43,6 +43,7 @@ macro_rules! try_expression {
         try_expression!(expression);
     };
 }
+pub use try_expression;
 
 /// The result of an arithmetic expression that may or may not be defined.
 ///
@@ -779,19 +780,19 @@ where
     }
 }
 
-macro_rules! impl_binary_operation {
+macro_rules! impl_binary_operation_for_expression {
     () => {
-        with_binary_operations!(impl_binary_operation);
+        with_binary_operations!(impl_binary_operation_for_expression);
     };
     (operation => $trait:ident :: $method:ident) => {
-        impl_binary_operation!(operation => $trait :: $method, |left, right| {
+        impl_binary_operation_for_expression!(operation => $trait :: $method, |left, right| {
             left.zip_map(right, $trait::$method)
         });
     };
     (operation => $trait:ident :: $method:ident, |$left:ident, $right:ident| $f:block) => {
-        macro_rules! impl_primitive_binary_operation {
+        macro_rules! impl_primitive_binary_operation_for_expression {
             () => {
-                with_primitives!(impl_primitive_binary_operation);
+                with_primitives!(impl_primitive_binary_operation_for_expression);
             };
             (primitive => $t:ty) => {
                 impl<C> $trait<ExpressionOf<Proxy<$t, C>>> for $t
@@ -809,7 +810,7 @@ macro_rules! impl_binary_operation {
                 }
             };
         }
-        impl_primitive_binary_operation!();
+        impl_primitive_binary_operation_for_expression!();
 
         impl<T, C> $trait<ExpressionOf<Self>> for Proxy<T, C>
         where
@@ -872,11 +873,11 @@ macro_rules! impl_binary_operation {
         }
     };
 }
-impl_binary_operation!();
+impl_binary_operation_for_expression!();
 
-macro_rules! impl_try_from {
+macro_rules! impl_try_from_for_expression {
     () => {
-        with_primitives!(impl_try_from);
+        with_primitives!(impl_try_from_for_expression);
     };
     (primitive => $t:ty) => {
         impl<C> TryFrom<Expression<Proxy<$t, C>, C::Error>> for Proxy<$t, C>
@@ -912,4 +913,4 @@ macro_rules! impl_try_from {
         }
     };
 }
-impl_try_from!();
+impl_try_from_for_expression!();

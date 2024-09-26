@@ -494,7 +494,7 @@ macro_rules! with_binary_operations {
 }
 pub(crate) use with_binary_operations;
 
-/// Implements floating-point traits for primitive types.
+/// Implements real number and floating-point traits for primitive types.
 macro_rules! impl_primitive {
     () => {
         with_primitives!(impl_primitive);
