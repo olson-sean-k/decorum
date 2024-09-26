@@ -129,12 +129,12 @@ then **the `OrPanic` divergence panics** while the `OrError` divergence
 constructs a value that encodes the error. The output type of fallible
 operations is determined by an _output kind_:
 
-| Output Kind    | Type                  | Continue        | Break          |
-|----------------|-----------------------|-----------------|----------------|
-| `AsSelf`       | `Self`                | `Self`          |                |
-| `AsOption`     | `Option<Self>`        | `Some(Self)`    | `None`         |
-| `AsResult`     | `Result<Self, E>`     | `Ok(Self)`      | `Err(E)`       |
-| `AsExpression` | `Expression<Self, E>` | `Defined(Self)` | `Undefined(E)` |
+| Output Kind    | Type                  | Continue        | Break              |
+|----------------|-----------------------|-----------------|--------------------|
+| `AsSelf`       | `Self`                | `self`          |                    |
+| `AsOption`     | `Option<Self>`        | `Some(self)`    | `None`             |
+| `AsResult`     | `Result<Self, E>`     | `Ok(self)`      | `Err(error)`       |
+| `AsExpression` | `Expression<Self, E>` | `Defined(self)` | `Undefined(error)` |
 
 In the table above, `Self` refers to a `Proxy` type and `E` refers to the
 associated error type of its constraint. Note that only the `OrPanic` divergence

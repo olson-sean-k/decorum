@@ -22,12 +22,12 @@
 //! Output types are determined by an [output kind][`Continue`]. An output kind is type constructor
 //! with which a [`Divergence`] can construct an output type:
 //!
-//! | Output Kind      | Output Type           | Continue        | Break          |
-//! |------------------|-----------------------|-----------------|----------------|
-//! | [`AsSelf`]       | `Self`                | `Self`          |                |
-//! | [`AsOption`]     | `Option<Self>`        | `Some(Self)`    | `None`         |
-//! | [`AsResult`]     | `Result<Self, E>`     | `Ok(Self)`      | `Err(E)`       |
-//! | [`AsExpression`] | `Expression<Self, E>` | `Defined(Self)` | `Undefined(E)` |
+//! | Output Kind      | Output Type           | Continue        | Break              |
+//! |------------------|-----------------------|-----------------|--------------------|
+//! | [`AsSelf`]       | `Self`                | `self`          |                    |
+//! | [`AsOption`]     | `Option<Self>`        | `Some(self)`    | `None`             |
+//! | [`AsResult`]     | `Result<Self, E>`     | `Ok(self)`      | `Err(error)`       |
+//! | [`AsExpression`] | `Expression<Self, E>` | `Defined(self)` | `Undefined(error)` |
 //!
 //! In the above table, `Self` refers to a [`Proxy`] type and `E` refers to the [associated
 //! error][`Constraint::Error`] type of its [constraint][`constraint`]. [`AsSelf`] is unique in
