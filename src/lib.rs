@@ -10,13 +10,13 @@
 //!
 //! # Proxy Types
 //!
-//! [`Proxy`] types wrap primitive floating-point types and constrain the set of values that they
-//! can represent. These types use the same representation as primitives and in many cases can be
-//! used as drop-in replacements, in particular the [`Total`] type. [`Proxy`] supports numerous
-//! traits and APIs (including third-party integrations) and always provides a complete API for
-//! real numbers.
+//! [`Constrained`] types wrap primitive floating-point types and constrain the set of values that
+//! they can represent. These types use the same representation as primitives and in many cases can
+//! be used as drop-in replacements, in particular the [`Total`] type. [`Constrained`] supports
+//! numerous traits and APIs (including third-party integrations) and always provides a complete
+//! API for real numbers.
 //!
-//! Proxy types and their [constraints][`constraint`] operate on three subsets of IEEE 754
+//! Constrained types and their [constraints][`constraint`] operate on three subsets of IEEE 754
 //! floating-point values:
 //!
 //! | Subset       | Example Member |
@@ -34,7 +34,7 @@
 //! `NaN` is encountered or enable structured error handling of extended real numbers where any
 //! `NaN` is interpreted as undefined and yields an explicit error value.
 //!
-//! Proxy types and their components are provided by the [`proxy`], [`constraint`], and
+//! Constrained types and their components are provided by the [`proxy`], [`constraint`], and
 //! [`divergence`] modules. Numerous type definitions are also provided in the crate root:
 //!
 //! | Type Definition  | Subsets                                |
@@ -58,9 +58,9 @@
 //! # Hashing
 //!
 //! The [`hash`] module provides traits for hashing floating-point representations. Hashing is
-//! consistent with the total ordering defined by the [`cmp`] module. Proxy types implement the
-//! standard [`Hash`] trait via this module and it also provides functions for hashing primitive
-//! floating-point types.
+//! consistent with the total ordering defined by the [`cmp`] module. Constrained types implement
+//! the standard [`Hash`] trait via this module and it also provides functions for hashing
+//! primitive floating-point types.
 //!
 //! # Numeric Traits
 //!
@@ -72,17 +72,17 @@
 //!
 //! # Expressions
 //!
-//! [`Expression`] types represent the output of computations using constrained [`Proxy`] types.
-//! They provide structured types that directly encode divergence (errors) as values. Unlike other
-//! branch types, [`Expression`] also supports the same numeric operations as [`Proxy`] types, so
-//! they can be used fluently in numeric expressions without matching or trying.
+//! [`Expression`] types represent the output of computations using constrained [`Constrained`]
+//! types. They provide structured types that directly encode divergence (errors) as values. Unlike
+//! other branch types, [`Expression`] also supports the same numeric operations as [`Constrained`]
+//! types, so they can be used fluently in numeric expressions without matching or trying.
 //!
 //! ```rust
 //! use decorum::constraint::IsReal;
 //! use decorum::divergence::OrError;
-//! use decorum::proxy::{OutputOf, Proxy};
+//! use decorum::proxy::{Constrained, OutputOf};
 //!
-//! type Real = Proxy<f64, IsReal<OrError>>;
+//! type Real = Constrained<f64, IsReal<OrError>>;
 //! type Expr = OutputOf<Real>;
 //!
 //! fn f(x: Real, y: Real) -> Expr {
@@ -102,10 +102,10 @@
 //! ```rust,ignore
 //! use decorum::constraint::IsReal;
 //! use decorum::divergence::OrError;
-//! use decorum::proxy::{OutputOf, Proxy};
+//! use decorum::proxy::{OutputOf, Constrained};
 //! use decorum::real::UnaryRealFunction;
 //!
-//! type Real = Proxy<f64, IsReal<OrError>>;
+//! type Real = Constrained<f64, IsReal<OrError>>;
 //! type Expr = OutputOf<Real>;
 //!
 //! # fn fallible() -> Expr {
@@ -121,6 +121,7 @@
 //! ```
 //!
 //! [`cmp`]: crate::cmp
+//! [`Constrained`]: crate::proxy::Constrained
 //! [`constraint`]: crate::constraint
 //! [`Constraint`]: crate::constraint::Constraint
 //! [`divergence`]: crate::divergence
@@ -129,7 +130,6 @@
 //! [`hash`]: crate::hash
 //! [`Hash`]: core::hash::Hash
 //! [`proxy`]: crate::proxy
-//! [`Proxy`]: crate::proxy::Proxy
 //! [`real`]: crate::real
 //! [`Real`]: crate::Real
 //! [`Total`]: crate::Total
@@ -162,7 +162,7 @@ use core::num::FpCategory;
 use crate::cmp::IntrinsicOrd;
 use crate::constraint::{IsExtendedReal, IsFloat, IsReal};
 use crate::divergence::OrPanic;
-use crate::proxy::Proxy;
+use crate::proxy::Constrained;
 use crate::real::{
     BinaryRealFunction, Endofunction, Function, RealFunction, Sign, UnaryRealFunction,
 };
@@ -183,18 +183,18 @@ use crate::sealed::Sealed;
 
 /// IEEE 754 floating-point representation with non-standard total ordering and hashing.
 ///
-/// This [`Proxy`] type applies no constraints and no divergence. It can trivially replace
+/// This [`Constrained`] type applies no constraints and no divergence. It can trivially replace
 /// primitive floating point types and implements the standard [`Eq`] and [`Ord`] traits. See the
 /// [`cmp`] module for more details about these relations.
 ///
 /// [`cmp`]: crate::cmp
+/// [`Constrained`]: crate::proxy::Constrained
 /// [`Eq`]: core::cmp::Eq
 /// [`Ord`]: core::cmp::Ord
-/// [`Proxy`]: crate::proxy::Proxy
-pub type Total<T> = Proxy<T, IsFloat>;
+pub type Total<T> = Constrained<T, IsFloat>;
 
 /// IEEE 754 floating-point representation that must be an extended real.
-pub type ExtendedReal<T, D = OrPanic> = Proxy<T, IsExtendedReal<D>>;
+pub type ExtendedReal<T, D = OrPanic> = Constrained<T, IsExtendedReal<D>>;
 
 /// IEEE 754 floating-point representation that must not be `NaN`.
 pub type NotNan<T, D = OrPanic> = ExtendedReal<T, D>;
@@ -205,7 +205,7 @@ pub type E32<D = OrPanic> = ExtendedReal<f32, D>;
 pub type E64<D = OrPanic> = ExtendedReal<f64, D>;
 
 /// IEEE 754 floating-point representation that must be a real number.
-pub type Real<T, D = OrPanic> = Proxy<T, IsReal<D>>;
+pub type Real<T, D = OrPanic> = Constrained<T, IsReal<D>>;
 
 /// 32-bit IEEE 754 floating-point representation that must be a real number.
 pub type R32<D = OrPanic> = Real<f32, D>;
@@ -446,7 +446,7 @@ impl From<Nan<f64>> for f64 {
 fn _sanity() {
     use crate::real::FloatFunction;
 
-    type Real = Proxy<f64, IsReal<OrPanic>>;
+    type Real = Constrained<f64, IsReal<OrPanic>>;
 
     fn f<T>(x: T) -> T
     where

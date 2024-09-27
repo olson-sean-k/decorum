@@ -1,7 +1,8 @@
 //! Error behavior and output types for fallible operations.
 //!
 //! This module provides type constructors that determine the behavior and output types of fallible
-//! [`Proxy`] operations. These types are used as parameters of some [constraints][`constraint`].
+//! [`Constrained`] operations. These types are used as parameters of some
+//! [constraints][`constraint`].
 //!
 //! # Error Behaviors
 //!
@@ -29,23 +30,23 @@
 //! | [`AsResult`]     | `Result<Self, E>`     | `Ok(self)`      | `Err(error)`       |
 //! | [`AsExpression`] | `Expression<Self, E>` | `Defined(self)` | `Undefined(error)` |
 //!
-//! In the above table, `Self` refers to a [`Proxy`] type and `E` refers to the [associated
+//! In the above table, `Self` refers to a [`Constrained`] type and `E` refers to the [associated
 //! error][`Constraint::Error`] type of its [constraint][`constraint`]. [`AsSelf`] is unique in
 //! that it cannot represent errors and so does not support breaking: its output type is the
 //! identity.
 //!
 //! # Examples
 //!
-//! The following example illustrates how to define a [`Proxy`] type.
+//! The following example illustrates how to define a [`Constrained`] type.
 //!
 //! ```rust
 //! use decorum::constraint::IsNotNan;
 //! use decorum::divergence::{AsSelf, OrPanic};
-//! use decorum::proxy::Proxy;
+//! use decorum::proxy::Constrained;
 //!
 //! // A 32-bit floating-point representation that must be a real number or an infinity. Panics if
 //! // constructed from a `NaN`.
-//! pub type NotNan = Proxy<f32, IsNotNan<OrPanic<AsSelf>>>;
+//! pub type NotNan = Constrained<f32, IsNotNan<OrPanic<AsSelf>>>;
 //! ```
 //!
 //! The following example demonstrates a conditionally compiled `Real` type definition with a
@@ -56,14 +57,14 @@
 //! pub mod real {
 //!     use decorum::constraint::IsReal;
 //!     use decorum::divergence::{self, AsResult};
-//!     use decorum::proxy::{OutputOf, Proxy};
+//!     use decorum::proxy::{Constrained, OutputOf};
 //!
 //!     #[cfg(debug_assertions)]
 //!     type OrDiverge = divergence::OrPanic<AsResult>;
 //!     #[cfg(not(debug_assertions))]
 //!     type OrDiverge = divergence::OrError<AsResult>;
 //!
-//!     pub type Real = Proxy<f64, IsReal<OrDiverge>>;
+//!     pub type Real = Constrained<f64, IsReal<OrDiverge>>;
 //!     pub type Result = OutputOf<Real>;
 //! }
 //!
@@ -81,20 +82,13 @@
 //! [`AsOption`]: crate::divergence::AsOption
 //! [`AsResult`]: crate::divergence::AsResult
 //! [`AsSelf`]: crate::divergence::AsSelf
+//! [`Constrained`]: crate::proxy::Constrained
 //! [`constraint`]: crate::constraint
 //! [`Constraint::Error`]: crate::constraint::Constraint::Error
 //! [`Divergence`]: crate::divergence::Divergence
 //! [`OrError`]: crate::divergence::OrError
 //! [`OrPanic`]: crate::divergence::OrPanic
-//! [`Proxy`]: crate::proxy::Proxy
 //! [`Result`]: core::result::Result
-
-// TODO: Rename and refactor types such that type definitions resemble the following:
-//
-//         pub type Real = Constrained<f64, IsReal<OrPanic>>;
-//         pub type Real = Constrained<f64, IsReal<OrPanic<AsSelf>>>;
-//         pub type Extended = Constrained<f64, IsExtended<OrError<AsExpression>>>;
-//         pub type Total = Constrained<f64, IsFloat>;
 
 use core::convert::Infallible;
 use core::fmt::{self, Debug, Formatter};
@@ -217,15 +211,15 @@ impl StaticDebug for AsSelf {
     }
 }
 
-/// Determines the output type and behavior of a [`Proxy`] when it is fallibly constructed.
+/// Determines the output type and behavior of a [`Constrained`] when it is fallibly constructed.
 ///
 /// The output type is defined by an associated [output **kind**][`Continue`]. Regardless of this
 /// type, this trait implements continuing and breaking on the [`Result`] of constructing a
-/// [`Proxy`]. See the [module documentation][`divergence`].
+/// [`Constrained`]. See the [module documentation][`divergence`].
 ///
+/// [`Constrained`]: crate::proxy::Constrained
 /// [`Continue`]: crate::divergence::Continue
 /// [`divergence`]: crate::divergence
-/// [`Proxy`]: crate::proxy::Proxy
 /// [`Result`]: core::result::Result
 pub trait Divergence: Sealed + StaticDebug {
     type Continue: Continue;
@@ -240,14 +234,14 @@ pub type OutputOf<D, P, E> = <ContinueOf<D> as Continue>::As<P, E>;
 
 /// Divergence that breaks on errors by **panicking**.
 ///
-/// **`OrPanic` panics if a [`Proxy`] cannot be constructed.** This behavior is independent of the
-/// output kind, so even an `OrPanic` divergence with a [`Result`] output type panics if an error
-/// occurs.
+/// **`OrPanic` panics if a [`Constrained`] cannot be constructed.** This behavior is independent
+/// of the output kind, so even an `OrPanic` divergence with a [`Result`] output type panics if an
+/// error occurs.
 ///
 /// By default, `OrPanic` uses the [`AsSelf`] output kind.
 ///
 /// [`AsSelf`]: crate::divergence::AsSelf
-/// [`Proxy`]: crate::proxy::Proxy
+/// [`Constrained`]: crate::proxy::Constrained
 /// [`Result`]: core::result::Result
 #[derive(Debug)]
 pub struct OrPanic<K = AsSelf>(PhantomData<fn() -> K>, Infallible);

@@ -1,9 +1,10 @@
-//! Constraints on the set of IEEE 754 floating-point values that [`Proxy`] types may represent.
+//! Constraints on the set of IEEE 754 floating-point values that [`Constrained`] types may
+//! represent.
 //!
-//! This module provides traits and types that define the error conditions of [`Proxy`]s.
+//! This module provides traits and types that define the error conditions of [`Constrained`]s.
 //! Constraints determine when, if ever, a particular floating-point value is considered an error
 //! and so construction must [diverge][`divergence`]. Constraints are defined in terms of subsets
-//! of IEEE 754 floating-point values and each constraint has associated [`Proxy`] type
+//! of IEEE 754 floating-point values and each constraint has associated [`Constrained`] type
 //! definitions for convenience:
 //!
 //! | Constraint         | Divergent | Type Definition  | Disallowed Values     |
@@ -16,19 +17,19 @@
 //! floating-point types however, [`Total`] defines equivalence and total ordering to `NaN`, which
 //! allows it to implement related standard traits like `Eq`, `Hash`, and `Ord`.
 //!
-//! [`ExtendedReal`], [`Real`], and their corresponding constraints disallow certain IEEE 754 values.
-//! Because the output of some floating-point operations may yield these values (even when the
-//! inputs are real numbers), these constraints must specify a [divergence][`divergence`], which
-//! determines the behavior of [`Proxy`]s when such a value is encountered.
+//! [`ExtendedReal`], [`Real`], and their corresponding constraints disallow certain IEEE 754
+//! values. Because the output of some floating-point operations may yield these values (even when
+//! the inputs are real numbers), these constraints must specify a [divergence][`divergence`],
+//! which determines the behavior of [`Constrained`]s when such a value is encountered.
 //!
 //! [`cmp`]: crate::cmp
+//! [`Constrained`]: crate::proxy::Constrained
 //! [`divergence`]: crate::divergence
 //! [`ExtendedReal`]: crate::ExtendedReal
 //! [`IsExtendedReal`]: crate::constraint::IsExtendedReal
 //! [`IsFloat`]: crate::constraint::IsFloat
 //! [`IsReal`]: crate::constraint::IsReal
 //! [`OrPanic`]: crate::divergence::OrPanic
-//! [`Proxy`]: crate::proxy::Proxy
 //! [`Real`]: crate::Real
 //! [`Total`]: crate::Total
 
@@ -40,18 +41,18 @@ use thiserror::Error;
 
 use crate::cmp::Undefined;
 use crate::divergence::{Divergence, OrPanic, OutputOf};
-use crate::proxy::{ClosedProxy, Proxy};
+use crate::proxy::{ClosedProxy, Constrained};
 use crate::sealed::{Sealed, StaticDebug};
 use crate::{NanEncoding, Primitive};
 
 pub(crate) mod sealed {
-    use crate::proxy::Proxy;
+    use crate::proxy::Constrained;
     use crate::Primitive;
 
     /// Defines a notion of undefined for [`Constraint`] types.
     ///
     /// This trait is a corollary to [`IntrinsicOrd`] and is used to implement that trait for
-    /// [`Proxy`] types more generally than is otherwise possible.
+    /// [`Constrained`] types more generally than is otherwise possible.
     pub trait FromUndefined: Sized {
         type Undefined<T>;
 
@@ -59,7 +60,7 @@ pub(crate) mod sealed {
         where
             T: Primitive;
 
-        fn from_undefined<T>(undefined: Self::Undefined<T>) -> Proxy<T, Self>
+        fn from_undefined<T>(undefined: Self::Undefined<T>) -> Constrained<T, Self>
         where
             T: Primitive;
 
@@ -185,13 +186,13 @@ where
 {
 }
 
-/// Describes constraints on the set of floating-point values that a [`Proxy`] may represent.
+/// Describes constraints on the set of floating-point values that a [`Constrained`] may represent.
 ///
 /// Note that constraints require [`Member<RealSet>`][`Member`], meaning that the set of real
 /// numbers must always be supported and is implied wherever a `Constraint` bound is used.
 ///
+/// [`Constrained`]: crate::proxy::Constrained
 /// [`Member`]: crate::constraint::Member
-/// [`Proxy`]: crate::proxy::Proxy
 pub trait Constraint: FromUndefined + Member<RealSet> + StaticDebug {
     type Divergence: Divergence;
     // TODO: Bound this on `core::Error` once it is stabilized.
@@ -242,18 +243,18 @@ impl Constraint for IsFloat {
 }
 
 impl FromUndefined for IsFloat {
-    type Undefined<T> = Proxy<T, Self>;
+    type Undefined<T> = Constrained<T, Self>;
 
     #[inline(always)]
     fn undefined<T>() -> Self::Undefined<T>
     where
         T: Primitive,
     {
-        Proxy::NAN
+        Constrained::NAN
     }
 
     #[inline(always)]
-    fn from_undefined<T>(undefined: Self::Undefined<T>) -> Proxy<T, Self>
+    fn from_undefined<T>(undefined: Self::Undefined<T>) -> Constrained<T, Self>
     where
         T: Primitive,
     {
@@ -325,7 +326,7 @@ where
         unreachable!()
     }
 
-    fn from_undefined<T>(_: Self::Undefined<T>) -> Proxy<T, Self>
+    fn from_undefined<T>(_: Self::Undefined<T>) -> Constrained<T, Self>
     where
         T: Primitive,
     {
@@ -396,7 +397,7 @@ where
         unreachable!()
     }
 
-    fn from_undefined<T>(_: Self::Undefined<T>) -> Proxy<T, Self>
+    fn from_undefined<T>(_: Self::Undefined<T>) -> Constrained<T, Self>
     where
         T: Primitive,
     {

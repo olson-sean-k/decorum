@@ -1,15 +1,16 @@
 //! IEEE 754 floating-point proxy types that apply ordering and configurable contraints and
 //! divergence.
 //!
-//! [`Proxy`] types wrap primitive floating-point types and change their behavior with respect to
-//! ordering, equivalence, hashing, supported values, and error behaviors. These types have the
-//! same representation as primitive floating-point types and can often be used as drop-in
+//! [`Constrained`] types wrap primitive floating-point types and change their behavior with
+//! respect to ordering, equivalence, hashing, supported values, and error behaviors. These types
+//! have the same representation as primitive floating-point types and can often be used as drop-in
 //! replacements.
 //!
-//! [Constraints][`constraint`] configure the behavior of [`Proxy`]s by determining the set of IEEE
+//! [Constraints][`constraint`] configure the behavior of [`Constrained`]s by determining the set
+//! of IEEE
 //! 754 floating-point values that can be represented and how to [diverge][`divergence`] if a value
-//! that is not in this set is encountered. The following table summarizes the proxy type
-//! definitions and their constraints:
+//!     that is not in this set is encountered. The following table summarizes the proxy type
+//!     definitions and their constraints:
 //!
 //! | Type Definition  | Sized Definitions | Trait Implementations                           | Disallowed Values     |
 //! |------------------|-------------------|-------------------------------------------------|-----------------------|
@@ -73,9 +74,9 @@ pub type DivergenceOf<P> = <ConstraintOf<P> as Constraint>::Divergence;
 pub type ErrorOf<P> = <ConstraintOf<P> as Constraint>::Error;
 pub type ExpressionOf<P> = Expression<P, ErrorOf<P>>;
 
-/// A [`Proxy`] type that is closed over its primitive floating-point type and constraint.
+/// A [`Constrained`] type that is closed over its primitive floating-point type and constraint.
 ///
-/// [`Proxy`]: crate::proxy::Proxy
+/// [`Constrained`]: crate::proxy::Constrained
 pub trait ClosedProxy: Sized {
     type Primitive: Primitive;
     type Constraint: Constraint;
@@ -87,10 +88,10 @@ pub trait ClosedProxy: Sized {
 //       non-real values.
 /// Serialization container.
 ///
-/// This type is represented and serialized transparently as its inner type `T`. `Proxy` uses this
-/// type for its own serialization and deserialization. Importantly, this uses a conversion when
-/// deserializing that upholds the constraints on proxy types, so it is not possible to deserialize
-/// a floating-point value into a proxy type that does not support that value.
+/// This type is represented and serialized transparently as its inner type `T`. `Constrained` uses
+/// this type for its own serialization and deserialization. Importantly, this uses a conversion
+/// when deserializing that upholds the constraints on proxy types, so it is not possible to
+/// deserialize a floating-point value into a proxy type that does not support that value.
 ///
 /// See the following for more context and details:
 ///
@@ -106,8 +107,8 @@ struct Serde<T> {
 }
 
 #[cfg(feature = "serde")]
-impl<T, C> From<Proxy<T, C>> for Serde<T> {
-    fn from(proxy: Proxy<T, C>) -> Self {
+impl<T, C> From<Constrained<T, C>> for Serde<T> {
+    fn from(proxy: Constrained<T, C>) -> Self {
         Serde {
             inner: proxy.into_inner(),
         }
@@ -117,8 +118,8 @@ impl<T, C> From<Proxy<T, C>> for Serde<T> {
 /// IEEE 754 floating-point proxy that provides total ordering, equivalence, hashing, constraints,
 /// and error handling.
 ///
-/// Proxy types wrap primitive floating-point type and extend their behavior. For example, all
-/// proxy types implement the standard [`Eq`], [`Hash`], and [`Ord`] traits, sometimes via the
+/// `Constrained` types wrap primitive floating-point type and extend their behavior. For example,
+/// all proxy types implement the standard [`Eq`], [`Hash`], and [`Ord`] traits, sometimes via the
 /// non-standard relations described in the [`cmp`] module when `NaN`s must be considered.
 /// Constraints and divergence can be composed to determine the subset of floating-point values
 /// that a proxy supports and how the proxy behaves when those constraints are violated.
@@ -147,15 +148,15 @@ impl<T, C> From<Proxy<T, C>> for Serde<T> {
     )
 )]
 #[repr(transparent)]
-pub struct Proxy<T, C> {
+pub struct Constrained<T, C> {
     inner: T,
     #[cfg_attr(feature = "serde", serde(skip))]
     phantom: PhantomData<fn() -> C>,
 }
 
-impl<T, C> Proxy<T, C> {
+impl<T, C> Constrained<T, C> {
     pub(crate) const fn unchecked(inner: T) -> Self {
-        Proxy {
+        Constrained {
             inner,
             phantom: PhantomData,
         }
@@ -186,7 +187,7 @@ impl<T, C> Proxy<T, C> {
     where
         F: FnOnce(T) -> T,
     {
-        Proxy::unchecked(f(self.into_inner()))
+        Constrained::unchecked(f(self.into_inner()))
     }
 
     pub(crate) fn with_inner<U, F>(self, f: F) -> U
@@ -197,7 +198,7 @@ impl<T, C> Proxy<T, C> {
     }
 }
 
-impl<T, C> Proxy<T, C>
+impl<T, C> Constrained<T, C>
 where
     T: Debug,
     C: StaticDebug,
@@ -207,19 +208,19 @@ where
     /// This function is similar to [`debug`], but writes a verbose description of the proxy into a
     /// [`Formatter`] rather than returning a [`Debug`] implementation.
     ///
-    /// [`debug`]: crate::proxy::Proxy::debug
+    /// [`debug`]: crate::proxy::Constrained::debug
     /// [`Debug`]: core::fmt::Debug
     /// [`Formatter`]: core::fmt::Formatter
     pub fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
-        write!(formatter, "Proxy<")?;
+        write!(formatter, "Constrained<")?;
         C::fmt(formatter)?;
         write!(formatter, ">({:?})", self.inner)
     }
 
     /// Gets a [`Debug`] implementation that thoroughly describes the proxy.
     ///
-    /// Proxy types implement [`Display`] and [`Debug`], but these implementations omit more
-    /// specific information about [constraints][`constraint`] and [divergence]. This function
+    /// `Constrained` types implement [`Display`] and [`Debug`], but these implementations omit
+    /// more specific information about [constraints][`constraint`] and [divergence]. This function
     /// provides an instance of a verbose [`Debug`] type that more thoroughly describes the
     /// behavior of the proxy.
     ///
@@ -228,7 +229,7 @@ where
     /// [`Display`]: core::fmt::Display
     /// [`divergence`]: crate::divergence
     pub fn debug(&self) -> impl '_ + Copy + Debug {
-        struct Formatted<'a, T, C>(&'a Proxy<T, C>);
+        struct Formatted<'a, T, C>(&'a Constrained<T, C>);
 
         impl<'a, T, C> Clone for Formatted<'a, T, C> {
             fn clone(&self) -> Self {
@@ -244,7 +245,7 @@ where
             C: StaticDebug,
         {
             fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
-                Proxy::fmt(self.0, formatter)
+                Constrained::fmt(self.0, formatter)
             }
         }
 
@@ -252,7 +253,7 @@ where
     }
 }
 
-impl<T, C> Proxy<T, C>
+impl<T, C> Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -264,7 +265,7 @@ where
     /// function never fails for [`Total`], which has no constraints.
     ///
     /// The distinctions in output and behavior are static and are determined by the type
-    /// parameters of the `Proxy` type constructor.
+    /// parameters of the `Constrained` type constructor.
     ///
     /// # Panics
     ///
@@ -286,10 +287,10 @@ where
     /// ```rust
     /// use decorum::constraint::IsReal;
     /// use decorum::divergence::{AsResult, OrError};
-    /// use decorum::proxy::Proxy;
+    /// use decorum::proxy::Constrained;
     ///
-    /// // The branch type of `Real` is `Result`.
-    /// type Real = Proxy<f64, IsReal<OrError<AsResult>>>;
+    /// // The output type of `Real` is `Result`.
+    /// type Real = Constrained<f64, IsReal<OrError<AsResult>>>;
     ///
     /// let x = Real::new(2.0).unwrap(); // The output type of `new` is `Result` per `TryResult`.
     /// ```
@@ -299,10 +300,10 @@ where
     /// ```rust,should_panic
     /// use decorum::constraint::IsReal;
     /// use decorum::divergence::OrPanic;
-    /// use decorum::proxy::Proxy;
+    /// use decorum::proxy::Constrained;
     ///
-    /// // The branch type of `OrPanic` is `Real`.
-    /// type Real = Proxy<f64, IsReal<OrPanic>>;
+    /// // The output type of `OrPanic` is `Real`.
+    /// type Real = Constrained<f64, IsReal<OrPanic>>;
     ///
     /// let x = Real::new(2.0); // The output type of `new` is `Real` per `OrPanic`.
     /// let y = Real::new(0.0 / 0.0); // Panics.
@@ -314,7 +315,7 @@ where
     /// [`Total`]: crate::Total
     /// [`Undefined`]: crate::expression::Expression::Undefined
     pub fn new(inner: T) -> OutputOf<Self> {
-        C::map(inner, |inner| Proxy {
+        C::map(inner, |inner| Constrained {
             inner,
             phantom: PhantomData,
         })
@@ -338,9 +339,9 @@ where
     /// ```rust
     /// use decorum::constraint::IsReal;
     /// use decorum::divergence::OrPanic;
-    /// use decorum::proxy::Proxy;
+    /// use decorum::proxy::Constrained;
     ///
-    /// type Real = Proxy<f64, IsReal<OrPanic>>;
+    /// type Real = Constrained<f64, IsReal<OrPanic>>;
     ///
     /// fn f(x: Real) -> Real {
     ///     x * 2.0
@@ -356,9 +357,9 @@ where
     /// ```rust,should_panic
     /// use decorum::constraint::IsReal;
     /// use decorum::divergence::OrPanic;
-    /// use decorum::proxy::Proxy;
+    /// use decorum::proxy::Constrained;
     ///
-    /// type Real = Proxy<f64, IsReal<OrPanic>>;
+    /// type Real = Constrained<f64, IsReal<OrPanic>>;
     ///
     /// // `IsReal` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
     /// let x = Real::try_new(0.0 / 0.0).unwrap(); // Panics when unwrapping.
@@ -370,7 +371,7 @@ where
     /// [`Result`]: core::result::Result
     /// [`Total`]: crate::Total
     pub fn try_new(inner: T) -> Result<Self, C::Error> {
-        C::check(inner).map(|_| Proxy {
+        C::check(inner).map(|_| Constrained {
             inner,
             phantom: PhantomData,
         })
@@ -395,9 +396,9 @@ where
     /// ```rust
     /// use decorum::constraint::IsReal;
     /// use decorum::divergence::OrPanic;
-    /// use decorum::proxy::Proxy;
+    /// use decorum::proxy::Constrained;
     ///
-    /// type Real = Proxy<f64, IsReal<OrPanic>>;
+    /// type Real = Constrained<f64, IsReal<OrPanic>>;
     ///
     /// fn f(x: Real) -> Real {
     ///     x * 2.0
@@ -411,9 +412,9 @@ where
     /// ```rust,should_panic
     /// use decorum::constraint::IsReal;
     /// use decorum::divergence::OrPanic;
-    /// use decorum::proxy::Proxy;
+    /// use decorum::proxy::Constrained;
     ///
-    /// type Real = Proxy<f64, IsReal<OrPanic>>;
+    /// type Real = Constrained<f64, IsReal<OrPanic>>;
     ///
     /// // `IsReal` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
     /// let x = Real::assert(0.0 / 0.0); // Panics.
@@ -440,8 +441,9 @@ where
     /// [`IsFloat`]: crate::constraint::IsFloat
     pub fn try_from_slice<'a>(slice: &'a [T]) -> Result<&'a [Self], C::Error> {
         slice.iter().try_for_each(|inner| C::check(*inner))?;
-        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
-        //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
+        // SAFETY: `Constrained<T>` is `repr(transparent)` and has the same binary representation
+        //         as its input type `T`. This means that it is safe to transmute `T` to
+        //         `Constrained<T>`.
         Ok(unsafe { mem::transmute::<&'a [T], &'a [Self]>(slice) })
     }
 
@@ -461,8 +463,9 @@ where
     /// [`IsFloat`]: crate::constraint::IsFloat
     pub fn try_from_mut_slice<'a>(slice: &'a mut [T]) -> Result<&'a mut [Self], C::Error> {
         slice.iter().try_for_each(|inner| C::check(*inner))?;
-        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
-        //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
+        // SAFETY: `Constrained<T>` is `repr(transparent)` and has the same binary representation
+        //         as its input type `T`. This means that it is safe to transmute `T` to
+        //         `Constrained<T>`.
         Ok(unsafe { mem::transmute::<&'a mut [T], &'a mut [Self]>(slice) })
     }
 
@@ -479,7 +482,7 @@ where
     /// let x = R64::<OrPanic>::ZERO;
     /// let y = E64::from_subset(x); // `E64` allows a superset of the values of `R64`.
     /// ```
-    pub fn from_subset<C2>(other: Proxy<T, C2>) -> Self
+    pub fn from_subset<C2>(other: Constrained<T, C2>) -> Self
     where
         C2: Constraint + SubsetOf<C>,
     {
@@ -498,11 +501,11 @@ where
     /// let x = R64::ZERO;
     /// let y: E64 = x.into_superset(); // `E64` allows a superset of the values of `R64`.
     /// ```
-    pub fn into_superset<C2>(self) -> Proxy<T, C2>
+    pub fn into_superset<C2>(self) -> Constrained<T, C2>
     where
         C2: Constraint + SupersetOf<C>,
     {
-        Proxy::unchecked(self.into_inner())
+        Constrained::unchecked(self.into_inner())
     }
 
     /// Converts a proxy into its corresponding [`Expression`].
@@ -522,7 +525,7 @@ where
         Self::new(f(self.into_inner()))
     }
 
-    pub(crate) fn zip_map<C2, F>(self, other: Proxy<T, C2>, f: F) -> OutputOf<Self>
+    pub(crate) fn zip_map<C2, F>(self, other: Constrained<T, C2>, f: F) -> OutputOf<Self>
     where
         C2: Constraint,
         F: FnOnce(T, T) -> T,
@@ -540,10 +543,11 @@ where
     /// Unlike [`try_from_slice`], this conversion is infallible and trivial and so has `O(1)` time
     /// complexity.
     ///
-    /// [`try_from_slice`]: crate::proxy::Proxy::try_from_slice
+    /// [`try_from_slice`]: crate::proxy::Constrained::try_from_slice
     pub fn from_slice<'a>(slice: &'a [T]) -> &'a [Self] {
-        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
-        //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
+        // SAFETY: `Constrained<T>` is `repr(transparent)` and has the same binary representation
+        //         as its input type `T`. This means that it is safe to transmute `T` to
+        //         `Constrained<T>`.
         unsafe { mem::transmute::<&'a [T], &'a [Self]>(slice) }
     }
 
@@ -553,16 +557,17 @@ where
     /// Unlike [`try_from_mut_slice`], this conversion is infallible and trivial and so has `O(1)`
     /// time complexity.
     ///
-    /// [`try_from_mut_slice`]: crate::proxy::Proxy::try_from_mut_slice
+    /// [`try_from_mut_slice`]: crate::proxy::Constrained::try_from_mut_slice
     pub fn from_mut_slice<'a>(slice: &'a mut [T]) -> &'a mut [Self] {
-        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
-        //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
+        // SAFETY: `Constrained<T>` is `repr(transparent)` and has the same binary representation
+        //         as its input type `T`. This means that it is safe to transmute `T` to
+        //         `Constrained<T>`.
         unsafe { mem::transmute::<&'a mut [T], &'a mut [Self]>(slice) }
     }
 }
 
 #[cfg(feature = "approx")]
-impl<T, C> AbsDiffEq for Proxy<T, C>
+impl<T, C> AbsDiffEq for Constrained<T, C>
 where
     T: AbsDiffEq<Epsilon = T> + Primitive,
     C: Constraint,
@@ -579,7 +584,7 @@ where
     }
 }
 
-impl<T, C> Add for Proxy<T, C>
+impl<T, C> Add for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -591,7 +596,7 @@ where
     }
 }
 
-impl<T, C> Add<T> for Proxy<T, C>
+impl<T, C> Add<T> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -603,7 +608,7 @@ where
     }
 }
 
-impl<T, C, E> AddAssign for Proxy<T, C>
+impl<T, C, E> AddAssign for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
@@ -614,7 +619,7 @@ where
     }
 }
 
-impl<T, C, E> AddAssign<T> for Proxy<T, C>
+impl<T, C, E> AddAssign<T> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
@@ -625,13 +630,13 @@ where
     }
 }
 
-impl<T, C> AsRef<T> for Proxy<T, C> {
+impl<T, C> AsRef<T> for Constrained<T, C> {
     fn as_ref(&self) -> &T {
         &self.inner
     }
 }
 
-impl<T, C> BinaryRealFunction for Proxy<T, C>
+impl<T, C> BinaryRealFunction for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -667,7 +672,7 @@ where
     }
 }
 
-impl<T, C> BinaryRealFunction<T> for Proxy<T, C>
+impl<T, C> BinaryRealFunction<T> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -703,7 +708,7 @@ where
     }
 }
 
-impl<T, C> Bounded for Proxy<T, C>
+impl<T, C> Bounded for Constrained<T, C>
 where
     T: Primitive,
 {
@@ -716,19 +721,19 @@ where
     }
 }
 
-impl<T, C> Clone for Proxy<T, C>
+impl<T, C> Clone for Constrained<T, C>
 where
     T: Clone,
 {
     fn clone(&self) -> Self {
-        Proxy {
+        Constrained {
             inner: self.inner.clone(),
             phantom: PhantomData,
         }
     }
 }
 
-impl<T, C> ClosedProxy for Proxy<T, C>
+impl<T, C> ClosedProxy for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -737,7 +742,7 @@ where
     type Constraint = C;
 }
 
-impl<T, C> Function for Proxy<T, C>
+impl<T, C> Function for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -745,9 +750,9 @@ where
     type Codomain = OutputOf<Self>;
 }
 
-impl<T, C> Copy for Proxy<T, C> where T: Copy {}
+impl<T, C> Copy for Constrained<T, C> where T: Copy {}
 
-impl<T, D> Debug for Proxy<T, IsExtendedReal<D>>
+impl<T, D> Debug for Constrained<T, IsExtendedReal<D>>
 where
     T: Debug,
     D: Divergence,
@@ -760,7 +765,7 @@ where
     }
 }
 
-impl<T> Debug for Proxy<T, IsFloat>
+impl<T> Debug for Constrained<T, IsFloat>
 where
     T: Debug,
 {
@@ -769,7 +774,7 @@ where
     }
 }
 
-impl<T, D> Debug for Proxy<T, IsReal<D>>
+impl<T, D> Debug for Constrained<T, IsReal<D>>
 where
     T: Debug,
     D: Divergence,
@@ -779,7 +784,7 @@ where
     }
 }
 
-impl<T, C> Default for Proxy<T, C>
+impl<T, C> Default for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -790,7 +795,7 @@ where
     }
 }
 
-impl<T, C> Display for Proxy<T, C>
+impl<T, C> Display for Constrained<T, C>
 where
     T: Display,
 {
@@ -799,7 +804,7 @@ where
     }
 }
 
-impl<T, C> Div for Proxy<T, C>
+impl<T, C> Div for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -811,7 +816,7 @@ where
     }
 }
 
-impl<T, C> Div<T> for Proxy<T, C>
+impl<T, C> Div<T> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -823,7 +828,7 @@ where
     }
 }
 
-impl<T, C, E> DivAssign for Proxy<T, C>
+impl<T, C, E> DivAssign for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
@@ -834,7 +839,7 @@ where
     }
 }
 
-impl<T, C, E> DivAssign<T> for Proxy<T, C>
+impl<T, C, E> DivAssign<T> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
@@ -845,14 +850,14 @@ where
     }
 }
 
-impl<T, C> BaseEncoding for Proxy<T, C>
+impl<T, C> BaseEncoding for Constrained<T, C>
 where
     T: Primitive,
 {
-    const MAX_FINITE: Self = Proxy::unchecked(T::MAX_FINITE);
-    const MIN_FINITE: Self = Proxy::unchecked(T::MIN_FINITE);
-    const MIN_POSITIVE_NORMAL: Self = Proxy::unchecked(T::MIN_POSITIVE_NORMAL);
-    const EPSILON: Self = Proxy::unchecked(T::EPSILON);
+    const MAX_FINITE: Self = Constrained::unchecked(T::MAX_FINITE);
+    const MIN_FINITE: Self = Constrained::unchecked(T::MIN_FINITE);
+    const MIN_POSITIVE_NORMAL: Self = Constrained::unchecked(T::MIN_POSITIVE_NORMAL);
+    const EPSILON: Self = Constrained::unchecked(T::EPSILON);
 
     fn classify(self) -> FpCategory {
         T::classify(self.into_inner())
@@ -880,9 +885,9 @@ where
     }
 }
 
-impl<T, C> Eq for Proxy<T, C> where T: Primitive {}
+impl<T, C> Eq for Constrained<T, C> where T: Primitive {}
 
-impl<T, C, E> Float for Proxy<T, C>
+impl<T, C, E> Float for Constrained<T, C>
 where
     T: Float + Primitive,
     C: Constraint<Error = E> + Member<InfinitySet> + Member<NanSet>,
@@ -1110,7 +1115,7 @@ where
     #[cfg(feature = "std")]
     fn sin_cos(self) -> (Self, Self) {
         let (sin, cos) = Float::sin_cos(self.into_inner());
-        (Proxy::<_, C>::new(sin), Proxy::<_, C>::new(cos))
+        (Constrained::<_, C>::new(sin), Constrained::<_, C>::new(cos))
     }
 
     #[cfg(feature = "std")]
@@ -1154,7 +1159,7 @@ where
     }
 }
 
-impl<T, C> FloatConst for Proxy<T, C>
+impl<T, C> FloatConst for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -1238,8 +1243,9 @@ where
     T: Primitive,
 {
     fn from(inner: &'a T) -> Self {
-        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
-        //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
+        // SAFETY: `Constrained<T>` is `repr(transparent)` and has the same binary representation
+        //         as its input type `T`. This means that it is safe to transmute `T` to
+        //         `Constrained<T>`.
         unsafe { &*(inner as *const T as *const Total<T>) }
     }
 }
@@ -1249,8 +1255,9 @@ where
     T: Primitive,
 {
     fn from(inner: &'a mut T) -> Self {
-        // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary representation as its
-        //         input type `T`. This means that it is safe to transmute `T` to `Proxy<T>`.
+        // SAFETY: `Constrained<T>` is `repr(transparent)` and has the same binary representation
+        //         as its input type `T`. This means that it is safe to transmute `T` to
+        //         `Constrained<T>`.
         unsafe { &mut *(inner as *mut T as *mut Total<T>) }
     }
 }
@@ -1273,14 +1280,14 @@ where
     }
 }
 
-impl<C> From<Proxy<f32, C>> for f32 {
-    fn from(proxy: Proxy<f32, C>) -> Self {
+impl<C> From<Constrained<f32, C>> for f32 {
+    fn from(proxy: Constrained<f32, C>) -> Self {
         proxy.into_inner()
     }
 }
 
-impl<C> From<Proxy<f64, C>> for f64 {
-    fn from(proxy: Proxy<f64, C>) -> Self {
+impl<C> From<Constrained<f64, C>> for f64 {
+    fn from(proxy: Constrained<f64, C>) -> Self {
         proxy.into_inner()
     }
 }
@@ -1294,61 +1301,61 @@ where
     }
 }
 
-impl<T, C> FromPrimitive for Proxy<T, C>
+impl<T, C> FromPrimitive for Constrained<T, C>
 where
     T: FromPrimitive + Primitive,
     C: Constraint,
 {
     fn from_i8(value: i8) -> Option<Self> {
-        T::from_i8(value).and_then(|inner| Proxy::try_new(inner).ok())
+        T::from_i8(value).and_then(|inner| Constrained::try_new(inner).ok())
     }
 
     fn from_u8(value: u8) -> Option<Self> {
-        T::from_u8(value).and_then(|inner| Proxy::try_new(inner).ok())
+        T::from_u8(value).and_then(|inner| Constrained::try_new(inner).ok())
     }
 
     fn from_i16(value: i16) -> Option<Self> {
-        T::from_i16(value).and_then(|inner| Proxy::try_new(inner).ok())
+        T::from_i16(value).and_then(|inner| Constrained::try_new(inner).ok())
     }
 
     fn from_u16(value: u16) -> Option<Self> {
-        T::from_u16(value).and_then(|inner| Proxy::try_new(inner).ok())
+        T::from_u16(value).and_then(|inner| Constrained::try_new(inner).ok())
     }
 
     fn from_i32(value: i32) -> Option<Self> {
-        T::from_i32(value).and_then(|inner| Proxy::try_new(inner).ok())
+        T::from_i32(value).and_then(|inner| Constrained::try_new(inner).ok())
     }
 
     fn from_u32(value: u32) -> Option<Self> {
-        T::from_u32(value).and_then(|inner| Proxy::try_new(inner).ok())
+        T::from_u32(value).and_then(|inner| Constrained::try_new(inner).ok())
     }
 
     fn from_i64(value: i64) -> Option<Self> {
-        T::from_i64(value).and_then(|inner| Proxy::try_new(inner).ok())
+        T::from_i64(value).and_then(|inner| Constrained::try_new(inner).ok())
     }
 
     fn from_u64(value: u64) -> Option<Self> {
-        T::from_u64(value).and_then(|inner| Proxy::try_new(inner).ok())
+        T::from_u64(value).and_then(|inner| Constrained::try_new(inner).ok())
     }
 
     fn from_isize(value: isize) -> Option<Self> {
-        T::from_isize(value).and_then(|inner| Proxy::try_new(inner).ok())
+        T::from_isize(value).and_then(|inner| Constrained::try_new(inner).ok())
     }
 
     fn from_usize(value: usize) -> Option<Self> {
-        T::from_usize(value).and_then(|inner| Proxy::try_new(inner).ok())
+        T::from_usize(value).and_then(|inner| Constrained::try_new(inner).ok())
     }
 
     fn from_f32(value: f32) -> Option<Self> {
-        T::from_f32(value).and_then(|inner| Proxy::try_new(inner).ok())
+        T::from_f32(value).and_then(|inner| Constrained::try_new(inner).ok())
     }
 
     fn from_f64(value: f64) -> Option<Self> {
-        T::from_f64(value).and_then(|inner| Proxy::try_new(inner).ok())
+        T::from_f64(value).and_then(|inner| Constrained::try_new(inner).ok())
     }
 }
 
-impl<T, C, E> FromStr for Proxy<T, C>
+impl<T, C, E> FromStr for Constrained<T, C>
 where
     T: FromStr + Primitive,
     C: Constraint<Error = E>,
@@ -1361,7 +1368,7 @@ where
     }
 }
 
-impl<T, C> Hash for Proxy<T, C>
+impl<T, C> Hash for Constrained<T, C>
 where
     T: Primitive + ToCanonical,
 {
@@ -1373,13 +1380,13 @@ where
     }
 }
 
-impl<T, C> InfinityEncoding for Proxy<T, C>
+impl<T, C> InfinityEncoding for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint + Member<InfinitySet>,
 {
-    const INFINITY: Self = Proxy::unchecked(T::INFINITY);
-    const NEG_INFINITY: Self = Proxy::unchecked(T::NEG_INFINITY);
+    const INFINITY: Self = Constrained::unchecked(T::INFINITY);
+    const NEG_INFINITY: Self = Constrained::unchecked(T::NEG_INFINITY);
 
     fn is_infinite(self) -> bool {
         self.into_inner().is_infinite()
@@ -1390,7 +1397,7 @@ where
     }
 }
 
-impl<T, C> IntrinsicOrd for Proxy<T, C>
+impl<T, C> IntrinsicOrd for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -1415,7 +1422,7 @@ where
     }
 }
 
-impl<T, C> LowerExp for Proxy<T, C>
+impl<T, C> LowerExp for Constrained<T, C>
 where
     T: LowerExp + Primitive,
 {
@@ -1424,7 +1431,7 @@ where
     }
 }
 
-impl<T, C> Mul for Proxy<T, C>
+impl<T, C> Mul for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -1436,7 +1443,7 @@ where
     }
 }
 
-impl<T, C> Mul<T> for Proxy<T, C>
+impl<T, C> Mul<T> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -1448,7 +1455,7 @@ where
     }
 }
 
-impl<T, C, E> MulAssign for Proxy<T, C>
+impl<T, C, E> MulAssign for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
@@ -1459,7 +1466,7 @@ where
     }
 }
 
-impl<T, C, E> MulAssign<T> for Proxy<T, C>
+impl<T, C, E> MulAssign<T> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
@@ -1470,21 +1477,21 @@ where
     }
 }
 
-impl<T, C> NanEncoding for Proxy<T, C>
+impl<T, C> NanEncoding for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint + Member<NanSet>,
 {
     type Nan = Self;
 
-    const NAN: Self::Nan = Proxy::unchecked(T::NAN.into_inner());
+    const NAN: Self::Nan = Constrained::unchecked(T::NAN.into_inner());
 
     fn is_nan(self) -> bool {
         self.into_inner().is_nan()
     }
 }
 
-impl<T, C> Neg for Proxy<T, C>
+impl<T, C> Neg for Constrained<T, C>
 where
     T: Primitive,
 {
@@ -1492,11 +1499,11 @@ where
 
     fn neg(self) -> Self::Output {
         // There is no constraint for which negating a value produces an invalid value.
-        Proxy::unchecked(-self.into_inner())
+        Constrained::unchecked(-self.into_inner())
     }
 }
 
-impl<T, C, E> Num for Proxy<T, C>
+impl<T, C, E> Num for Constrained<T, C>
 where
     T: Num + Primitive,
     C: Constraint<Error = E>,
@@ -1508,11 +1515,11 @@ where
     fn from_str_radix(source: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
         T::from_str_radix(source, radix)
             .map_err(|_| ())
-            .and_then(|inner| Proxy::try_new(inner).map_err(|_| ()))
+            .and_then(|inner| Constrained::try_new(inner).map_err(|_| ()))
     }
 }
 
-impl<T, C> NumCast for Proxy<T, C>
+impl<T, C> NumCast for Constrained<T, C>
 where
     T: NumCast + Primitive + ToPrimitive,
     C: Constraint,
@@ -1521,11 +1528,11 @@ where
     where
         U: ToPrimitive,
     {
-        T::from(value).and_then(|inner| Proxy::try_new(inner).ok())
+        T::from(value).and_then(|inner| Constrained::try_new(inner).ok())
     }
 }
 
-impl<T, C, E> One for Proxy<T, C>
+impl<T, C, E> One for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
@@ -1536,7 +1543,7 @@ where
     }
 }
 
-impl<T, C> Ord for Proxy<T, C>
+impl<T, C> Ord for Constrained<T, C>
 where
     T: Primitive,
 {
@@ -1545,7 +1552,7 @@ where
     }
 }
 
-impl<T, C> PartialEq for Proxy<T, C>
+impl<T, C> PartialEq for Constrained<T, C>
 where
     T: Primitive,
 {
@@ -1554,7 +1561,7 @@ where
     }
 }
 
-impl<T, C> PartialEq<T> for Proxy<T, C>
+impl<T, C> PartialEq<T> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -1569,7 +1576,7 @@ where
     }
 }
 
-impl<T, C> PartialOrd for Proxy<T, C>
+impl<T, C> PartialOrd for Constrained<T, C>
 where
     T: Primitive,
 {
@@ -1578,7 +1585,7 @@ where
     }
 }
 
-impl<T, C> PartialOrd<T> for Proxy<T, C>
+impl<T, C> PartialOrd<T> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -1590,7 +1597,7 @@ where
     }
 }
 
-impl<T, C, E> Product for Proxy<T, C>
+impl<T, C, E> Product for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
@@ -1605,7 +1612,7 @@ where
 }
 
 #[cfg(feature = "approx")]
-impl<T, C> RelativeEq for Proxy<T, C>
+impl<T, C> RelativeEq for Constrained<T, C>
 where
     T: Primitive + RelativeEq<Epsilon = T>,
     C: Constraint,
@@ -1628,7 +1635,7 @@ where
     }
 }
 
-impl<T, C> Rem for Proxy<T, C>
+impl<T, C> Rem for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -1640,7 +1647,7 @@ where
     }
 }
 
-impl<T, C> Rem<T> for Proxy<T, C>
+impl<T, C> Rem<T> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -1652,7 +1659,7 @@ where
     }
 }
 
-impl<T, C, E> RemAssign for Proxy<T, C>
+impl<T, C, E> RemAssign for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
@@ -1663,7 +1670,7 @@ where
     }
 }
 
-impl<T, C, E> RemAssign<T> for Proxy<T, C>
+impl<T, C, E> RemAssign<T> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
@@ -1674,7 +1681,7 @@ where
     }
 }
 
-impl<T, C, E> Signed for Proxy<T, C>
+impl<T, C, E> Signed for Constrained<T, C>
 where
     T: Primitive + Signed,
     C: Constraint<Error = E>,
@@ -1701,7 +1708,7 @@ where
     }
 }
 
-impl<T, C> Sub for Proxy<T, C>
+impl<T, C> Sub for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -1713,7 +1720,7 @@ where
     }
 }
 
-impl<T, C> Sub<T> for Proxy<T, C>
+impl<T, C> Sub<T> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -1725,7 +1732,7 @@ where
     }
 }
 
-impl<T, C, E> SubAssign for Proxy<T, C>
+impl<T, C, E> SubAssign for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
@@ -1736,7 +1743,7 @@ where
     }
 }
 
-impl<T, C, E> SubAssign<T> for Proxy<T, C>
+impl<T, C, E> SubAssign<T> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
@@ -1747,7 +1754,7 @@ where
     }
 }
 
-impl<T, C, E> Sum for Proxy<T, C>
+impl<T, C, E> Sum for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
@@ -1761,7 +1768,7 @@ where
     }
 }
 
-impl<T, C> ToCanonical for Proxy<T, C>
+impl<T, C> ToCanonical for Constrained<T, C>
 where
     T: Primitive,
 {
@@ -1772,7 +1779,7 @@ where
     }
 }
 
-impl<T, C> ToPrimitive for Proxy<T, C>
+impl<T, C> ToPrimitive for Constrained<T, C>
 where
     T: Primitive + ToPrimitive,
 {
@@ -1826,7 +1833,7 @@ where
 }
 
 #[cfg(feature = "serde")]
-impl<T, C> TryFrom<Serde<T>> for Proxy<T, C>
+impl<T, C> TryFrom<Serde<T>> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
@@ -1839,7 +1846,7 @@ where
 }
 
 #[cfg(feature = "approx")]
-impl<T, C> UlpsEq for Proxy<T, C>
+impl<T, C> UlpsEq for Constrained<T, C>
 where
     T: Primitive + UlpsEq<Epsilon = T>,
     C: Constraint,
@@ -1854,29 +1861,29 @@ where
     }
 }
 
-impl<T, C> UnaryRealFunction for Proxy<T, C>
+impl<T, C> UnaryRealFunction for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
 {
-    const ZERO: Self = Proxy::unchecked(UnaryRealFunction::ZERO);
-    const ONE: Self = Proxy::unchecked(UnaryRealFunction::ONE);
-    const E: Self = Proxy::unchecked(UnaryRealFunction::E);
-    const PI: Self = Proxy::unchecked(UnaryRealFunction::PI);
-    const FRAC_1_PI: Self = Proxy::unchecked(UnaryRealFunction::FRAC_1_PI);
-    const FRAC_2_PI: Self = Proxy::unchecked(UnaryRealFunction::FRAC_2_PI);
-    const FRAC_2_SQRT_PI: Self = Proxy::unchecked(UnaryRealFunction::FRAC_2_SQRT_PI);
-    const FRAC_PI_2: Self = Proxy::unchecked(UnaryRealFunction::FRAC_PI_2);
-    const FRAC_PI_3: Self = Proxy::unchecked(UnaryRealFunction::FRAC_PI_3);
-    const FRAC_PI_4: Self = Proxy::unchecked(UnaryRealFunction::FRAC_PI_4);
-    const FRAC_PI_6: Self = Proxy::unchecked(UnaryRealFunction::FRAC_PI_6);
-    const FRAC_PI_8: Self = Proxy::unchecked(UnaryRealFunction::FRAC_PI_8);
-    const SQRT_2: Self = Proxy::unchecked(UnaryRealFunction::SQRT_2);
-    const FRAC_1_SQRT_2: Self = Proxy::unchecked(UnaryRealFunction::FRAC_1_SQRT_2);
-    const LN_2: Self = Proxy::unchecked(UnaryRealFunction::LN_2);
-    const LN_10: Self = Proxy::unchecked(UnaryRealFunction::LN_10);
-    const LOG2_E: Self = Proxy::unchecked(UnaryRealFunction::LOG2_E);
-    const LOG10_E: Self = Proxy::unchecked(UnaryRealFunction::LOG10_E);
+    const ZERO: Self = Constrained::unchecked(UnaryRealFunction::ZERO);
+    const ONE: Self = Constrained::unchecked(UnaryRealFunction::ONE);
+    const E: Self = Constrained::unchecked(UnaryRealFunction::E);
+    const PI: Self = Constrained::unchecked(UnaryRealFunction::PI);
+    const FRAC_1_PI: Self = Constrained::unchecked(UnaryRealFunction::FRAC_1_PI);
+    const FRAC_2_PI: Self = Constrained::unchecked(UnaryRealFunction::FRAC_2_PI);
+    const FRAC_2_SQRT_PI: Self = Constrained::unchecked(UnaryRealFunction::FRAC_2_SQRT_PI);
+    const FRAC_PI_2: Self = Constrained::unchecked(UnaryRealFunction::FRAC_PI_2);
+    const FRAC_PI_3: Self = Constrained::unchecked(UnaryRealFunction::FRAC_PI_3);
+    const FRAC_PI_4: Self = Constrained::unchecked(UnaryRealFunction::FRAC_PI_4);
+    const FRAC_PI_6: Self = Constrained::unchecked(UnaryRealFunction::FRAC_PI_6);
+    const FRAC_PI_8: Self = Constrained::unchecked(UnaryRealFunction::FRAC_PI_8);
+    const SQRT_2: Self = Constrained::unchecked(UnaryRealFunction::SQRT_2);
+    const FRAC_1_SQRT_2: Self = Constrained::unchecked(UnaryRealFunction::FRAC_1_SQRT_2);
+    const LN_2: Self = Constrained::unchecked(UnaryRealFunction::LN_2);
+    const LN_10: Self = Constrained::unchecked(UnaryRealFunction::LN_10);
+    const LOG2_E: Self = Constrained::unchecked(UnaryRealFunction::LOG2_E);
+    const LOG10_E: Self = Constrained::unchecked(UnaryRealFunction::LOG10_E);
 
     fn is_zero(self) -> bool {
         self.into_inner().is_zero()
@@ -2017,7 +2024,7 @@ where
     #[cfg(feature = "std")]
     fn sin_cos(self) -> (Self, Self) {
         let (sin, cos) = self.into_inner().sin_cos();
-        (Proxy::unchecked(sin), Proxy::unchecked(cos))
+        (Constrained::unchecked(sin), Constrained::unchecked(cos))
     }
 
     #[cfg(feature = "std")]
@@ -2060,7 +2067,7 @@ where
     }
 }
 
-impl<T, C> UpperExp for Proxy<T, C>
+impl<T, C> UpperExp for Constrained<T, C>
 where
     T: UpperExp,
 {
@@ -2069,7 +2076,7 @@ where
     }
 }
 
-impl<T, C, E> Zero for Proxy<T, C>
+impl<T, C, E> Zero for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
@@ -2096,13 +2103,13 @@ macro_rules! impl_binary_operation_for_proxy {
     (operation => $trait:ident :: $method:ident, |$left:ident, $right:ident| $f:block) => {
         macro_rules! impl_primitive_binary_operation_for_proxy {
             (primitive => $t:ty) => {
-                impl<C> $trait<Proxy<$t, C>> for $t
+                impl<C> $trait<Constrained<$t, C>> for $t
                 where
                     C: Constraint,
                 {
-                    type Output = OutputOf<Proxy<$t, C>>;
+                    type Output = OutputOf<Constrained<$t, C>>;
 
-                    fn $method(self, other: Proxy<$t, C>) -> Self::Output {
+                    fn $method(self, other: Constrained<$t, C>) -> Self::Output {
                         let $left = self;
                         let $right = other;
                         $f
@@ -2363,9 +2370,9 @@ macro_rules! impl_try_from_for_proxy {
 
             fn try_from(inner: &'a $t) -> Result<Self, Self::Error> {
                 ConstraintOf::<$p<$t, D>>::check(*inner).map(|_| {
-                    // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary
+                    // SAFETY: `Constrained<T>` is `repr(transparent)` and has the same binary
                     //         representation as its input type `T`. This means that it is safe to
-                    //         transmute `T` to `Proxy<T>`.
+                    //         transmute `T` to `Constrained<T>`.
                     unsafe { mem::transmute::<&'a $t, Self>(inner) }
                 })
             }
@@ -2379,9 +2386,9 @@ macro_rules! impl_try_from_for_proxy {
 
             fn try_from(inner: &'a mut $t) -> Result<Self, Self::Error> {
                 ConstraintOf::<$p<$t, D>>::check(*inner).map(move |_| {
-                    // SAFETY: `Proxy<T>` is `repr(transparent)` and has the same binary
+                    // SAFETY: `Constrained<T>` is `repr(transparent)` and has the same binary
                     //         representation as its input type `T`. This means that it is safe to
-                    //         transmute `T` to `Proxy<T>`.
+                    //         transmute `T` to `Constrained<T>`.
                     unsafe { mem::transmute::<&'a mut $t, Self>(inner) }
                 })
             }
@@ -2630,8 +2637,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn deserialize_panic_on_violation() {
-        // TODO: See `SerdeContainer`. This does not test a value that violates `N32`'s
-        //       constraints; instead, this simply fails to deserialize `f32` from `"null"`.
+        // TODO: See `Serde`. This does not test a value that violates `E32`'s constraints;
+        //       instead, this simply fails to deserialize `f32` from `"null"`.
         let _: E32 = serde_json::from_str("null").unwrap();
     }
 
@@ -2644,7 +2651,7 @@ mod tests {
             "1.0",
             serde_json::to_string(&E32::<OrPanic>::assert(1.0)).unwrap()
         );
-        // TODO: See `SerdeContainer`.
+        // TODO: See `Serde`.
         assert_eq!(
             "null",
             serde_json::to_string(&E32::<OrPanic>::INFINITY).unwrap()

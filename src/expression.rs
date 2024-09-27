@@ -9,7 +9,7 @@ use core::ops::{Add, Div, Mul, Neg, Rem, Sub};
 use crate::cmp::{self, IntrinsicOrd};
 use crate::constraint::Constraint;
 use crate::divergence::{AsExpression, Divergence, OrError};
-use crate::proxy::{ErrorOf, ExpressionOf, Proxy};
+use crate::proxy::{Constrained, ErrorOf, ExpressionOf};
 use crate::real::{BinaryRealFunction, Function, Sign, UnaryRealFunction};
 use crate::{with_binary_operations, with_primitives, InfinityEncoding, Primitive};
 
@@ -47,10 +47,10 @@ pub use try_expression;
 
 /// The result of an arithmetic expression that may or may not be defined.
 ///
-/// `Expression` is a fallible output of arithmetic expressions over [`Proxy`] types. It resembles
-/// [`Result`], but `Expression` crucially implements numeric traits and can be used in arithmetic
-/// expressions. This allows complex expressions to defer matching or trying for more fluent
-/// syntax.
+/// `Expression` is a fallible output of arithmetic expressions over [`Constrained`] types. It
+/// resembles [`Result`], but `Expression` crucially implements numeric traits and can be used in
+/// arithmetic expressions. This allows complex expressions to defer matching or trying for more
+/// fluent syntax.
 ///
 /// When the `unstable` Cargo feature is enabled with a nightly Rust toolchain, [`Expression`] also
 /// implements the unstable (at time of writing) [`Try`] trait and supports the try operator `?`.
@@ -63,11 +63,11 @@ pub use try_expression;
 /// ```rust
 /// use decorum::constraint::IsReal;
 /// use decorum::divergence::OrError;
-/// use decorum::proxy::{OutputOf, Proxy};
+/// use decorum::proxy::{Constrained, OutputOf};
 /// use decorum::real::UnaryRealFunction;
 /// use decorum::try_expression;
 ///
-/// pub type Real = Proxy<f64, IsReal<OrError>>;
+/// pub type Real = Constrained<f64, IsReal<OrError>>;
 /// pub type Expr = OutputOf<Real>;
 ///
 /// # fn fallible() -> Expr {
@@ -86,10 +86,10 @@ pub use try_expression;
 /// ```rust
 /// use decorum::constraint::IsReal;
 /// use decorum::divergence::{AsResult, OrError};
-/// use decorum::proxy::{OutputOf, Proxy};
+/// use decorum::proxy::{Constrained, OutputOf};
 /// use decorum::real::UnaryRealFunction;
 ///
-/// pub type Real = Proxy<f64, IsReal<OrError<AsResult>>>;
+/// pub type Real = Constrained<f64, IsReal<OrError<AsResult>>>;
 /// pub type RealResult = OutputOf<Real>;
 ///
 /// # fn fallible() -> RealResult {
@@ -113,10 +113,10 @@ pub use try_expression;
 /// ```rust,ignore
 /// use decorum::constraint::IsReal;
 /// use decorum::divergence::{AsExpression, OrError};
-/// use decorum::proxy::{OutputOf, Proxy};
+/// use decorum::proxy::{OutputOf, Constrained};
 /// use decorum::real::UnaryRealFunction;
 ///
-/// pub type Real = Proxy<f64, IsReal<OrError<AsExpression>>>;
+/// pub type Real = Constrained<f64, IsReal<OrError<AsExpression>>>;
 /// pub type Expr = OutputOf<Real>;
 ///
 /// # fn fallible() -> Expr {
@@ -135,7 +135,7 @@ pub use try_expression;
 /// # }
 /// ```
 ///
-/// [`Proxy`]: crate::proxy::Proxy
+/// [`Constrained`]: crate::proxy::Constrained
 /// [`Result`]: core::result::Result
 /// [`Try`]: core::ops::Try
 #[derive(Clone, Copy, Debug)]
@@ -246,9 +246,9 @@ impl<'a, T, E> Expression<&'a mut T, E> {
     }
 }
 
-impl<T, C> BinaryRealFunction for ExpressionOf<Proxy<T, C>>
+impl<T, C> BinaryRealFunction for ExpressionOf<Constrained<T, C>>
 where
-    ErrorOf<Proxy<T, C>>: Clone + cmp::Undefined,
+    ErrorOf<Constrained<T, C>>: Clone + cmp::Undefined,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -284,9 +284,9 @@ where
     }
 }
 
-impl<T, C> BinaryRealFunction<T> for ExpressionOf<Proxy<T, C>>
+impl<T, C> BinaryRealFunction<T> for ExpressionOf<Constrained<T, C>>
 where
-    ErrorOf<Proxy<T, C>>: Clone + cmp::Undefined,
+    ErrorOf<Constrained<T, C>>: Clone + cmp::Undefined,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -295,7 +295,7 @@ where
     fn div_euclid(self, n: T) -> Self::Codomain {
         BinaryRealFunction::div_euclid(
             try_expression!(self),
-            try_expression!(Proxy::<T, C>::new(n)),
+            try_expression!(Constrained::<T, C>::new(n)),
         )
     }
 
@@ -303,7 +303,7 @@ where
     fn rem_euclid(self, n: T) -> Self::Codomain {
         BinaryRealFunction::rem_euclid(
             try_expression!(self),
-            try_expression!(Proxy::<T, C>::new(n)),
+            try_expression!(Constrained::<T, C>::new(n)),
         )
     }
 
@@ -311,7 +311,7 @@ where
     fn pow(self, n: T) -> Self::Codomain {
         BinaryRealFunction::pow(
             try_expression!(self),
-            try_expression!(Proxy::<T, C>::new(n)),
+            try_expression!(Constrained::<T, C>::new(n)),
         )
     }
 
@@ -319,7 +319,7 @@ where
     fn log(self, base: T) -> Self::Codomain {
         BinaryRealFunction::log(
             try_expression!(self),
-            try_expression!(Proxy::<T, C>::new(base)),
+            try_expression!(Constrained::<T, C>::new(base)),
         )
     }
 
@@ -327,7 +327,7 @@ where
     fn hypot(self, other: T) -> Self::Codomain {
         BinaryRealFunction::hypot(
             try_expression!(self),
-            try_expression!(Proxy::<T, C>::new(other)),
+            try_expression!(Constrained::<T, C>::new(other)),
         )
     }
 
@@ -335,125 +335,125 @@ where
     fn atan2(self, other: T) -> Self::Codomain {
         BinaryRealFunction::atan2(
             try_expression!(self),
-            try_expression!(Proxy::<T, C>::new(other)),
+            try_expression!(Constrained::<T, C>::new(other)),
         )
     }
 }
 
-impl<T, C> BinaryRealFunction<Proxy<T, C>> for ExpressionOf<Proxy<T, C>>
+impl<T, C> BinaryRealFunction<Constrained<T, C>> for ExpressionOf<Constrained<T, C>>
 where
-    ErrorOf<Proxy<T, C>>: Clone + cmp::Undefined,
+    ErrorOf<Constrained<T, C>>: Clone + cmp::Undefined,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
 {
     #[cfg(feature = "std")]
-    fn div_euclid(self, n: Proxy<T, C>) -> Self::Codomain {
+    fn div_euclid(self, n: Constrained<T, C>) -> Self::Codomain {
         BinaryRealFunction::div_euclid(try_expression!(self), n)
     }
 
     #[cfg(feature = "std")]
-    fn rem_euclid(self, n: Proxy<T, C>) -> Self::Codomain {
+    fn rem_euclid(self, n: Constrained<T, C>) -> Self::Codomain {
         BinaryRealFunction::rem_euclid(try_expression!(self), n)
     }
 
     #[cfg(feature = "std")]
-    fn pow(self, n: Proxy<T, C>) -> Self::Codomain {
+    fn pow(self, n: Constrained<T, C>) -> Self::Codomain {
         BinaryRealFunction::pow(try_expression!(self), n)
     }
 
     #[cfg(feature = "std")]
-    fn log(self, base: Proxy<T, C>) -> Self::Codomain {
+    fn log(self, base: Constrained<T, C>) -> Self::Codomain {
         BinaryRealFunction::log(try_expression!(self), base)
     }
 
     #[cfg(feature = "std")]
-    fn hypot(self, other: Proxy<T, C>) -> Self::Codomain {
+    fn hypot(self, other: Constrained<T, C>) -> Self::Codomain {
         BinaryRealFunction::hypot(try_expression!(self), other)
     }
 
     #[cfg(feature = "std")]
-    fn atan2(self, other: Proxy<T, C>) -> Self::Codomain {
+    fn atan2(self, other: Constrained<T, C>) -> Self::Codomain {
         BinaryRealFunction::atan2(try_expression!(self), other)
     }
 }
 
-impl<T, C> BinaryRealFunction<ExpressionOf<Proxy<T, C>>> for Proxy<T, C>
+impl<T, C> BinaryRealFunction<ExpressionOf<Constrained<T, C>>> for Constrained<T, C>
 where
-    ErrorOf<Proxy<T, C>>: Clone + cmp::Undefined,
+    ErrorOf<Constrained<T, C>>: Clone + cmp::Undefined,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
 {
     #[cfg(feature = "std")]
-    fn div_euclid(self, n: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
+    fn div_euclid(self, n: ExpressionOf<Constrained<T, C>>) -> Self::Codomain {
         BinaryRealFunction::div_euclid(self, try_expression!(n))
     }
 
     #[cfg(feature = "std")]
-    fn rem_euclid(self, n: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
+    fn rem_euclid(self, n: ExpressionOf<Constrained<T, C>>) -> Self::Codomain {
         BinaryRealFunction::rem_euclid(self, try_expression!(n))
     }
 
     #[cfg(feature = "std")]
-    fn pow(self, n: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
+    fn pow(self, n: ExpressionOf<Constrained<T, C>>) -> Self::Codomain {
         BinaryRealFunction::pow(self, try_expression!(n))
     }
 
     #[cfg(feature = "std")]
-    fn log(self, base: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
+    fn log(self, base: ExpressionOf<Constrained<T, C>>) -> Self::Codomain {
         BinaryRealFunction::log(self, try_expression!(base))
     }
 
     #[cfg(feature = "std")]
-    fn hypot(self, other: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
+    fn hypot(self, other: ExpressionOf<Constrained<T, C>>) -> Self::Codomain {
         BinaryRealFunction::hypot(self, try_expression!(other))
     }
 
     #[cfg(feature = "std")]
-    fn atan2(self, other: ExpressionOf<Proxy<T, C>>) -> Self::Codomain {
+    fn atan2(self, other: ExpressionOf<Constrained<T, C>>) -> Self::Codomain {
         BinaryRealFunction::atan2(self, try_expression!(other))
     }
 }
 
-impl<T, C> From<T> for Expression<Proxy<T, C>, ErrorOf<Proxy<T, C>>>
+impl<T, C> From<T> for Expression<Constrained<T, C>, ErrorOf<Constrained<T, C>>>
 where
     T: Primitive,
     C: Constraint,
 {
     fn from(inner: T) -> Self {
-        Proxy::try_new(inner).into()
+        Constrained::try_new(inner).into()
     }
 }
 
-impl<'a, T, C> From<&'a T> for ExpressionOf<Proxy<T, C>>
+impl<'a, T, C> From<&'a T> for ExpressionOf<Constrained<T, C>>
 where
-    Proxy<T, C>: TryFrom<&'a T, Error = C::Error>,
+    Constrained<T, C>: TryFrom<&'a T, Error = C::Error>,
     T: Primitive,
     C: Constraint<Divergence = OrError<AsExpression>>,
 {
     fn from(inner: &'a T) -> Self {
-        Proxy::<T, C>::try_from(inner).into()
+        Constrained::<T, C>::try_from(inner).into()
     }
 }
 
-impl<'a, T, C> From<&'a mut T> for ExpressionOf<Proxy<T, C>>
+impl<'a, T, C> From<&'a mut T> for ExpressionOf<Constrained<T, C>>
 where
-    Proxy<T, C>: TryFrom<&'a mut T, Error = C::Error>,
+    Constrained<T, C>: TryFrom<&'a mut T, Error = C::Error>,
     T: Primitive,
     C: Constraint<Divergence = OrError<AsExpression>>,
 {
     fn from(inner: &'a mut T) -> Self {
-        Proxy::<T, C>::try_from(inner).into()
+        Constrained::<T, C>::try_from(inner).into()
     }
 }
 
-impl<T, C> From<Proxy<T, C>> for Expression<Proxy<T, C>, ErrorOf<Proxy<T, C>>>
+impl<T, C> From<Constrained<T, C>> for Expression<Constrained<T, C>, ErrorOf<Constrained<T, C>>>
 where
     T: Primitive,
     C: Constraint,
 {
-    fn from(proxy: Proxy<T, C>) -> Self {
+    fn from(proxy: Constrained<T, C>) -> Self {
         Defined(proxy)
     }
 }
@@ -491,9 +491,9 @@ impl<T, E> FromResidual for Expression<T, E> {
     }
 }
 
-impl<T, C> Function for ExpressionOf<Proxy<T, C>>
+impl<T, C> Function for ExpressionOf<Constrained<T, C>>
 where
-    ErrorOf<Proxy<T, C>>: cmp::Undefined,
+    ErrorOf<Constrained<T, C>>: cmp::Undefined,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -501,10 +501,10 @@ where
     type Codomain = Self;
 }
 
-impl<T, C> InfinityEncoding for ExpressionOf<Proxy<T, C>>
+impl<T, C> InfinityEncoding for ExpressionOf<Constrained<T, C>>
 where
-    ErrorOf<Proxy<T, C>>: Copy,
-    Proxy<T, C>: InfinityEncoding,
+    ErrorOf<Constrained<T, C>>: Copy,
+    Constrained<T, C>: InfinityEncoding,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -549,7 +549,7 @@ where
     }
 }
 
-impl<T, C> Neg for ExpressionOf<Proxy<T, C>>
+impl<T, C> Neg for ExpressionOf<Constrained<T, C>>
 where
     T: Primitive,
     C: Constraint,
@@ -603,9 +603,9 @@ impl<T, E> ops::Try for Expression<T, E> {
     }
 }
 
-impl<T, C> UnaryRealFunction for ExpressionOf<Proxy<T, C>>
+impl<T, C> UnaryRealFunction for ExpressionOf<Constrained<T, C>>
 where
-    ErrorOf<Proxy<T, C>>: Clone + cmp::Undefined,
+    ErrorOf<Constrained<T, C>>: Clone + cmp::Undefined,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -832,15 +832,15 @@ macro_rules! impl_binary_operation_for_expression {
                 with_primitives!(impl_primitive_binary_operation_for_expression);
             };
             (primitive => $t:ty) => {
-                impl<C> $trait<ExpressionOf<Proxy<$t, C>>> for $t
+                impl<C> $trait<ExpressionOf<Constrained<$t, C>>> for $t
                 where
                     C: Constraint,
                     C::Divergence: Divergence<Continue = AsExpression>,
                 {
-                    type Output = ExpressionOf<Proxy<$t, C>>;
+                    type Output = ExpressionOf<Constrained<$t, C>>;
 
-                    fn $method(self, other: ExpressionOf<Proxy<$t, C>>) -> Self::Output {
-                        let $left = try_expression!(Proxy::<_, C>::new(self));
+                    fn $method(self, other: ExpressionOf<Constrained<$t, C>>) -> Self::Output {
+                        let $left = try_expression!(Constrained::<_, C>::new(self));
                         let $right = try_expression!(other);
                         $f
                     }
@@ -849,7 +849,7 @@ macro_rules! impl_binary_operation_for_expression {
         }
         impl_primitive_binary_operation_for_expression!();
 
-        impl<T, C> $trait<ExpressionOf<Self>> for Proxy<T, C>
+        impl<T, C> $trait<ExpressionOf<Self>> for Constrained<T, C>
         where
             T: Primitive,
             C: Constraint,
@@ -864,7 +864,7 @@ macro_rules! impl_binary_operation_for_expression {
             }
         }
 
-        impl<T, C> $trait<Proxy<T, C>> for ExpressionOf<Proxy<T, C>>
+        impl<T, C> $trait<Constrained<T, C>> for ExpressionOf<Constrained<T, C>>
         where
             T: Primitive,
             C: Constraint,
@@ -872,14 +872,14 @@ macro_rules! impl_binary_operation_for_expression {
         {
             type Output = Self;
 
-            fn $method(self, other: Proxy<T, C>) -> Self::Output {
+            fn $method(self, other: Constrained<T, C>) -> Self::Output {
                 let $left = try_expression!(self);
                 let $right = other;
                 $f
             }
         }
 
-        impl<T, C> $trait<ExpressionOf<Proxy<T, C>>> for ExpressionOf<Proxy<T, C>>
+        impl<T, C> $trait<ExpressionOf<Constrained<T, C>>> for ExpressionOf<Constrained<T, C>>
         where
             T: Primitive,
             C: Constraint,
@@ -894,7 +894,7 @@ macro_rules! impl_binary_operation_for_expression {
             }
         }
 
-        impl<T, C> $trait<T> for ExpressionOf<Proxy<T, C>>
+        impl<T, C> $trait<T> for ExpressionOf<Constrained<T, C>>
         where
             T: Primitive,
             C: Constraint,
@@ -904,7 +904,7 @@ macro_rules! impl_binary_operation_for_expression {
 
             fn $method(self, other: T) -> Self::Output {
                 let $left = try_expression!(self);
-                let $right = try_expression!(Proxy::<_, C>::new(other));
+                let $right = try_expression!(Constrained::<_, C>::new(other));
                 $f
             }
         }
@@ -917,14 +917,14 @@ macro_rules! impl_try_from_for_expression {
         with_primitives!(impl_try_from_for_expression);
     };
     (primitive => $t:ty) => {
-        impl<C> TryFrom<Expression<Proxy<$t, C>, C::Error>> for Proxy<$t, C>
+        impl<C> TryFrom<Expression<Constrained<$t, C>, C::Error>> for Constrained<$t, C>
         where
             C: Constraint,
         {
             type Error = C::Error;
 
             fn try_from(
-                expression: Expression<Proxy<$t, C>, C::Error>,
+                expression: Expression<Constrained<$t, C>, C::Error>,
             ) -> Result<Self, Self::Error> {
                 match expression {
                     Defined(defined) => Ok(defined),
@@ -933,14 +933,14 @@ macro_rules! impl_try_from_for_expression {
             }
         }
 
-        impl<C> TryFrom<Expression<Proxy<$t, C>, C::Error>> for $t
+        impl<C> TryFrom<Expression<Constrained<$t, C>, C::Error>> for $t
         where
             C: Constraint,
         {
             type Error = C::Error;
 
             fn try_from(
-                expression: Expression<Proxy<$t, C>, C::Error>,
+                expression: Expression<Constrained<$t, C>, C::Error>,
             ) -> Result<Self, Self::Error> {
                 match expression {
                     Defined(defined) => Ok(defined.into()),

@@ -41,11 +41,11 @@ Configure the behavior of an IEEE 754 floating-point representation:
 pub mod real {
     use decorum::constraint::IsReal;
     use decorum::divergence::{AsResult, OrError};
-    use decorum::proxy::{OutputOf, Proxy};
+    use decorum::proxy::{Constrained, OutputOf};
 
     // A 64-bit floating point type that must represent a real number and returns
     // `Result`s from fallible operations.
-    pub type Real = Proxy<f64, IsReal<OrError<AsResult>>>;
+    pub type Real = Constrained<f64, IsReal<OrError<AsResult>>>;
     pub type Result = OutputOf<Real>;
 }
 
@@ -60,14 +60,15 @@ let z = (x / y)?;
 
 ## Proxy Types
 
-The primary API of Decorum is its `Proxy` types, which transparently wrap
-primitive IEEE 754 floating-point types and configure their behavior. `Proxy`
+The primary API of Decorum is its `Constrained` types, which transparently wrap
+primitive IEEE 754 floating-point types and configure their behavior.
+`Constrained`
 types support many numeric features and operations and integrate with the
 [`num-traits`] crate and others when [Cargo features](#cargo-features) are
 enabled. Depending on its configuration, a proxy can be used as a drop-in
 replacement for primitive floating-point types.
 
-The following `Proxy` behaviors can be configured:
+The following `Constrained` behaviors can be configured:
 
 1. the allowed subset of IEEE 754 floating-point values
 1. the output type of fallibe operations (that may produce non-member values
@@ -75,18 +76,18 @@ The following `Proxy` behaviors can be configured:
 1. what happens when an error occurs (i.e., return an error value or panic)
 
 Note that the output type of fallible operations and the error behavior are
-independent. A `Proxy` type may return a `Result` and yet panic if an error
+independent. A `Constrained` type may return a `Result` and yet panic if an error
 occurs, which can be useful for conditional compilation and builds wherein
-**behavior** changes but types do not. The behavior of a `Proxy` type is
+**behavior** changes but types do not. The behavior of a `Constrained` type is
 configured using two mechanisms: _constraints_ and _divergence_.
 
 ```rust
 use decorum::constraint::IsReal;
 use decorum::divergence::OrPanic;
-use decorum::proxy::Proxy;
+use decorum::proxy::Constrained;
 
 // `Real` must represent a real number and otherwise panics.
-pub type Real = Proxy<f64, IsReal<OrPanic>>;
+pub type Real = Constrained<f64, IsReal<OrPanic>>;
 ```
 
 Constraints specify a subset of floating-point values that a proxy may
@@ -136,7 +137,7 @@ operations is determined by an _output kind_:
 | `AsResult`     | `Result<Self, E>`     | `Ok(self)`      | `Err(error)`       |
 | `AsExpression` | `Expression<Self, E>` | `Defined(self)` | `Undefined(error)` |
 
-In the table above, `Self` refers to a `Proxy` type and `E` refers to the
+In the table above, `Self` refers to a `Constrained` type and `E` refers to the
 associated error type of its constraint. Note that only the `OrPanic` divergence
 supports `AsSelf` and can output the same type as its input type for fallible
 operations (just like primitive IEEE 754 floating-point types).
@@ -150,11 +151,11 @@ such that it can be used directly in expressions and defer error checking.
 ```rust
 use decorum::constraint::IsReal;
 use decorum::divergence::{AsExpression, OrError};
-use decorum::proxy::{OutputOf, Proxy};
+use decorum::proxy::{Constrained, OutputOf};
 use decorum::real::UnaryRealFunction;
 use decorum::try_expression;
 
-pub type Real = Proxy<f64, IsReal<OrError<AsExpression>>>;
+pub type Real = Constrained<f64, IsReal<OrError<AsExpression>>>;
 pub type Expr = OutputOf<Real>;
 
 pub fn f(x: Real, y: Real) -> Expr {
@@ -179,14 +180,14 @@ writing) unstable `Try` trait and try operator `?`.
 let x: Real = f(Real::E, -Real::ONE)?;
 ```
 
-`Proxy` types support numerous constructions and conversions depending on
+`Constrained` types support numerous constructions and conversions depending on
 configuration, including conversions for references, slices, subsets, supersets,
 and more. Conversions are provided via inherent functions and implementations of
 the standard `From` and `TryFrom` traits. The following inherent functions are
-supported by all `Proxy` types, though some more bespoke constructions are
+supported by all `Constrained` types, though some more bespoke constructions are
 available for specific configurations.
 
-| Proxy Method           | Input     | Output    | Error         |
+| Method                 | Input     | Output    | Error         |
 |------------------------|-----------|-----------|---------------|
 | `new`                  | primitive | proxy     | break         |
 | `assert`               | primitive | proxy     | **panic**     |
@@ -221,7 +222,8 @@ IEEE 754 floating-point encoding has multiple representations of zero (`-0` and
 ordering](https://en.wikipedia.org/wiki/NaN#Comparison_with_NaN).
 
 Some proxy types disallow unordered `NaN` values and therefore support a total
-ordering based on the ordered subset of non-`NaN` floating-point values. Proxy
+ordering based on the ordered subset of non-`NaN` floating-point values.
+`Constrained`
 types that use `IsFloat` (such as the `Total` type definition) support `NaN` but
 use the total ordering described above to implement the standard `Eq`, `Hash`,
 and `Ord` traits.
@@ -307,8 +309,8 @@ Decorum supports the following feature flags.
 
 | Feature    | Default | Description                                                  |
 |------------|---------|--------------------------------------------------------------|
-| `approx`   | yes     | Implements traits from [`approx`] for `Proxy` types.         |
-| `serde`    | yes     | Implements traits from [`serde`] for `Proxy` types.          |
+| `approx`   | yes     | Implements traits from [`approx`] for `Constrained` types.   |
+| `serde`    | yes     | Implements traits from [`serde`] for `Constrained` types.    |
 | `std`      | yes     | Integrates the `std` library and enables dependent features. |
 | `unstable` | no      | Enables features that require an unstable compiler.          |
 
