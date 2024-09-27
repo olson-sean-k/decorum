@@ -48,6 +48,10 @@ pub(crate) mod sealed {
     use crate::proxy::Proxy;
     use crate::Primitive;
 
+    /// Defines a notion of undefined for [`Constraint`] types.
+    ///
+    /// This trait is a corollary to [`IntrinsicOrd`] and is used to implement that trait for
+    /// [`Proxy`] types more generally than is otherwise possible.
     pub trait FromUndefined: Sized {
         type Undefined<T>;
 

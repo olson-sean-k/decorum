@@ -1,4 +1,4 @@
-//! Ordering and comparisons of IEEE 754 floating-point and other partially ordered values.
+//! Ordering and comparisons of IEEE 754 floating-point and other partially ordered types.
 //!
 //! This module provides traits and functions for total ordering of floating-point values and
 //! handling partial ordering via intrinsic types. For primitive floating-point types, the
@@ -258,7 +258,7 @@ where
 
     fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined> {
         match (self.as_ref(), other.as_ref()) {
-            (Ok(ref a), Ok(ref b)) => a.intrinsic_cmp(b).map_err(|_| Undefined::undefined()),
+            (Ok(a), Ok(b)) => a.intrinsic_cmp(b).map_err(|_| Undefined::undefined()),
             _ => Err(Undefined::undefined()),
         }
     }

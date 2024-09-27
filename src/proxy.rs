@@ -232,7 +232,7 @@ where
 
         impl<'a, T, C> Clone for Formatted<'a, T, C> {
             fn clone(&self) -> Self {
-                Formatted(self.0)
+                *self
             }
         }
 
@@ -2536,10 +2536,10 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::cmp_nan)]
     #[allow(clippy::eq_op)]
     #[allow(clippy::float_cmp)]
     #[allow(clippy::zero_divided_by_zero)]
+    #[allow(invalid_nan_comparisons)]
     fn cmp_proxy_primitive() {
         // Compare a canonicalized `NaN` with a primitive `NaN` with a different representation.
         let x: Total<f32> = (0.0 / 0.0).into();
