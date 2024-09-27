@@ -52,7 +52,7 @@ use num_traits::{
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 
-use crate::cmp::{CanonicalEq, CanonicalOrd};
+use crate::cmp::{CanonicalEq, CanonicalOrd, IntrinsicOrd, Undefined};
 use crate::constraint::{
     Constraint, ExpectConstrained, InfinitySet, IsExtendedReal, IsFloat, IsReal, Member, NanSet,
     SubsetOf, SupersetOf,
@@ -232,7 +232,7 @@ where
 
         impl<'a, T, C> Clone for Formatted<'a, T, C> {
             fn clone(&self) -> Self {
-                Formatted(self.0)
+                *self
             }
         }
 
@@ -1390,6 +1390,31 @@ where
     }
 }
 
+impl<T, C> IntrinsicOrd for Proxy<T, C>
+where
+    T: Primitive,
+    C: Constraint,
+{
+    type Undefined = C::Undefined<T>;
+
+    #[inline(always)]
+    fn from_undefined(undefined: Self::Undefined) -> Self {
+        C::from_undefined(undefined)
+    }
+
+    #[inline(always)]
+    fn is_undefined(&self) -> bool {
+        C::is_undefined(self.as_ref())
+    }
+
+    fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined> {
+        match self.as_ref().intrinsic_cmp(other.as_ref()) {
+            Ok(ordering) => Ok(ordering),
+            Err(_) => Err(C::undefined()),
+        }
+    }
+}
+
 impl<T, C> LowerExp for Proxy<T, C>
 where
     T: LowerExp + Primitive,
@@ -2026,6 +2051,15 @@ where
     }
 }
 
+impl<T> Undefined for Total<T>
+where
+    T: Primitive,
+{
+    fn undefined() -> Self {
+        Total::NAN
+    }
+}
+
 impl<T, C> UpperExp for Proxy<T, C>
 where
     T: UpperExp,
@@ -2502,10 +2536,10 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::cmp_nan)]
     #[allow(clippy::eq_op)]
     #[allow(clippy::float_cmp)]
     #[allow(clippy::zero_divided_by_zero)]
+    #[allow(invalid_nan_comparisons)]
     fn cmp_proxy_primitive() {
         // Compare a canonicalized `NaN` with a primitive `NaN` with a different representation.
         let x: Total<f32> = (0.0 / 0.0).into();

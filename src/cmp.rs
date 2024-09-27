@@ -1,4 +1,4 @@
-//! Ordering and comparisons of IEEE 754 floating-point and other partially ordered values.
+//! Ordering and comparisons of IEEE 754 floating-point and other partially ordered types.
 //!
 //! This module provides traits and functions for total ordering of floating-point values and
 //! handling partial ordering via intrinsic types. For primitive floating-point types, the
@@ -60,11 +60,9 @@
 //! [`Total`]: crate::Total
 
 use core::cmp::Ordering;
+use core::convert::Infallible;
 
-use crate::constraint::Constraint;
-use crate::expression::{Defined, Expression, Undefined};
-use crate::proxy::Proxy;
-use crate::{with_primitives, NanEncoding, Primitive, ToCanonical};
+use crate::{with_primitives, Primitive, ToCanonical};
 
 /// Total equivalence relation of IEEE 754 floating-point encoded types.
 ///
@@ -187,155 +185,57 @@ where
     }
 }
 
-pub trait UndefinedError {
+pub trait Undefined {
     fn undefined() -> Self;
 }
 
-/// Pairwise ordering of types with intrinsic representations for undefined comparisons (or total
-/// ordering).
-///
-/// `IntrinsicOrd` compares two values of the same type to produce a pairwise minimum and maximum.
-/// This contrasts [`PartialOrd`], which expresses comparisons via the extrinsic type
-/// [`Option<Ordering>`].
-///
-/// Some types have intrinsic representations for _undefined_, such as the `None` variant of
-/// [`Option`] and `NaN`s for floating-point primitives. For these types, **regardless of having
-/// only a partial ordering or a total ordering**, comparisons wherein any of the input values are
-/// undefined also yield a value that represents undefined. For types with total ordering and no
-/// representation for undefined, such as integer primitives, comparisons have no error conditions
-/// and always yield a valid ordering.
-///
-/// This trait can be used in generic APIs to peform comparisons while ergonomically propogating
-/// `NaN`s or other undefined values when a comparison cannot be performed. For floating-point
-/// primitives, this mirrors the behavior of mathematical operations like addition, multiplication,
-/// etc. with respect to `NaN`s.
-///
-/// See the [`min_or_undefined`] and [`max_or_undefined`] functions.
-///
-/// [`max_or_undefined`]: crate::cmp::max_or_undefined
-/// [`min_or_undefined`]: crate::cmp::min_or_undefined
-/// [`Option`]: core::option::Option
-/// [`Option<Ordering>`]: core::cmp::Ordering
-/// [`PartialOrd`]: core::cmp::PartialOrd
-pub trait IntrinsicOrd: PartialOrd + Sized {
-    /// Returns `true` if a value encodes _undefined_, otherwise `false`.
-    ///
-    /// Prefer this predicate over direct comparisons. For floating-point representations, `NaN` is
-    /// considered undefined, but direct comparisons with `NaN` values should be avoided.
-    fn is_undefined(&self) -> bool;
-
-    /// Compares two values and returns their pairwise minimum and maximum.
-    ///
-    /// This function returns a representation of _undefined_ for both the minimum and maximum if
-    /// either of the inputs are undefined or the inputs cannot be compared, **even if undefined
-    /// values are ordered and the type has a total ordering**. Undefined values are always
-    /// propagated.
-    ///
-    /// Some types have multiple representations of _undefined_. The representation returned by
-    /// this function for undefined comparisons is arbitrary.
-    ///
-    /// # Examples
-    ///
-    /// Propagating `NaN` values when comparing proxy types with a total ordering:
-    ///
-    /// ```rust
-    /// use decorum::cmp::{self, IntrinsicOrd};
-    /// use decorum::{NanEncoding, Total};
-    ///
-    /// let x: Total<f64> = 0.0.into();
-    /// let y: Total<f64> = (0.0 / 0.0).into(); // `NaN`.
-    ///
-    /// // `Total` provides a total ordering in which zero is less than `NaN`, but `NaN` is considered
-    /// // undefined and is the result of the intrinsic comparison.
-    /// assert!(y.is_undefined());
-    /// assert!(cmp::min_or_undefined(x, y).is_undefined());
-    /// ```
-    fn min_max_or_undefined(&self, other: &Self) -> (Self, Self);
-
-    fn min_or_undefined(&self, other: &Self) -> Self {
-        self.min_max_or_undefined(other).0
-    }
-
-    fn max_or_undefined(&self, other: &Self) -> Self {
-        self.min_max_or_undefined(other).1
+impl<T> Undefined for Option<T> {
+    #[inline(always)]
+    fn undefined() -> Self {
+        None
     }
 }
 
-impl<T, E> IntrinsicOrd for Expression<T, E>
+impl<T, E> Undefined for Result<T, E>
 where
-    T: IntrinsicOrd,
-    E: UndefinedError,
+    E: Undefined,
 {
-    fn is_undefined(&self) -> bool {
-        Expression::is_undefined(self)
+    #[inline(always)]
+    fn undefined() -> Self {
+        Err(E::undefined())
     }
+}
 
-    fn min_max_or_undefined(&self, other: &Self) -> (Self, Self) {
-        let undefined = || (Undefined(E::undefined()), Undefined(E::undefined()));
-        match (self, other) {
-            (Defined(ref a), Defined(ref b)) => {
-                let (min, max) = a.min_max_or_undefined(b);
-                if min.is_undefined() {
-                    undefined()
-                }
-                else {
-                    (Defined(min), Defined(max))
-                }
-            }
-            _ => undefined(),
-        }
-    }
+pub trait IntrinsicOrd: PartialOrd {
+    type Undefined;
+
+    fn from_undefined(undefined: Self::Undefined) -> Self;
+
+    fn is_undefined(&self) -> bool;
+
+    fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined>;
 }
 
 impl<T> IntrinsicOrd for Option<T>
 where
     T: IntrinsicOrd,
 {
+    type Undefined = Self;
+
+    #[inline(always)]
+    fn from_undefined(undefined: <Self as IntrinsicOrd>::Undefined) -> Self {
+        undefined
+    }
+
     fn is_undefined(&self) -> bool {
         self.is_none()
     }
 
-    fn min_max_or_undefined(&self, other: &Self) -> (Self, Self) {
-        let undefined = (None, None);
-        match (self, other) {
-            (Some(ref a), Some(ref b)) => {
-                let (min, max) = a.min_max_or_undefined(b);
-                if min.is_undefined() {
-                    undefined
-                }
-                else {
-                    (Some(min), Some(max))
-                }
-            }
-            _ => undefined,
-        }
-    }
-}
-
-impl<T, C> IntrinsicOrd for Proxy<T, C>
-where
-    T: IntrinsicOrd + Primitive,
-    C: Constraint,
-{
-    fn is_undefined(&self) -> bool {
-        self.into_inner().is_nan()
-    }
-
-    fn min_max_or_undefined(&self, other: &Self) -> (Self, Self) {
-        let a = self.into_inner();
-        let b = other.into_inner();
-        let (min, max) = a.min_max_or_undefined(&b);
-        // Both `min` and `max` are `NaN` if `a` and `b` are incomparable.
-        if min.is_nan() {
-            // This relies on the correctness of the implementation of `IntrinsicOrd` for `T`. For
-            // constrained (and nonresidual) types like `ExtendedReal` and `Real`, `a` and `b` must
-            // not be undefined (`NaN`) and so `min` and `max` also must not be undefined.
-            let nan = Proxy::<_, C>::unchecked(T::NAN.into_inner());
-            (nan, nan)
-        }
-        else {
-            (Proxy::<_, C>::unchecked(min), Proxy::<_, C>::unchecked(max))
-        }
+    fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined> {
+        self.as_ref().zip(other.as_ref()).map_or_else(
+            || Err(Undefined::undefined()),
+            |(a, b)| a.intrinsic_cmp(b).map_err(|_| Undefined::undefined()),
+        )
     }
 }
 
@@ -343,28 +243,52 @@ impl<T, E> IntrinsicOrd for Result<T, E>
 where
     Self: PartialOrd,
     T: IntrinsicOrd,
-    E: UndefinedError,
+    E: Undefined,
 {
+    type Undefined = Self;
+
+    #[inline(always)]
+    fn from_undefined(undefined: Self::Undefined) -> Self {
+        undefined
+    }
+
     fn is_undefined(&self) -> bool {
         self.is_err()
     }
 
-    fn min_max_or_undefined(&self, other: &Self) -> (Self, Self) {
-        let undefined = || (Err(E::undefined()), Err(E::undefined()));
-        match (self, other) {
-            (Ok(ref a), Ok(ref b)) => {
-                let (min, max) = a.min_max_or_undefined(b);
-                if min.is_undefined() {
-                    undefined()
-                }
-                else {
-                    (Ok(min), Ok(max))
-                }
-            }
-            _ => undefined(),
+    fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined> {
+        match (self.as_ref(), other.as_ref()) {
+            (Ok(a), Ok(b)) => a.intrinsic_cmp(b).map_err(|_| Undefined::undefined()),
+            _ => Err(Undefined::undefined()),
         }
     }
 }
+
+macro_rules! impl_intrinsic_ord_for_float_primitive {
+    () => {
+        with_primitives!(impl_intrinsic_ord_for_float_primitive);
+    };
+    (primitive => $t:ty) => {
+        impl IntrinsicOrd for $t {
+            type Undefined = Self;
+
+            #[inline(always)]
+            fn from_undefined(undefined: Self::Undefined) -> Self {
+                undefined
+            }
+
+            fn is_undefined(&self) -> bool {
+                self.is_nan()
+            }
+
+            fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined> {
+                self.partial_cmp(other)
+                    .ok_or_else(|| Undefined::undefined())
+            }
+        }
+    };
+}
+impl_intrinsic_ord_for_float_primitive!();
 
 macro_rules! impl_intrinsic_ord_for_total_primitive {
     () => {
@@ -383,43 +307,39 @@ macro_rules! impl_intrinsic_ord_for_total_primitive {
     };
     (primitive => $t:ty) => {
         impl IntrinsicOrd for $t {
+            type Undefined = Infallible;
+
+            fn from_undefined(_: Self::Undefined) -> Self {
+                unreachable!()
+            }
+            #[inline(always)]
             fn is_undefined(&self) -> bool {
                 false
             }
 
-            fn min_max_or_undefined(&self, other: &Self) -> (Self, Self) {
-                let (min, max) = partial_min_max(self, other).unwrap();
-                (*min, *max)
+            #[inline(always)]
+            fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined> {
+                Ok(self.cmp(other))
             }
         }
     };
 }
 impl_intrinsic_ord_for_total_primitive!();
 
-macro_rules! impl_intrinsic_ord_for_float_primitive {
+macro_rules! impl_undefined_for_float_primitive {
     () => {
-        with_primitives!(impl_intrinsic_ord_for_float_primitive);
+        with_primitives!(impl_undefined_for_float_primitive);
     };
     (primitive => $t:ty) => {
-        impl IntrinsicOrd for $t {
-            fn is_undefined(&self) -> bool {
-                self.is_nan()
-            }
-
-            fn min_max_or_undefined(&self, other: &Self) -> (Self, Self) {
-                match partial_min_max(self, other) {
-                    // `NaN`s cannot be compared, so `min` and `max` cannot be undefined here.
-                    Some((min, max)) => (*min, *max),
-                    _ => (
-                        <$t as NanEncoding>::NAN.into_inner(),
-                        <$t as NanEncoding>::NAN.into_inner(),
-                    ),
-                }
+        impl Undefined for $t {
+            #[inline(always)]
+            fn undefined() -> Self {
+                Self::NAN
             }
         }
     };
 }
-impl_intrinsic_ord_for_float_primitive!();
+impl_undefined_for_float_primitive!();
 
 /// Partial maximum of types with intrinsic representations for undefined.
 ///
@@ -430,7 +350,11 @@ pub fn max_or_undefined<T>(a: T, b: T) -> T
 where
     T: IntrinsicOrd,
 {
-    a.max_or_undefined(&b)
+    match a.intrinsic_cmp(&b) {
+        Ok(Ordering::Less | Ordering::Equal) => b,
+        Ok(Ordering::Greater) => a,
+        Err(undefined) => T::from_undefined(undefined),
+    }
 }
 
 /// Partial minimum of types with intrinsic representations for undefined.
@@ -442,17 +366,25 @@ pub fn min_or_undefined<T>(a: T, b: T) -> T
 where
     T: IntrinsicOrd,
 {
-    a.min_or_undefined(&b)
+    match a.intrinsic_cmp(&b) {
+        Ok(Ordering::Less | Ordering::Equal) => a,
+        Ok(Ordering::Greater) => b,
+        Err(undefined) => T::from_undefined(undefined),
+    }
 }
 
-fn partial_min_max<'t, T>(a: &'t T, b: &'t T) -> Option<(&'t T, &'t T)>
+pub fn min_max_or_undefined<T>(a: T, b: T) -> (T, T)
 where
-    T: PartialOrd,
+    T: Copy + IntrinsicOrd,
 {
-    a.partial_cmp(b).map(|ordering| match ordering {
-        Ordering::Less | Ordering::Equal => (a, b),
-        _ => (b, a),
-    })
+    match a.intrinsic_cmp(&b) {
+        Ok(Ordering::Less | Ordering::Equal) => (a, b),
+        Ok(Ordering::Greater) => (b, a),
+        Err(undefined) => {
+            let undefined = T::from_undefined(undefined);
+            (undefined, undefined)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -502,12 +434,12 @@ mod tests {
         let zero = Total::zero();
         let one = Total::one();
 
-        assert_eq!((zero, one), zero.min_max_or_undefined(&one));
-        assert_eq!((zero, one), one.min_max_or_undefined(&zero));
+        assert_eq!((zero, one), cmp::min_max_or_undefined(zero, one));
+        assert_eq!((zero, one), cmp::min_max_or_undefined(one, zero));
 
-        assert_eq!((nan, nan), nan.min_max_or_undefined(&zero));
-        assert_eq!((nan, nan), zero.min_max_or_undefined(&nan));
-        assert_eq!((nan, nan), nan.min_max_or_undefined(&nan));
+        assert_eq!((nan, nan), cmp::min_max_or_undefined(nan, zero));
+        assert_eq!((nan, nan), cmp::min_max_or_undefined(zero, nan));
+        assert_eq!((nan, nan), cmp::min_max_or_undefined(nan, nan));
 
         assert_eq!(nan, cmp::min_or_undefined(nan, zero));
         assert_eq!(nan, cmp::max_or_undefined(nan, zero));

@@ -38,11 +38,37 @@ use core::marker::PhantomData;
 #[cfg(feature = "std")]
 use thiserror::Error;
 
-use crate::cmp::UndefinedError;
+use crate::cmp::Undefined;
 use crate::divergence::{Divergence, OrPanic, OutputOf};
-use crate::proxy::ClosedProxy;
+use crate::proxy::{ClosedProxy, Proxy};
 use crate::sealed::{Sealed, StaticDebug};
-use crate::Primitive;
+use crate::{NanEncoding, Primitive};
+
+pub(crate) mod sealed {
+    use crate::proxy::Proxy;
+    use crate::Primitive;
+
+    /// Defines a notion of undefined for [`Constraint`] types.
+    ///
+    /// This trait is a corollary to [`IntrinsicOrd`] and is used to implement that trait for
+    /// [`Proxy`] types more generally than is otherwise possible.
+    pub trait FromUndefined: Sized {
+        type Undefined<T>;
+
+        fn undefined<T>() -> Self::Undefined<T>
+        where
+            T: Primitive;
+
+        fn from_undefined<T>(undefined: Self::Undefined<T>) -> Proxy<T, Self>
+        where
+            T: Primitive;
+
+        fn is_undefined<T>(primitive: &T) -> bool
+        where
+            T: Primitive;
+    }
+}
+use sealed::FromUndefined;
 
 pub(crate) trait Description {
     const DESCRIPTION: &'static str;
@@ -99,7 +125,7 @@ impl Display for NotExtendedRealError {
     }
 }
 
-impl UndefinedError for NotExtendedRealError {
+impl Undefined for NotExtendedRealError {
     fn undefined() -> Self {
         NotExtendedRealError
     }
@@ -121,7 +147,7 @@ impl Display for NotRealError {
     }
 }
 
-impl UndefinedError for NotRealError {
+impl Undefined for NotRealError {
     fn undefined() -> Self {
         NotRealError
     }
@@ -166,7 +192,7 @@ where
 ///
 /// [`Member`]: crate::constraint::Member
 /// [`Proxy`]: crate::proxy::Proxy
-pub trait Constraint: Member<RealSet> + StaticDebug {
+pub trait Constraint: FromUndefined + Member<RealSet> + StaticDebug {
     type Divergence: Divergence;
     // TODO: Bound this on `core::Error` once it is stabilized.
     type Error: Debug + Display;
@@ -215,6 +241,34 @@ impl Constraint for IsFloat {
     }
 }
 
+impl FromUndefined for IsFloat {
+    type Undefined<T> = Proxy<T, Self>;
+
+    #[inline(always)]
+    fn undefined<T>() -> Self::Undefined<T>
+    where
+        T: Primitive,
+    {
+        Proxy::NAN
+    }
+
+    #[inline(always)]
+    fn from_undefined<T>(undefined: Self::Undefined<T>) -> Proxy<T, Self>
+    where
+        T: Primitive,
+    {
+        undefined
+    }
+
+    #[inline(always)]
+    fn is_undefined<T>(primitive: &T) -> bool
+    where
+        T: Primitive,
+    {
+        primitive.is_nan()
+    }
+}
+
 impl Member<InfinitySet> for IsFloat {}
 
 impl Member<NanSet> for IsFloat {}
@@ -258,6 +312,35 @@ where
     }
 }
 
+impl<D> FromUndefined for IsExtendedReal<D>
+where
+    D: Divergence,
+{
+    type Undefined<T> = Infallible;
+
+    fn undefined<T>() -> Self::Undefined<T>
+    where
+        T: Primitive,
+    {
+        unreachable!()
+    }
+
+    fn from_undefined<T>(_: Self::Undefined<T>) -> Proxy<T, Self>
+    where
+        T: Primitive,
+    {
+        unreachable!()
+    }
+
+    #[inline(always)]
+    fn is_undefined<T>(_: &T) -> bool
+    where
+        T: Primitive,
+    {
+        false
+    }
+}
+
 impl<D> Member<InfinitySet> for IsExtendedReal<D> {}
 
 impl<D> Member<RealSet> for IsExtendedReal<D> {}
@@ -297,6 +380,35 @@ where
         else {
             Ok(())
         }
+    }
+}
+
+impl<D> FromUndefined for IsReal<D>
+where
+    D: Divergence,
+{
+    type Undefined<T> = Infallible;
+
+    fn undefined<T>() -> Self::Undefined<T>
+    where
+        T: Primitive,
+    {
+        unreachable!()
+    }
+
+    fn from_undefined<T>(_: Self::Undefined<T>) -> Proxy<T, Self>
+    where
+        T: Primitive,
+    {
+        unreachable!()
+    }
+
+    #[inline(always)]
+    fn is_undefined<T>(_: &T) -> bool
+    where
+        T: Primitive,
+    {
+        false
     }
 }
 
