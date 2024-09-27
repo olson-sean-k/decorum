@@ -69,15 +69,13 @@ use crate::{
 };
 
 pub type OutputOf<P> = divergence::OutputOf<DivergenceOf<P>, P, ErrorOf<P>>;
-pub type ConstraintOf<P> = <P as ClosedProxy>::Constraint;
+pub type ConstraintOf<P> = <P as Proxy>::Constraint;
 pub type DivergenceOf<P> = <ConstraintOf<P> as Constraint>::Divergence;
 pub type ErrorOf<P> = <ConstraintOf<P> as Constraint>::Error;
 pub type ExpressionOf<P> = Expression<P, ErrorOf<P>>;
 
-/// A [`Constrained`] type that is closed over its primitive floating-point type and constraint.
-///
-/// [`Constrained`]: crate::proxy::Constrained
-pub trait ClosedProxy: Sized {
+/// An IEEE 754 floating-point proxy type.
+pub trait Proxy: Sized {
     type Primitive: Primitive;
     type Constraint: Constraint;
 }
@@ -733,7 +731,7 @@ where
     }
 }
 
-impl<T, C> ClosedProxy for Constrained<T, C>
+impl<T, C> Proxy for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
