@@ -6,7 +6,7 @@ use core::fmt::Debug;
 use core::ops::{self, ControlFlow, FromResidual};
 use core::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
-use crate::cmp::UndefinedError;
+use crate::cmp::{self, IntrinsicOrd};
 use crate::constraint::Constraint;
 use crate::divergence::{AsExpression, Divergence, OrError};
 use crate::proxy::{ErrorOf, ExpressionOf, Proxy};
@@ -248,7 +248,7 @@ impl<'a, T, E> Expression<&'a mut T, E> {
 
 impl<T, C> BinaryRealFunction for ExpressionOf<Proxy<T, C>>
 where
-    ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
+    ErrorOf<Proxy<T, C>>: Clone + cmp::Undefined,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -286,7 +286,7 @@ where
 
 impl<T, C> BinaryRealFunction<T> for ExpressionOf<Proxy<T, C>>
 where
-    ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
+    ErrorOf<Proxy<T, C>>: Clone + cmp::Undefined,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -342,7 +342,7 @@ where
 
 impl<T, C> BinaryRealFunction<Proxy<T, C>> for ExpressionOf<Proxy<T, C>>
 where
-    ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
+    ErrorOf<Proxy<T, C>>: Clone + cmp::Undefined,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -380,7 +380,7 @@ where
 
 impl<T, C> BinaryRealFunction<ExpressionOf<Proxy<T, C>>> for Proxy<T, C>
 where
-    ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
+    ErrorOf<Proxy<T, C>>: Clone + cmp::Undefined,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -493,7 +493,7 @@ impl<T, E> FromResidual for Expression<T, E> {
 
 impl<T, C> Function for ExpressionOf<Proxy<T, C>>
 where
-    ErrorOf<Proxy<T, C>>: UndefinedError,
+    ErrorOf<Proxy<T, C>>: cmp::Undefined,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -519,6 +519,33 @@ where
 
     fn is_finite(self) -> bool {
         self.defined().map_or(false, |defined| defined.is_finite())
+    }
+}
+
+impl<T, E> IntrinsicOrd for Expression<T, E>
+where
+    T: IntrinsicOrd,
+    E: cmp::Undefined,
+{
+    type Undefined = Self;
+
+    #[inline(always)]
+    fn from_undefined(undefined: <Self as IntrinsicOrd>::Undefined) -> Self {
+        undefined
+    }
+
+    fn is_undefined(&self) -> bool {
+        Expression::is_undefined(self)
+    }
+
+    fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, <Self as IntrinsicOrd>::Undefined> {
+        self.as_ref()
+            .defined()
+            .zip(other.as_ref().defined())
+            .map_or_else(
+                || Err(cmp::Undefined::undefined()),
+                |(a, b)| a.intrinsic_cmp(b).map_err(|_| cmp::Undefined::undefined()),
+            )
     }
 }
 
@@ -578,7 +605,7 @@ impl<T, E> ops::Try for Expression<T, E> {
 
 impl<T, C> UnaryRealFunction for ExpressionOf<Proxy<T, C>>
 where
-    ErrorOf<Proxy<T, C>>: Clone + UndefinedError,
+    ErrorOf<Proxy<T, C>>: Clone + cmp::Undefined,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -777,6 +804,16 @@ where
     #[cfg(feature = "std")]
     fn atanh(self) -> Self::Codomain {
         self.and_then(UnaryRealFunction::atanh)
+    }
+}
+
+impl<T, E> cmp::Undefined for Expression<T, E>
+where
+    E: cmp::Undefined,
+{
+    #[inline(always)]
+    fn undefined() -> Self {
+        Expression::Undefined(E::undefined())
     }
 }
 

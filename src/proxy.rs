@@ -52,7 +52,7 @@ use num_traits::{
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 
-use crate::cmp::{CanonicalEq, CanonicalOrd};
+use crate::cmp::{CanonicalEq, CanonicalOrd, IntrinsicOrd, Undefined};
 use crate::constraint::{
     Constraint, ExpectConstrained, InfinitySet, IsExtendedReal, IsFloat, IsReal, Member, NanSet,
     SubsetOf, SupersetOf,
@@ -1390,6 +1390,31 @@ where
     }
 }
 
+impl<T, C> IntrinsicOrd for Proxy<T, C>
+where
+    T: Primitive,
+    C: Constraint,
+{
+    type Undefined = C::Undefined<T>;
+
+    #[inline(always)]
+    fn from_undefined(undefined: Self::Undefined) -> Self {
+        C::from_undefined(undefined)
+    }
+
+    #[inline(always)]
+    fn is_undefined(&self) -> bool {
+        C::is_undefined(self.as_ref())
+    }
+
+    fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined> {
+        match self.as_ref().intrinsic_cmp(other.as_ref()) {
+            Ok(ordering) => Ok(ordering),
+            Err(_) => Err(C::undefined()),
+        }
+    }
+}
+
 impl<T, C> LowerExp for Proxy<T, C>
 where
     T: LowerExp + Primitive,
@@ -2023,6 +2048,15 @@ where
     #[cfg(feature = "std")]
     fn atanh(self) -> Self::Codomain {
         self.map(UnaryRealFunction::atanh)
+    }
+}
+
+impl<T> Undefined for Total<T>
+where
+    T: Primitive,
+{
+    fn undefined() -> Self {
+        Total::NAN
     }
 }
 

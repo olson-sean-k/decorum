@@ -402,7 +402,7 @@ pub trait Primitive:
     + Copy
     + Endofunction
     + InfinityEncoding
-    + IntrinsicOrd
+    + IntrinsicOrd<Undefined = Self>
     + NanEncoding<Nan = Nan<Self>>
     + PartialEq
     + PartialOrd
