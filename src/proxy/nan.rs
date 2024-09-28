@@ -1,3 +1,4 @@
+use crate::proxy::Proxy;
 use crate::Primitive;
 
 /// An incomparable primitive IEEE 754 floating-point `NaN`.
@@ -33,4 +34,11 @@ impl From<Nan<f64>> for f64 {
     fn from(nan: Nan<f64>) -> Self {
         nan.into_inner()
     }
+}
+
+impl<T> Proxy for Nan<T>
+where
+    T: Primitive,
+{
+    type Primitive = T;
 }
