@@ -1,35 +1,3 @@
-//! IEEE 754 floating-point proxy types that apply ordering and configurable contraints and
-//! divergence.
-//!
-//! [`Constrained`] types wrap primitive floating-point types and change their behavior with
-//! respect to ordering, equivalence, hashing, supported values, and error behaviors. These types
-//! have the same representation as primitive floating-point types and can often be used as drop-in
-//! replacements.
-//!
-//! [Constraints][`constraint`] configure the behavior of [`Constrained`]s by determining the set
-//! of IEEE
-//! 754 floating-point values that can be represented and how to [diverge][`divergence`] if a value
-//!     that is not in this set is encountered. The following table summarizes the proxy type
-//!     definitions and their constraints:
-//!
-//! | Type Definition  | Sized Definitions | Trait Implementations                           | Disallowed Values     |
-//! |------------------|-------------------|-------------------------------------------------|-----------------------|
-//! | [`Total`]        |                   | `BaseEncoding + InfinityEncoding + NanEncoding` |                       |
-//! | [`ExtendedReal`] | `E32`, `E64`      | `BaseEncoding + InfinityEncoding`               | `NaN`                 |
-//! | [`Real`]         | `R32`, `R64`      | `BaseEncoding`                                  | `NaN`, `-INF`, `+INF` |
-//!
-//! The [`ExtendedReal`] and [`Real`] types disallow values that represent not-a-number, $\infin$,
-//! and $-\infin$. These types diverge if such a value is encountered, which may result in an error
-//! encoding output (e.g., a `Result::Err`) or even a panic. Notably, the [`Total`] type applies no
-//! constraints and is infallible (never diverges).
-//!
-//! [`constraint`]: crate::constraint
-//! [`divergence`]: crate::divergence
-//! [`ExtendedReal`]: crate::ExtendedReal
-//! [`Real`]: crate::Real
-//! [`Result::Err`]: core::result::Result::Err
-//! [`Total`]: crate::Total
-
 #[cfg(feature = "approx")]
 use approx::{AbsDiffEq, RelativeEq, UlpsEq};
 use core::cmp::Ordering;
@@ -61,6 +29,9 @@ use crate::constraint::{
 use crate::divergence::{self, Divergence, NonResidual};
 use crate::expression::Expression;
 use crate::hash::CanonicalHash;
+use crate::proxy::Proxy;
+#[cfg(feature = "serde")]
+use crate::proxy::Serde;
 use crate::real::{BinaryRealFunction, Function, Sign, UnaryRealFunction};
 use crate::sealed::StaticDebug;
 use crate::{
@@ -73,45 +44,6 @@ pub type ConstraintOf<P> = <P as Proxy>::Constraint;
 pub type DivergenceOf<P> = <ConstraintOf<P> as Constraint>::Divergence;
 pub type ErrorOf<P> = <ConstraintOf<P> as Constraint>::Error;
 pub type ExpressionOf<P> = Expression<P, ErrorOf<P>>;
-
-/// An IEEE 754 floating-point proxy type.
-pub trait Proxy: Sized {
-    type Primitive: Primitive;
-    type Constraint: Constraint;
-}
-
-// TODO: By default, Serde serializes floating-point primitives representing `NaN` and infinities
-//       as `"null"`. Moreover, Serde cannot deserialize `"null"` as a floating-point primitive.
-//       This means that information is lost when serializing and deserializing is impossible for
-//       non-real values.
-/// Serialization container.
-///
-/// This type is represented and serialized transparently as its inner type `T`. `Constrained` uses
-/// this type for its own serialization and deserialization. Importantly, this uses a conversion
-/// when deserializing that upholds the constraints on proxy types, so it is not possible to
-/// deserialize a floating-point value into a proxy type that does not support that value.
-///
-/// See the following for more context and details:
-///
-/// - https://github.com/serde-rs/serde/issues/642
-/// - https://github.com/serde-rs/serde/issues/939
-#[cfg(feature = "serde")]
-#[derive(Deserialize, Serialize)]
-#[serde(transparent)]
-#[derive(Clone, Copy)]
-#[repr(transparent)]
-struct Serde<T> {
-    inner: T,
-}
-
-#[cfg(feature = "serde")]
-impl<T, C> From<Constrained<T, C>> for Serde<T> {
-    fn from(proxy: Constrained<T, C>) -> Self {
-        Serde {
-            inner: proxy.into_inner(),
-        }
-    }
-}
 
 /// IEEE 754 floating-point proxy that provides total ordering, equivalence, hashing, constraints,
 /// and error handling.
@@ -1287,6 +1219,15 @@ impl<C> From<Constrained<f32, C>> for f32 {
 impl<C> From<Constrained<f64, C>> for f64 {
     fn from(proxy: Constrained<f64, C>) -> Self {
         proxy.into_inner()
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<T, C> From<Constrained<T, C>> for Serde<T> {
+    fn from(proxy: Constrained<T, C>) -> Self {
+        Serde {
+            inner: proxy.into_inner(),
+        }
     }
 }
 
