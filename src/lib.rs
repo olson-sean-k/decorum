@@ -162,7 +162,7 @@ use core::num::FpCategory;
 use crate::cmp::IntrinsicOrd;
 use crate::constraint::{IsExtendedReal, IsFloat, IsReal};
 use crate::divergence::OrPanic;
-use crate::proxy::Constrained;
+use crate::proxy::{Constrained, Nan};
 use crate::real::{
     BinaryRealFunction, Endofunction, Function, RealFunction, Sign, UnaryRealFunction,
 };
@@ -386,7 +386,7 @@ pub trait NanEncoding: Copy {
     ///
     /// For proxy types, which are totally ordered, this type satisfies the bound `Eq + Ord`.
     ///
-    /// [`Nan`]: crate::Nan
+    /// [`Nan`]: crate::proxy::Nan
     /// [`NAN`]: crate::NanEncoding::NAN
     type Nan;
 
@@ -409,37 +409,6 @@ pub trait Primitive:
     + RealFunction
     + Sealed
 {
-}
-
-/// An incomparable primitive IEEE 754 floating-point `NaN`.
-#[derive(Clone, Copy, Debug)]
-#[repr(transparent)]
-pub struct Nan<T>
-where
-    T: Primitive,
-{
-    inner: T,
-}
-
-impl<T> Nan<T>
-where
-    T: Primitive,
-{
-    pub const fn into_inner(self) -> T {
-        self.inner
-    }
-}
-
-impl From<Nan<f32>> for f32 {
-    fn from(nan: Nan<f32>) -> Self {
-        nan.into_inner()
-    }
-}
-
-impl From<Nan<f64>> for f64 {
-    fn from(nan: Nan<f64>) -> Self {
-        nan.into_inner()
-    }
 }
 
 // TODO: Remove this. Of course.
@@ -552,7 +521,7 @@ macro_rules! impl_primitive {
         impl NanEncoding for $t {
             type Nan = Nan<$t>;
 
-            const NAN: Self::Nan = Nan { inner: <$t>::NAN };
+            const NAN: Self::Nan = Nan::unchecked(<$t>::NAN);
 
             fn is_nan(self) -> bool {
                 self.is_nan()
