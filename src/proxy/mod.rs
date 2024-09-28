@@ -36,18 +36,16 @@ mod nan;
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 
-pub use crate::proxy::constrained::{Constrained, ErrorOf, ExpressionOf, OutputOf};
+use crate::Primitive;
+
+pub use crate::proxy::constrained::{
+    Constrained, ConstrainedProxy, ErrorOf, ExpressionOf, OutputOf,
+};
 pub use crate::proxy::nan::Nan;
 
-pub(crate) mod sealed {
-    use crate::Primitive;
-
-    pub use crate::proxy::constrained::ConstrainedProxy;
-
-    /// An IEEE 754 floating-point proxy type.
-    pub trait Proxy: Sized {
-        type Primitive: Primitive;
-    }
+/// An IEEE 754 floating-point proxy type.
+pub trait Proxy: Sized {
+    type Primitive: Primitive;
 }
 
 // TODO: By default, Serde serializes floating-point primitives representing `NaN` and infinities

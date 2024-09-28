@@ -41,8 +41,7 @@ use thiserror::Error;
 
 use crate::cmp::Undefined;
 use crate::divergence::{Divergence, OrPanic, OutputOf};
-use crate::proxy::sealed::ConstrainedProxy;
-use crate::proxy::Constrained;
+use crate::proxy::{Constrained, ConstrainedProxy};
 use crate::sealed::{Sealed, StaticDebug};
 use crate::{NanEncoding, Primitive};
 

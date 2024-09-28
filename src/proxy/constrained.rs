@@ -29,7 +29,7 @@ use crate::constraint::{
 use crate::divergence::{self, Divergence, NonResidual};
 use crate::expression::Expression;
 use crate::hash::CanonicalHash;
-use crate::proxy::sealed::Proxy;
+use crate::proxy::Proxy;
 #[cfg(feature = "serde")]
 use crate::proxy::Serde;
 use crate::real::{BinaryRealFunction, Function, Sign, UnaryRealFunction};
