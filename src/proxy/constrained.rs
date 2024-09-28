@@ -40,10 +40,15 @@ use crate::{
 };
 
 pub type OutputOf<P> = divergence::OutputOf<DivergenceOf<P>, P, ErrorOf<P>>;
-pub type ConstraintOf<P> = <P as Proxy>::Constraint;
+pub type ConstraintOf<P> = <P as ConstrainedProxy>::Constraint;
 pub type DivergenceOf<P> = <ConstraintOf<P> as Constraint>::Divergence;
 pub type ErrorOf<P> = <ConstraintOf<P> as Constraint>::Error;
 pub type ExpressionOf<P> = Expression<P, ErrorOf<P>>;
+
+/// A constrained IEEE 754 floating-point proxy type.
+pub trait ConstrainedProxy: Proxy {
+    type Constraint: Constraint;
+}
 
 /// IEEE 754 floating-point proxy that provides total ordering, equivalence, hashing, constraints,
 /// and error handling.
@@ -663,12 +668,11 @@ where
     }
 }
 
-impl<T, C> Proxy for Constrained<T, C>
+impl<T, C> ConstrainedProxy for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
 {
-    type Primitive = T;
     type Constraint = C;
 }
 
@@ -1548,6 +1552,13 @@ where
     {
         input.fold(UnaryRealFunction::ONE, |a, b| a * b)
     }
+}
+
+impl<T, C> Proxy for Constrained<T, C>
+where
+    T: Primitive,
+{
+    type Primitive = T;
 }
 
 #[cfg(feature = "approx")]

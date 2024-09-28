@@ -41,7 +41,7 @@ use thiserror::Error;
 
 use crate::cmp::Undefined;
 use crate::divergence::{Divergence, OrPanic, OutputOf};
-use crate::proxy::{Constrained, Proxy};
+use crate::proxy::{Constrained, ConstrainedProxy};
 use crate::sealed::{Sealed, StaticDebug};
 use crate::{NanEncoding, Primitive};
 
@@ -208,7 +208,7 @@ pub trait Constraint: FromUndefined + Member<RealSet> + StaticDebug {
     fn map<T, U, F>(inner: T, f: F) -> OutputOf<Self::Divergence, U, Self::Error>
     where
         T: Primitive,
-        U: Proxy<Constraint = Self, Primitive = T>,
+        U: ConstrainedProxy<Constraint = Self, Primitive = T>,
         F: FnOnce(T) -> U,
     {
         Self::Divergence::diverge(Self::check(inner).map(|_| f(inner)))
@@ -235,7 +235,7 @@ impl Constraint for IsFloat {
     fn map<T, U, F>(inner: T, f: F) -> U
     where
         T: Primitive,
-        U: Proxy<Constraint = Self, Primitive = T>,
+        U: ConstrainedProxy<Constraint = Self, Primitive = T>,
         F: FnOnce(T) -> U,
     {
         f(inner)
