@@ -97,6 +97,18 @@ impl<T, C> Constrained<T, C> {
         }
     }
 
+    pub(crate) fn with_inner<U, F>(self, f: F) -> U
+    where
+        F: FnOnce(T) -> U,
+    {
+        f(self.inner)
+    }
+}
+
+impl<T, C> Constrained<T, C>
+where
+    T: Copy,
+{
     /// Converts a proxy into its underlying primitive floating-point type.
     ///
     /// # Examples
@@ -114,7 +126,7 @@ impl<T, C> Constrained<T, C> {
     /// // The standard `From` and `Into` traits can also be used.
     /// let y: f64 = f().into();
     /// ```
-    pub fn into_inner(self) -> T {
+    pub const fn into_inner(self) -> T {
         self.inner
     }
 
@@ -123,13 +135,6 @@ impl<T, C> Constrained<T, C> {
         F: FnOnce(T) -> T,
     {
         Constrained::unchecked(f(self.into_inner()))
-    }
-
-    pub(crate) fn with_inner<U, F>(self, f: F) -> U
-    where
-        F: FnOnce(T) -> U,
-    {
-        f(self.inner)
     }
 }
 
@@ -163,7 +168,7 @@ where
     /// [`Debug`]: core::fmt::Debug
     /// [`Display`]: core::fmt::Display
     /// [`divergence`]: crate::divergence
-    pub fn debug(&self) -> impl '_ + Copy + Debug {
+    pub const fn debug(&self) -> impl '_ + Copy + Debug {
         struct Formatted<'a, T, C>(&'a Constrained<T, C>);
 
         impl<'a, T, C> Clone for Formatted<'a, T, C> {
@@ -1227,7 +1232,10 @@ impl<C> From<Constrained<f64, C>> for f64 {
 }
 
 #[cfg(feature = "serde")]
-impl<T, C> From<Constrained<T, C>> for Serde<T> {
+impl<T, C> From<Constrained<T, C>> for Serde<T>
+where
+    T: Copy,
+{
     fn from(proxy: Constrained<T, C>) -> Self {
         Serde {
             inner: proxy.into_inner(),
