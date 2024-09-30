@@ -181,6 +181,12 @@ mod sealed {
 }
 use crate::sealed::Sealed;
 
+pub mod prelude {
+    pub use crate::cmp::{CanonicalEq, CanonicalOrd};
+    pub use crate::hash::CanonicalHash;
+    pub use crate::real::{BinaryRealFunction, UnaryRealFunction};
+}
+
 /// IEEE 754 floating-point representation with non-standard total ordering and hashing.
 ///
 /// This [`Constrained`] type applies no constraints and no divergence. It can trivially replace
