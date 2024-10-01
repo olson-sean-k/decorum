@@ -248,7 +248,7 @@ impl<'a, T, E> Expression<&'a mut T, E> {
 
 impl<T, C> BinaryRealFunction for ExpressionOf<Constrained<T, C>>
 where
-    ErrorOf<Constrained<T, C>>: Clone + cmp::Undefined,
+    ErrorOf<Constrained<T, C>>: Clone + cmp::IntrinsicUndefined,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -286,7 +286,7 @@ where
 
 impl<T, C> BinaryRealFunction<T> for ExpressionOf<Constrained<T, C>>
 where
-    ErrorOf<Constrained<T, C>>: Clone + cmp::Undefined,
+    ErrorOf<Constrained<T, C>>: Clone + cmp::IntrinsicUndefined,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -342,7 +342,7 @@ where
 
 impl<T, C> BinaryRealFunction<Constrained<T, C>> for ExpressionOf<Constrained<T, C>>
 where
-    ErrorOf<Constrained<T, C>>: Clone + cmp::Undefined,
+    ErrorOf<Constrained<T, C>>: Clone + cmp::IntrinsicUndefined,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -380,7 +380,7 @@ where
 
 impl<T, C> BinaryRealFunction<ExpressionOf<Constrained<T, C>>> for Constrained<T, C>
 where
-    ErrorOf<Constrained<T, C>>: Clone + cmp::Undefined,
+    ErrorOf<Constrained<T, C>>: Clone + cmp::IntrinsicUndefined,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -493,7 +493,7 @@ impl<T, E> FromResidual for Expression<T, E> {
 
 impl<T, C> Function for ExpressionOf<Constrained<T, C>>
 where
-    ErrorOf<Constrained<T, C>>: cmp::Undefined,
+    ErrorOf<Constrained<T, C>>: cmp::IntrinsicUndefined,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -525,7 +525,7 @@ where
 impl<T, E> IntrinsicOrd for Expression<T, E>
 where
     T: IntrinsicOrd,
-    E: cmp::Undefined,
+    E: cmp::IntrinsicUndefined,
 {
     type Undefined = Self;
 
@@ -543,8 +543,11 @@ where
             .defined()
             .zip(other.as_ref().defined())
             .map_or_else(
-                || Err(cmp::Undefined::undefined()),
-                |(a, b)| a.intrinsic_cmp(b).map_err(|_| cmp::Undefined::undefined()),
+                || Err(cmp::IntrinsicUndefined::undefined()),
+                |(a, b)| {
+                    a.intrinsic_cmp(b)
+                        .map_err(|_| cmp::IntrinsicUndefined::undefined())
+                },
             )
     }
 }
@@ -605,7 +608,7 @@ impl<T, E> ops::Try for Expression<T, E> {
 
 impl<T, C> UnaryRealFunction for ExpressionOf<Constrained<T, C>>
 where
-    ErrorOf<Constrained<T, C>>: Clone + cmp::Undefined,
+    ErrorOf<Constrained<T, C>>: Clone + cmp::IntrinsicUndefined,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -807,9 +810,9 @@ where
     }
 }
 
-impl<T, E> cmp::Undefined for Expression<T, E>
+impl<T, E> cmp::IntrinsicUndefined for Expression<T, E>
 where
-    E: cmp::Undefined,
+    E: cmp::IntrinsicUndefined,
 {
     #[inline(always)]
     fn undefined() -> Self {

@@ -21,7 +21,7 @@ use num_traits::{
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 
-use crate::cmp::{CanonicalEq, CanonicalOrd, IntrinsicOrd, Undefined};
+use crate::cmp::{CanonicalEq, CanonicalOrd, IntrinsicOrd, IntrinsicUndefined};
 use crate::constraint::{
     Constraint, ExpectConstrained, InfinitySet, IsExtendedReal, IsFloat, IsReal, Member, NanSet,
     SubsetOf, SupersetOf,
@@ -1373,6 +1373,15 @@ where
     }
 }
 
+impl<T> IntrinsicUndefined for Total<T>
+where
+    T: Primitive,
+{
+    fn undefined() -> Self {
+        Total::NAN
+    }
+}
+
 impl<T, C> LowerExp for Constrained<T, C>
 where
     T: LowerExp + Primitive,
@@ -2013,15 +2022,6 @@ where
     #[cfg(feature = "std")]
     fn atanh(self) -> Self::Codomain {
         self.map(UnaryRealFunction::atanh)
-    }
-}
-
-impl<T> Undefined for Total<T>
-where
-    T: Primitive,
-{
-    fn undefined() -> Self {
-        Total::NAN
     }
 }
 

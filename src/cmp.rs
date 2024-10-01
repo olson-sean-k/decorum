@@ -185,20 +185,20 @@ where
     }
 }
 
-pub trait Undefined {
+pub trait IntrinsicUndefined {
     fn undefined() -> Self;
 }
 
-impl<T> Undefined for Option<T> {
+impl<T> IntrinsicUndefined for Option<T> {
     #[inline(always)]
     fn undefined() -> Self {
         None
     }
 }
 
-impl<T, E> Undefined for Result<T, E>
+impl<T, E> IntrinsicUndefined for Result<T, E>
 where
-    E: Undefined,
+    E: IntrinsicUndefined,
 {
     #[inline(always)]
     fn undefined() -> Self {
@@ -233,8 +233,11 @@ where
 
     fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined> {
         self.as_ref().zip(other.as_ref()).map_or_else(
-            || Err(Undefined::undefined()),
-            |(a, b)| a.intrinsic_cmp(b).map_err(|_| Undefined::undefined()),
+            || Err(IntrinsicUndefined::undefined()),
+            |(a, b)| {
+                a.intrinsic_cmp(b)
+                    .map_err(|_| IntrinsicUndefined::undefined())
+            },
         )
     }
 }
@@ -243,7 +246,7 @@ impl<T, E> IntrinsicOrd for Result<T, E>
 where
     Self: PartialOrd,
     T: IntrinsicOrd,
-    E: Undefined,
+    E: IntrinsicUndefined,
 {
     type Undefined = Self;
 
@@ -258,8 +261,10 @@ where
 
     fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined> {
         match (self.as_ref(), other.as_ref()) {
-            (Ok(a), Ok(b)) => a.intrinsic_cmp(b).map_err(|_| Undefined::undefined()),
-            _ => Err(Undefined::undefined()),
+            (Ok(a), Ok(b)) => a
+                .intrinsic_cmp(b)
+                .map_err(|_| IntrinsicUndefined::undefined()),
+            _ => Err(IntrinsicUndefined::undefined()),
         }
     }
 }
@@ -283,7 +288,7 @@ macro_rules! impl_intrinsic_ord_for_float_primitive {
 
             fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined> {
                 self.partial_cmp(other)
-                    .ok_or_else(|| Undefined::undefined())
+                    .ok_or_else(|| IntrinsicUndefined::undefined())
             }
         }
     };
@@ -312,6 +317,7 @@ macro_rules! impl_intrinsic_ord_for_total_primitive {
             fn from_undefined(_: Self::Undefined) -> Self {
                 unreachable!()
             }
+
             #[inline(always)]
             fn is_undefined(&self) -> bool {
                 false
@@ -331,7 +337,7 @@ macro_rules! impl_undefined_for_float_primitive {
         with_primitives!(impl_undefined_for_float_primitive);
     };
     (primitive => $t:ty) => {
-        impl Undefined for $t {
+        impl IntrinsicUndefined for $t {
             #[inline(always)]
             fn undefined() -> Self {
                 Self::NAN

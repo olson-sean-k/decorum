@@ -39,7 +39,7 @@ use core::marker::PhantomData;
 #[cfg(feature = "std")]
 use thiserror::Error;
 
-use crate::cmp::Undefined;
+use crate::cmp::IntrinsicUndefined;
 use crate::divergence::{Divergence, OrPanic, OutputOf};
 use crate::proxy::{Constrained, ConstrainedProxy};
 use crate::sealed::{Sealed, StaticDebug};
@@ -49,11 +49,18 @@ pub(crate) mod sealed {
     use crate::proxy::Constrained;
     use crate::Primitive;
 
-    /// Defines a notion of undefined for [`Constraint`] types.
+    /// Defines a notion of intrinsic undefined for [`Constraint`] types.
     ///
     /// This trait is a corollary to [`IntrinsicOrd`] and is used to implement that trait for
     /// [`Constrained`] types more generally than is otherwise possible.
-    pub trait FromUndefined: Sized {
+    ///
+    /// **The notion of intrinsic undefined is completely independent of constraints.** Regardless
+    /// of constraint, `NaN` is considered undefined in this context!
+    ///
+    /// [`Constrained`]: crate::proxy::Constrained
+    /// [`Constraint`]: crate::constraint::Constraint
+    /// [`IntrinsicOrd`]: crate::cmp::IntrinsicOrd
+    pub trait FromIntrinsicUndefined: Sized {
         type Undefined<T>;
 
         fn undefined<T>() -> Self::Undefined<T>
@@ -69,7 +76,7 @@ pub(crate) mod sealed {
             T: Primitive;
     }
 }
-use sealed::FromUndefined;
+use sealed::FromIntrinsicUndefined;
 
 pub(crate) trait Description {
     const DESCRIPTION: &'static str;
@@ -126,7 +133,7 @@ impl Display for NotExtendedRealError {
     }
 }
 
-impl Undefined for NotExtendedRealError {
+impl IntrinsicUndefined for NotExtendedRealError {
     fn undefined() -> Self {
         NotExtendedRealError
     }
@@ -148,7 +155,7 @@ impl Display for NotRealError {
     }
 }
 
-impl Undefined for NotRealError {
+impl IntrinsicUndefined for NotRealError {
     fn undefined() -> Self {
         NotRealError
     }
@@ -193,7 +200,7 @@ where
 ///
 /// [`Constrained`]: crate::proxy::Constrained
 /// [`Member`]: crate::constraint::Member
-pub trait Constraint: FromUndefined + Member<RealSet> + StaticDebug {
+pub trait Constraint: FromIntrinsicUndefined + Member<RealSet> + StaticDebug {
     type Divergence: Divergence;
     // TODO: Bound this on `core::Error` once it is stabilized.
     type Error: Debug + Display;
@@ -242,7 +249,7 @@ impl Constraint for IsFloat {
     }
 }
 
-impl FromUndefined for IsFloat {
+impl FromIntrinsicUndefined for IsFloat {
     type Undefined<T> = Constrained<T, Self>;
 
     #[inline(always)]
@@ -313,7 +320,7 @@ where
     }
 }
 
-impl<D> FromUndefined for IsExtendedReal<D>
+impl<D> FromIntrinsicUndefined for IsExtendedReal<D>
 where
     D: Divergence,
 {
@@ -384,7 +391,7 @@ where
     }
 }
 
-impl<D> FromUndefined for IsReal<D>
+impl<D> FromIntrinsicUndefined for IsReal<D>
 where
     D: Divergence,
 {
