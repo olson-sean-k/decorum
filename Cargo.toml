@@ -70,7 +70,7 @@ optional = true
 # TODO: Use `thiserror` in `no_std` environments when support lands.
 #       See https://github.com/dtolnay/thiserror/pull/64
 [dependencies.thiserror]
-version = "^1.0.0"
+version = "^2.0.3"
 optional = true
 
 [build-dependencies]
