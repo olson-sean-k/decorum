@@ -2,7 +2,6 @@
 
 use core::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
-use crate::cmp::IntrinsicOrd;
 use crate::Primitive;
 
 pub trait Function {
@@ -16,7 +15,7 @@ impl<T> Endofunction for T where T: Function<Codomain = T> {}
 // This trait is implemented by trivial `Copy` types.
 #[allow(clippy::wrong_self_convention)]
 pub trait UnaryRealFunction:
-    Function + IntrinsicOrd + Neg<Output = Self> + PartialEq + PartialOrd + Sized
+    Function + Neg<Output = Self> + PartialEq + PartialOrd + Sized
 {
     const ZERO: Self;
     const ONE: Self;

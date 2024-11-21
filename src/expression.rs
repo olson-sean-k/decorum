@@ -1,17 +1,17 @@
 use core::cmp::Ordering;
-#[cfg(all(nightly, feature = "unstable"))]
 use core::convert::Infallible;
 use core::fmt::Debug;
+use core::hint;
 #[cfg(all(nightly, feature = "unstable"))]
 use core::ops::{self, ControlFlow, FromResidual};
 use core::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 use crate::cmp::{self, IntrinsicOrd};
-use crate::constraint::Constraint;
+use crate::constraint::{Constraint, Member, NanSet};
 use crate::divergence::{AsExpression, Divergence, OrError};
 use crate::proxy::{Constrained, ErrorOf, ExpressionOf};
 use crate::real::{BinaryRealFunction, Function, Sign, UnaryRealFunction};
-use crate::{with_binary_operations, with_primitives, InfinityEncoding, Primitive};
+use crate::{with_binary_operations, with_primitives, InfinityEncoding, NanEncoding, Primitive};
 
 pub use Expression::Defined;
 pub use Expression::Undefined;
@@ -242,6 +242,40 @@ impl<'a, T, E> Expression<&'a mut T, E> {
         match self {
             Defined(defined) => Defined(defined.clone()),
             Undefined(undefined) => Undefined(undefined),
+        }
+    }
+}
+
+impl<T> Expression<T, Infallible> {
+    pub fn into_defined(self) -> T {
+        #[allow(unreachable_patterns)]
+        match self {
+            Defined(defined) => defined,
+            // SAFETY: `Infallible` is uninhabited, so it is not possible to construct the
+            //         `Undefined` variant here.
+            Undefined(_) => unsafe { hint::unreachable_unchecked() },
+        }
+    }
+
+    pub fn get(&self) -> &T {
+        #[allow(unreachable_patterns)]
+        match self {
+            Defined(ref defined) => defined,
+            // SAFETY: `Infallible` is uninhabited, so it is not possible to construct the
+            //         `Undefined` variant here.
+            Undefined(_) => unsafe { hint::unreachable_unchecked() },
+        }
+    }
+}
+
+impl<E> Expression<Infallible, E> {
+    pub fn into_undefined(self) -> E {
+        #[allow(unreachable_patterns)]
+        match self {
+            Undefined(undefined) => undefined,
+            // SAFETY: `Infallible` is uninhabited, so it is not possible to construct the
+            //         `Defined` variant here.
+            Defined(_) => unsafe { hint::unreachable_unchecked() },
         }
     }
 }
@@ -479,15 +513,7 @@ impl<T, E> From<Expression<T, E>> for Result<T, E> {
 #[cfg(all(nightly, feature = "unstable"))]
 impl<T, E> FromResidual for Expression<T, E> {
     fn from_residual(residual: Expression<Infallible, E>) -> Self {
-        use core::hint;
-
-        #[allow(unreachable_patterns)]
-        match residual {
-            Undefined(undefined) => Undefined(undefined),
-            // SAFETY: `Infallible` is uninhabited, so it is not possible to construct the
-            //         `Defined` variant here.
-            Defined(_) => unsafe { hint::unreachable_unchecked() },
-        }
+        Undefined(residual.into_undefined())
     }
 }
 
@@ -522,10 +548,10 @@ where
     }
 }
 
-impl<T, E> IntrinsicOrd for Expression<T, E>
+impl<T, C> IntrinsicOrd for ExpressionOf<Constrained<T, C>>
 where
-    T: IntrinsicOrd,
-    E: cmp::IntrinsicUndefined,
+    T: Primitive,
+    C: Constraint<Error = Infallible> + Member<NanSet>,
 {
     type Undefined = Self;
 
@@ -535,20 +561,15 @@ where
     }
 
     fn is_undefined(&self) -> bool {
-        Expression::is_undefined(self)
+        self.get().is_nan()
     }
 
     fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, <Self as IntrinsicOrd>::Undefined> {
-        self.as_ref()
-            .defined()
-            .zip(other.as_ref().defined())
-            .map_or_else(
-                || Err(cmp::IntrinsicUndefined::undefined()),
-                |(a, b)| {
-                    a.intrinsic_cmp(b)
-                        .map_err(|_| cmp::IntrinsicUndefined::undefined())
-                },
-            )
+        match (self.is_undefined(), other.is_undefined()) {
+            (true, _) => Err(*self),
+            (_, true) => Err(*other),
+            (false, false) => Ok(self.get().cmp(other.get())),
+        }
     }
 }
 

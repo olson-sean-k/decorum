@@ -189,6 +189,10 @@ pub trait IntrinsicUndefined {
     fn undefined() -> Self;
 }
 
+impl IntrinsicUndefined for () {
+    fn undefined() -> Self {}
+}
+
 impl<T> IntrinsicUndefined for Option<T> {
     #[inline(always)]
     fn undefined() -> Self {
@@ -206,6 +210,13 @@ where
     }
 }
 
+// TODO: Do not use the term "undefined" here. It is completely independent of
+//       `Expression::Undefined`, `Constraint`s, and other APIs that may appear to have the very
+//       same notion but do not. Consider "incomparable" or a similar term that is a bit more
+//       specific than "undefined". For ordering functions, "undefined" may still be a reasonable
+//       term, such as in `min_or_undefined`.
+//
+//       See the `FromIntrinsicUndefined` trait for more commentary.
 pub trait IntrinsicOrd: PartialOrd {
     type Undefined;
 
@@ -218,7 +229,7 @@ pub trait IntrinsicOrd: PartialOrd {
 
 impl<T> IntrinsicOrd for Option<T>
 where
-    T: IntrinsicOrd,
+    T: Ord,
 {
     type Undefined = Self;
 
@@ -234,10 +245,7 @@ where
     fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined> {
         self.as_ref().zip(other.as_ref()).map_or_else(
             || Err(IntrinsicUndefined::undefined()),
-            |(a, b)| {
-                a.intrinsic_cmp(b)
-                    .map_err(|_| IntrinsicUndefined::undefined())
-            },
+            |(a, b)| Ok(a.cmp(b)),
         )
     }
 }
@@ -245,7 +253,7 @@ where
 impl<T, E> IntrinsicOrd for Result<T, E>
 where
     Self: PartialOrd,
-    T: IntrinsicOrd,
+    T: Ord,
     E: IntrinsicUndefined,
 {
     type Undefined = Self;
@@ -261,9 +269,7 @@ where
 
     fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined> {
         match (self.as_ref(), other.as_ref()) {
-            (Ok(a), Ok(b)) => a
-                .intrinsic_cmp(b)
-                .map_err(|_| IntrinsicUndefined::undefined()),
+            (Ok(a), Ok(b)) => Ok(a.cmp(b)),
             _ => Err(IntrinsicUndefined::undefined()),
         }
     }
