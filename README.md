@@ -245,13 +245,14 @@ let y = f64::INFINITY + f64::NEG_INFINITY; // `NaN`.
 assert!(x.eq_canonical(&y));
 ```
 
-Decorum also provides the `IntrinsicOrd` trait and the `min_or_undefined` and
-`max_or_undefined` functions. These pairwise comparisons can be used with
-partially ordered types that have an intrinsic representation for undefined,
-such as `Option` (`None`) and IEEE 754 floating-point representations (`NaN`).
-For floating-point representations, this provides an ergonomic method for
-comparison that naturally propogates `NaN`s just like floating-point operations
-do (unlike `f64::max`, etc.).
+Decorum also provides the `EmptyOrd` trait and the `min_or_empty` and
+`max_or_empty` functions. This trait defines a particular ordering for types
+that may have a notion of empty inhabitants. An empty inhabitant is considered
+incomparable, and comparisons return an empty inhabitant when encountered. For
+example, `None` is the empty inhabitant for `Option`. For floating-point types
+(including proxy types), `NaN`s are considered empty inhabitants. `EmptyOrd`
+functions forward `NaN`s when comparing these types just like most numeric
+operations (unlike `f64::max`, etc.).
 
 ```rust
 use decorum::cmp;
@@ -261,11 +262,10 @@ pub fn f<T>(x: T, y: T) -> T
 where
     T: Endofunction + RealFunction,
 {
-    // If the comparison is undefined, then `min` is assigned some
-    // representation of undefined. For floating-point types, `NaN` represents
-    // undefined and cannot be compared, so `min` is `NaN` if `x` or `y` is
-    // `NaN`.
-    let min = cmp::min_or_undefined(x, y);
+    // `min` is assigned an empty inhabitant if either `x` or `y` are an empty
+    // inhabitant. For `T`, the empty inhabitants are `NaN`s, so this function
+    // forwards any input `NaN`s to its output.
+    let min = cmp::min_or_empty(x, y);
     min * T::PI
 }
 ```

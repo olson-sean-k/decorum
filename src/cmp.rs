@@ -1,8 +1,8 @@
 //! Ordering and comparisons of IEEE 754 floating-point and other partially ordered types.
 //!
-//! This module provides traits and functions for total ordering of floating-point values and
-//! handling partial ordering via intrinsic types. For primitive floating-point types, the
-//! following total ordering is provided via the [`CanonicalEq`] and [`CanonicalOrd`] traits:
+//! This module provides traits and functions for partial and total orderings, in particular of
+//! floating-point types. For primitive floating-point types, the following total ordering is
+//! provided via the [`CanonicalEq`] and [`CanonicalOrd`] traits:
 //!
 //! $$-\infin<\cdots<0<\cdots<\infin<\text{NaN}$$
 //!
@@ -20,6 +20,17 @@
 //!
 //! These same semantics are used in the [`Eq`] and [`Ord`] implementations for the [`Total`]
 //! proxy.
+//!
+//! The [`EmptyOrd`] trait provides a particular ordering for types with a notion of empty
+//! inhabitants. These inhabitants are considered incomparable, regardless of whether or not they
+//! are ordered with respect to [`PartialOrd`] and [`Ord`]. For example, `None` is the empty
+//! inhabitant of [`Option`] and so cannot be compared with [`EmptyOrd`].
+//!
+//! For floating-point types, `NaN`s are considered empty inhabitants. In this context, _empty_ can
+//! be thought of as _undefined_, but note that **empty inhabitants are unrelated to proxy
+//! constraints**. Unlike the standard ordering traits, [`EmptyOrd`] forwards empty inhabitants in
+//! comparisons. For floating-point types, this importantly means that `NaN`s are forwarded
+//! consistently in comparisons.
 //!
 //! # Examples
 //!
@@ -39,7 +50,7 @@
 //! };
 //! ```
 //!
-//! Computing a pairwise minimum that propagates `NaN`s:
+//! Computing a pairwise minimum that propagates `NaN`s with [`EmptyOrd`]:
 //!
 //! ```rust
 //! use decorum::cmp;
@@ -48,15 +59,11 @@
 //! let x = f64::NAN;
 //! let y = 1.0f64;
 //!
-//! // `NaN` is incomparable and represents an undefined computation with respect to ordering, so
-//! // `min` is assigned a `NaN` value in this example.
-//! let min = cmp::min_or_undefined(x, y);
+//! // `NaN` is considered an empty inhabitant in this ordering, so `min` is assigned `NaN` in this
+//! // example, regardless of the order of parameters.
+//! let min = cmp::min_or_empty(x, y);
 //! ```
 //!
-//! [`CanonicalEq`]: crate::cmp::CanonicalEq
-//! [`CanonicalOrd`]: crate::cmp::CanonicalOrd
-//! [`Eq`]: core::cmp::Eq
-//! [`Ord`]: core::cmp::Ord
 //! [`Total`]: crate::Total
 
 use core::cmp::Ordering;
@@ -185,217 +192,221 @@ where
     }
 }
 
-pub trait IntrinsicUndefined {
-    fn undefined() -> Self;
+pub trait EmptyInhabitant {
+    fn empty() -> Self;
 }
 
-impl IntrinsicUndefined for () {
-    fn undefined() -> Self {}
+impl EmptyInhabitant for () {
+    fn empty() -> Self {}
 }
 
-impl<T> IntrinsicUndefined for Option<T> {
+impl<T> EmptyInhabitant for Option<T> {
     #[inline(always)]
-    fn undefined() -> Self {
+    fn empty() -> Self {
         None
     }
 }
 
-impl<T, E> IntrinsicUndefined for Result<T, E>
+impl<T, E> EmptyInhabitant for Result<T, E>
 where
-    E: IntrinsicUndefined,
+    E: EmptyInhabitant,
 {
     #[inline(always)]
-    fn undefined() -> Self {
-        Err(E::undefined())
+    fn empty() -> Self {
+        Err(E::empty())
     }
 }
 
-// TODO: Do not use the term "undefined" here. It is completely independent of
-//       `Expression::Undefined`, `Constraint`s, and other APIs that may appear to have the very
-//       same notion but do not. Consider "incomparable" or a similar term that is a bit more
-//       specific than "undefined". For ordering functions, "undefined" may still be a reasonable
-//       term, such as in `min_or_undefined`.
-//
-//       See the `FromIntrinsicUndefined` trait for more commentary.
-pub trait IntrinsicOrd: PartialOrd {
-    type Undefined;
+/// Defines an ordering for types that (may) have empty inhabitants.
+///
+/// An empty inhabitant is an intrinsic value of a type that is considered incomparable in this
+/// ordering, regardless of [`PartialOrd`] and [`Ord`] implementations. If an empty inhabitant is
+/// compared, then the comparison is considered undefined and the output is an empty inhabitant.
+///
+/// For floating-point types, `NaN`s are considered empty inhabitants.
+///
+/// `EmptyOrd` can be implemented for types with no empty inhabitants. Notably, this trait is
+/// implemented by totally ordered primitive numeric types. This better supports types that are
+/// defined by conditional compilation.
+///
+/// See [`min_or_empty`] and [`max_or_empty`].
+pub trait EmptyOrd: PartialOrd {
+    type Empty;
 
-    fn from_undefined(undefined: Self::Undefined) -> Self;
+    fn from_empty(empty: Self::Empty) -> Self;
 
-    fn is_undefined(&self) -> bool;
+    fn is_empty(&self) -> bool;
 
-    fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined>;
+    fn cmp_empty(&self, other: &Self) -> Result<Ordering, Self::Empty>;
 }
 
-impl<T> IntrinsicOrd for Option<T>
+impl<T> EmptyOrd for Option<T>
 where
     T: Ord,
 {
-    type Undefined = Self;
+    type Empty = Self;
 
     #[inline(always)]
-    fn from_undefined(undefined: <Self as IntrinsicOrd>::Undefined) -> Self {
-        undefined
+    fn from_empty(empty: <Self as EmptyOrd>::Empty) -> Self {
+        empty
     }
 
-    fn is_undefined(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.is_none()
     }
 
-    fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined> {
-        self.as_ref().zip(other.as_ref()).map_or_else(
-            || Err(IntrinsicUndefined::undefined()),
-            |(a, b)| Ok(a.cmp(b)),
-        )
+    fn cmp_empty(&self, other: &Self) -> Result<Ordering, Self::Empty> {
+        self.as_ref()
+            .zip(other.as_ref())
+            .map_or_else(|| Err(EmptyInhabitant::empty()), |(a, b)| Ok(a.cmp(b)))
     }
 }
 
-impl<T, E> IntrinsicOrd for Result<T, E>
+impl<T, E> EmptyOrd for Result<T, E>
 where
     Self: PartialOrd,
     T: Ord,
-    E: IntrinsicUndefined,
+    E: EmptyInhabitant,
 {
-    type Undefined = Self;
+    type Empty = Self;
 
     #[inline(always)]
-    fn from_undefined(undefined: Self::Undefined) -> Self {
-        undefined
+    fn from_empty(empty: Self::Empty) -> Self {
+        empty
     }
 
-    fn is_undefined(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.is_err()
     }
 
-    fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined> {
+    fn cmp_empty(&self, other: &Self) -> Result<Ordering, Self::Empty> {
         match (self.as_ref(), other.as_ref()) {
             (Ok(a), Ok(b)) => Ok(a.cmp(b)),
-            _ => Err(IntrinsicUndefined::undefined()),
+            _ => Err(EmptyInhabitant::empty()),
         }
     }
 }
 
-macro_rules! impl_intrinsic_ord_for_float_primitive {
+macro_rules! impl_empty_ord_for_float_primitive {
     () => {
-        with_primitives!(impl_intrinsic_ord_for_float_primitive);
+        with_primitives!(impl_empty_ord_for_float_primitive);
     };
     (primitive => $t:ty) => {
-        impl IntrinsicOrd for $t {
-            type Undefined = Self;
+        impl EmptyOrd for $t {
+            type Empty = Self;
 
             #[inline(always)]
-            fn from_undefined(undefined: Self::Undefined) -> Self {
-                undefined
+            fn from_empty(empty: Self::Empty) -> Self {
+                empty
             }
 
-            fn is_undefined(&self) -> bool {
+            fn is_empty(&self) -> bool {
                 self.is_nan()
             }
 
-            fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined> {
+            fn cmp_empty(&self, other: &Self) -> Result<Ordering, Self::Empty> {
                 self.partial_cmp(other)
-                    .ok_or_else(|| IntrinsicUndefined::undefined())
+                    .ok_or_else(|| EmptyInhabitant::empty())
             }
         }
     };
 }
-impl_intrinsic_ord_for_float_primitive!();
+impl_empty_ord_for_float_primitive!();
 
-macro_rules! impl_intrinsic_ord_for_total_primitive {
+macro_rules! impl_empty_ord_for_total_primitive {
     () => {
-        impl_intrinsic_ord_for_total_primitive!(primitive => isize);
-        impl_intrinsic_ord_for_total_primitive!(primitive => i8);
-        impl_intrinsic_ord_for_total_primitive!(primitive => i16);
-        impl_intrinsic_ord_for_total_primitive!(primitive => i32);
-        impl_intrinsic_ord_for_total_primitive!(primitive => i64);
-        impl_intrinsic_ord_for_total_primitive!(primitive => i128);
-        impl_intrinsic_ord_for_total_primitive!(primitive => usize);
-        impl_intrinsic_ord_for_total_primitive!(primitive => u8);
-        impl_intrinsic_ord_for_total_primitive!(primitive => u16);
-        impl_intrinsic_ord_for_total_primitive!(primitive => u32);
-        impl_intrinsic_ord_for_total_primitive!(primitive => u64);
-        impl_intrinsic_ord_for_total_primitive!(primitive => u128);
+        impl_empty_ord_for_total_primitive!(primitive => isize);
+        impl_empty_ord_for_total_primitive!(primitive => i8);
+        impl_empty_ord_for_total_primitive!(primitive => i16);
+        impl_empty_ord_for_total_primitive!(primitive => i32);
+        impl_empty_ord_for_total_primitive!(primitive => i64);
+        impl_empty_ord_for_total_primitive!(primitive => i128);
+        impl_empty_ord_for_total_primitive!(primitive => usize);
+        impl_empty_ord_for_total_primitive!(primitive => u8);
+        impl_empty_ord_for_total_primitive!(primitive => u16);
+        impl_empty_ord_for_total_primitive!(primitive => u32);
+        impl_empty_ord_for_total_primitive!(primitive => u64);
+        impl_empty_ord_for_total_primitive!(primitive => u128);
     };
     (primitive => $t:ty) => {
-        impl IntrinsicOrd for $t {
-            type Undefined = Infallible;
+        impl EmptyOrd for $t {
+            type Empty = Infallible;
 
-            fn from_undefined(_: Self::Undefined) -> Self {
+            fn from_empty(_: Self::Empty) -> Self {
                 unreachable!()
             }
 
             #[inline(always)]
-            fn is_undefined(&self) -> bool {
+            fn is_empty(&self) -> bool {
                 false
             }
 
             #[inline(always)]
-            fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined> {
+            fn cmp_empty(&self, other: &Self) -> Result<Ordering, Self::Empty> {
                 Ok(self.cmp(other))
             }
         }
     };
 }
-impl_intrinsic_ord_for_total_primitive!();
+impl_empty_ord_for_total_primitive!();
 
-macro_rules! impl_undefined_for_float_primitive {
+macro_rules! impl_empty_inhabitant_for_float_primitive {
     () => {
-        with_primitives!(impl_undefined_for_float_primitive);
+        with_primitives!(impl_empty_inhabitant_for_float_primitive);
     };
     (primitive => $t:ty) => {
-        impl IntrinsicUndefined for $t {
+        impl EmptyInhabitant for $t {
             #[inline(always)]
-            fn undefined() -> Self {
+            fn empty() -> Self {
                 Self::NAN
             }
         }
     };
 }
-impl_undefined_for_float_primitive!();
+impl_empty_inhabitant_for_float_primitive!();
 
-/// Partial maximum of types with intrinsic representations for undefined.
+/// Pairwise maximum for types that may have an empty inhabitant that is incomparable.
 ///
-/// See the [`IntrinsicOrd`] trait.
-///
-/// [`IntrinsicOrd`]: crate::cmp::IntrinsicOrd
-pub fn max_or_undefined<T>(a: T, b: T) -> T
+/// See the [`EmptyOrd`] trait.
+pub fn max_or_empty<T>(a: T, b: T) -> T
 where
-    T: IntrinsicOrd,
+    T: EmptyOrd,
 {
-    match a.intrinsic_cmp(&b) {
+    match a.cmp_empty(&b) {
         Ok(Ordering::Less | Ordering::Equal) => b,
         Ok(Ordering::Greater) => a,
-        Err(undefined) => T::from_undefined(undefined),
+        Err(empty) => T::from_empty(empty),
     }
 }
 
-/// Partial minimum of types with intrinsic representations for undefined.
+/// Pairwise minimum for types that may have an empty inhabitant that is incomparable.
 ///
-/// See the [`IntrinsicOrd`] trait.
-///
-/// [`IntrinsicOrd`]: crate::cmp::IntrinsicOrd
-pub fn min_or_undefined<T>(a: T, b: T) -> T
+/// See the [`EmptyOrd`] trait.
+pub fn min_or_empty<T>(a: T, b: T) -> T
 where
-    T: IntrinsicOrd,
+    T: EmptyOrd,
 {
-    match a.intrinsic_cmp(&b) {
+    match a.cmp_empty(&b) {
         Ok(Ordering::Less | Ordering::Equal) => a,
         Ok(Ordering::Greater) => b,
-        Err(undefined) => T::from_undefined(undefined),
+        Err(empty) => T::from_empty(empty),
     }
 }
 
-pub fn min_max_or_undefined<T>(a: T, b: T) -> (T, T)
+/// Pairwise ordering for types that may have an empty inhabitant that is incomparable.
+///
+/// The output tuple contains either the minimum and maximum (in that order) or empty inhabitants.
+///
+/// See the [`EmptyOrd`] trait.
+pub fn min_max_or_empty<T>(a: T, b: T) -> (T, T)
 where
-    T: Copy + IntrinsicOrd,
+    T: EmptyOrd,
+    T::Empty: Copy,
 {
-    match a.intrinsic_cmp(&b) {
+    match a.cmp_empty(&b) {
         Ok(Ordering::Less | Ordering::Equal) => (a, b),
         Ok(Ordering::Greater) => (b, a),
-        Err(undefined) => {
-            let undefined = T::from_undefined(undefined);
-            (undefined, undefined)
-        }
+        Err(empty) => (T::from_empty(empty), T::from_empty(empty)),
     }
 }
 
@@ -403,7 +414,7 @@ where
 mod tests {
     use num_traits::{One, Zero};
 
-    use crate::cmp::{self, CanonicalEq, IntrinsicOrd};
+    use crate::cmp::{self, CanonicalEq, EmptyOrd};
     use crate::{NanEncoding, Total};
 
     #[test]
@@ -420,42 +431,42 @@ mod tests {
     }
 
     #[test]
-    fn intrinsic_ord_option() {
+    fn empty_ord_option() {
         let zero = Some(0u64);
         let one = Some(1u64);
 
-        assert_eq!(zero, cmp::min_or_undefined(zero, one));
-        assert_eq!(one, cmp::max_or_undefined(zero, one));
-        assert!(cmp::min_or_undefined(None, zero).is_undefined());
+        assert_eq!(zero, cmp::min_or_empty(zero, one));
+        assert_eq!(one, cmp::max_or_empty(zero, one));
+        assert!(cmp::min_or_empty(None, zero).is_empty());
     }
 
     #[test]
     #[allow(clippy::float_cmp)]
-    fn intrinsic_ord_primitive() {
+    fn empty_ord_primitive() {
         let zero = 0.0f64;
         let one = 1.0f64;
 
-        assert_eq!(zero, cmp::min_or_undefined(zero, one));
-        assert_eq!(one, cmp::max_or_undefined(zero, one));
-        assert!(cmp::min_or_undefined(f64::NAN, zero).is_undefined());
+        assert_eq!(zero, cmp::min_or_empty(zero, one));
+        assert_eq!(one, cmp::max_or_empty(zero, one));
+        assert!(cmp::min_or_empty(f64::NAN, zero).is_empty());
     }
 
     #[test]
-    fn intrinsic_ord_proxy() {
+    fn empty_ord_proxy() {
         let nan = Total::<f64>::NAN;
         let zero = Total::zero();
         let one = Total::one();
 
-        assert_eq!((zero, one), cmp::min_max_or_undefined(zero, one));
-        assert_eq!((zero, one), cmp::min_max_or_undefined(one, zero));
+        assert_eq!((zero, one), cmp::min_max_or_empty(zero, one));
+        assert_eq!((zero, one), cmp::min_max_or_empty(one, zero));
 
-        assert_eq!((nan, nan), cmp::min_max_or_undefined(nan, zero));
-        assert_eq!((nan, nan), cmp::min_max_or_undefined(zero, nan));
-        assert_eq!((nan, nan), cmp::min_max_or_undefined(nan, nan));
+        assert_eq!((nan, nan), cmp::min_max_or_empty(nan, zero));
+        assert_eq!((nan, nan), cmp::min_max_or_empty(zero, nan));
+        assert_eq!((nan, nan), cmp::min_max_or_empty(nan, nan));
 
-        assert_eq!(nan, cmp::min_or_undefined(nan, zero));
-        assert_eq!(nan, cmp::max_or_undefined(nan, zero));
-        assert_eq!(nan, cmp::min_or_undefined(nan, nan));
-        assert_eq!(nan, cmp::max_or_undefined(nan, nan));
+        assert_eq!(nan, cmp::min_or_empty(nan, zero));
+        assert_eq!(nan, cmp::max_or_empty(nan, zero));
+        assert_eq!(nan, cmp::min_or_empty(nan, nan));
+        assert_eq!(nan, cmp::max_or_empty(nan, nan));
     }
 }

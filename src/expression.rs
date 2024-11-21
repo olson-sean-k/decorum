@@ -6,7 +6,7 @@ use core::hint;
 use core::ops::{self, ControlFlow, FromResidual};
 use core::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
-use crate::cmp::{self, IntrinsicOrd};
+use crate::cmp::{self, EmptyOrd};
 use crate::constraint::{Constraint, Member, NanSet};
 use crate::divergence::{AsExpression, Divergence, OrError};
 use crate::proxy::{Constrained, ErrorOf, ExpressionOf};
@@ -282,7 +282,7 @@ impl<E> Expression<Infallible, E> {
 
 impl<T, C> BinaryRealFunction for ExpressionOf<Constrained<T, C>>
 where
-    ErrorOf<Constrained<T, C>>: Clone + cmp::IntrinsicUndefined,
+    ErrorOf<Constrained<T, C>>: Clone + cmp::EmptyInhabitant,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -320,7 +320,7 @@ where
 
 impl<T, C> BinaryRealFunction<T> for ExpressionOf<Constrained<T, C>>
 where
-    ErrorOf<Constrained<T, C>>: Clone + cmp::IntrinsicUndefined,
+    ErrorOf<Constrained<T, C>>: Clone + cmp::EmptyInhabitant,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -376,7 +376,7 @@ where
 
 impl<T, C> BinaryRealFunction<Constrained<T, C>> for ExpressionOf<Constrained<T, C>>
 where
-    ErrorOf<Constrained<T, C>>: Clone + cmp::IntrinsicUndefined,
+    ErrorOf<Constrained<T, C>>: Clone + cmp::EmptyInhabitant,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -414,7 +414,7 @@ where
 
 impl<T, C> BinaryRealFunction<ExpressionOf<Constrained<T, C>>> for Constrained<T, C>
 where
-    ErrorOf<Constrained<T, C>>: Clone + cmp::IntrinsicUndefined,
+    ErrorOf<Constrained<T, C>>: Clone + cmp::EmptyInhabitant,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -519,7 +519,7 @@ impl<T, E> FromResidual for Expression<T, E> {
 
 impl<T, C> Function for ExpressionOf<Constrained<T, C>>
 where
-    ErrorOf<Constrained<T, C>>: cmp::IntrinsicUndefined,
+    ErrorOf<Constrained<T, C>>: cmp::EmptyInhabitant,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -548,23 +548,23 @@ where
     }
 }
 
-impl<T, C> IntrinsicOrd for ExpressionOf<Constrained<T, C>>
+impl<T, C> EmptyOrd for ExpressionOf<Constrained<T, C>>
 where
     T: Primitive,
     C: Constraint<Error = Infallible> + Member<NanSet>,
 {
-    type Undefined = Self;
+    type Empty = Self;
 
     #[inline(always)]
-    fn from_undefined(undefined: <Self as IntrinsicOrd>::Undefined) -> Self {
-        undefined
+    fn from_empty(empty: <Self as EmptyOrd>::Empty) -> Self {
+        empty
     }
 
-    fn is_undefined(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.get().is_nan()
     }
 
-    fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, <Self as IntrinsicOrd>::Undefined> {
+    fn cmp_empty(&self, other: &Self) -> Result<Ordering, <Self as EmptyOrd>::Empty> {
         match (self.is_undefined(), other.is_undefined()) {
             (true, _) => Err(*self),
             (_, true) => Err(*other),
@@ -629,7 +629,7 @@ impl<T, E> ops::Try for Expression<T, E> {
 
 impl<T, C> UnaryRealFunction for ExpressionOf<Constrained<T, C>>
 where
-    ErrorOf<Constrained<T, C>>: Clone + cmp::IntrinsicUndefined,
+    ErrorOf<Constrained<T, C>>: Clone + cmp::EmptyInhabitant,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -831,13 +831,13 @@ where
     }
 }
 
-impl<T, E> cmp::IntrinsicUndefined for Expression<T, E>
+impl<T, E> cmp::EmptyInhabitant for Expression<T, E>
 where
-    E: cmp::IntrinsicUndefined,
+    E: cmp::EmptyInhabitant,
 {
     #[inline(always)]
-    fn undefined() -> Self {
-        Expression::Undefined(E::undefined())
+    fn empty() -> Self {
+        Expression::Undefined(E::empty())
     }
 }
 

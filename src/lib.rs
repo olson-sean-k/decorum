@@ -159,7 +159,7 @@ pub mod real;
 use core::hash::Hash;
 use core::num::FpCategory;
 
-use crate::cmp::IntrinsicOrd;
+use crate::cmp::EmptyOrd;
 use crate::constraint::{IsExtendedReal, IsFloat, IsReal};
 use crate::divergence::OrPanic;
 use crate::proxy::{Constrained, Nan};
@@ -406,9 +406,9 @@ pub trait NanEncoding: Copy {
 pub trait Primitive:
     BaseEncoding
     + Copy
+    + EmptyOrd<Empty = Self>
     + Endofunction
     + InfinityEncoding
-    + IntrinsicOrd<Undefined = Self>
     + NanEncoding<Nan = Nan<Self>>
     + PartialEq
     + PartialOrd

@@ -39,7 +39,7 @@ use core::marker::PhantomData;
 #[cfg(feature = "std")]
 use thiserror::Error;
 
-use crate::cmp::IntrinsicUndefined;
+use crate::cmp::EmptyInhabitant;
 use crate::divergence::{Divergence, OrPanic, OutputOf};
 use crate::proxy::{Constrained, ConstrainedProxy};
 use crate::sealed::{Sealed, StaticDebug};
@@ -49,34 +49,34 @@ pub(crate) mod sealed {
     use crate::proxy::Constrained;
     use crate::Primitive;
 
-    /// Defines a notion of intrinsic undefined for [`Constraint`] types.
+    /// Defines a notion of empty inhabitants for [`Constraint`] types.
     ///
-    /// This trait is a corollary to [`IntrinsicOrd`] and is used to implement that trait for
+    /// This trait is a corollary to [`EmptyOrd`] and is used to implement that trait for
     /// [`Constrained`] types more generally than is otherwise possible.
     ///
-    /// **The notion of intrinsic undefined is completely independent of constraints.** Regardless
-    /// of constraint, `NaN` is considered undefined in this context!
+    /// **The notion of an empty inhabitant is independent of constraints.** Regardless of
+    /// constraint, `NaN`s are considered empty inhabitants.
     ///
     /// [`Constrained`]: crate::proxy::Constrained
     /// [`Constraint`]: crate::constraint::Constraint
-    /// [`IntrinsicOrd`]: crate::cmp::IntrinsicOrd
-    pub trait FromIntrinsicUndefined: Sized {
-        type Undefined<T>;
+    /// [`EmptyOrd`]: crate::cmp::EmptyOrd
+    pub trait FromEmpty: Sized {
+        type Empty<T>;
 
-        fn undefined<T>() -> Self::Undefined<T>
+        fn empty<T>() -> Self::Empty<T>
         where
             T: Primitive;
 
-        fn from_undefined<T>(undefined: Self::Undefined<T>) -> Constrained<T, Self>
+        fn from_empty<T>(empty: Self::Empty<T>) -> Constrained<T, Self>
         where
             T: Primitive;
 
-        fn is_undefined<T>(primitive: &T) -> bool
+        fn is_empty<T>(primitive: &T) -> bool
         where
             T: Primitive;
     }
 }
-use sealed::FromIntrinsicUndefined;
+use sealed::FromEmpty;
 
 pub(crate) trait Description {
     const DESCRIPTION: &'static str;
@@ -133,8 +133,8 @@ impl Display for NotExtendedRealError {
     }
 }
 
-impl IntrinsicUndefined for NotExtendedRealError {
-    fn undefined() -> Self {
+impl EmptyInhabitant for NotExtendedRealError {
+    fn empty() -> Self {
         NotExtendedRealError
     }
 }
@@ -155,8 +155,8 @@ impl Display for NotRealError {
     }
 }
 
-impl IntrinsicUndefined for NotRealError {
-    fn undefined() -> Self {
+impl EmptyInhabitant for NotRealError {
+    fn empty() -> Self {
         NotRealError
     }
 }
@@ -200,7 +200,7 @@ where
 ///
 /// [`Constrained`]: crate::proxy::Constrained
 /// [`Member`]: crate::constraint::Member
-pub trait Constraint: FromIntrinsicUndefined + Member<RealSet> + StaticDebug {
+pub trait Constraint: FromEmpty + Member<RealSet> + StaticDebug {
     type Divergence: Divergence;
     // TODO: Bound this on `core::Error` once it is stabilized.
     type Error: Debug + Display;
@@ -249,11 +249,11 @@ impl Constraint for IsFloat {
     }
 }
 
-impl FromIntrinsicUndefined for IsFloat {
-    type Undefined<T> = Constrained<T, Self>;
+impl FromEmpty for IsFloat {
+    type Empty<T> = Constrained<T, Self>;
 
     #[inline(always)]
-    fn undefined<T>() -> Self::Undefined<T>
+    fn empty<T>() -> Self::Empty<T>
     where
         T: Primitive,
     {
@@ -261,15 +261,15 @@ impl FromIntrinsicUndefined for IsFloat {
     }
 
     #[inline(always)]
-    fn from_undefined<T>(undefined: Self::Undefined<T>) -> Constrained<T, Self>
+    fn from_empty<T>(empty: Self::Empty<T>) -> Constrained<T, Self>
     where
         T: Primitive,
     {
-        undefined
+        empty
     }
 
     #[inline(always)]
-    fn is_undefined<T>(primitive: &T) -> bool
+    fn is_empty<T>(primitive: &T) -> bool
     where
         T: Primitive,
     {
@@ -320,20 +320,20 @@ where
     }
 }
 
-impl<D> FromIntrinsicUndefined for IsExtendedReal<D>
+impl<D> FromEmpty for IsExtendedReal<D>
 where
     D: Divergence,
 {
-    type Undefined<T> = Infallible;
+    type Empty<T> = Infallible;
 
-    fn undefined<T>() -> Self::Undefined<T>
+    fn empty<T>() -> Self::Empty<T>
     where
         T: Primitive,
     {
         unreachable!()
     }
 
-    fn from_undefined<T>(_: Self::Undefined<T>) -> Constrained<T, Self>
+    fn from_empty<T>(_: Self::Empty<T>) -> Constrained<T, Self>
     where
         T: Primitive,
     {
@@ -341,7 +341,7 @@ where
     }
 
     #[inline(always)]
-    fn is_undefined<T>(_: &T) -> bool
+    fn is_empty<T>(_: &T) -> bool
     where
         T: Primitive,
     {
@@ -391,20 +391,20 @@ where
     }
 }
 
-impl<D> FromIntrinsicUndefined for IsReal<D>
+impl<D> FromEmpty for IsReal<D>
 where
     D: Divergence,
 {
-    type Undefined<T> = Infallible;
+    type Empty<T> = Infallible;
 
-    fn undefined<T>() -> Self::Undefined<T>
+    fn empty<T>() -> Self::Empty<T>
     where
         T: Primitive,
     {
         unreachable!()
     }
 
-    fn from_undefined<T>(_: Self::Undefined<T>) -> Constrained<T, Self>
+    fn from_empty<T>(_: Self::Empty<T>) -> Constrained<T, Self>
     where
         T: Primitive,
     {
@@ -412,7 +412,7 @@ where
     }
 
     #[inline(always)]
-    fn is_undefined<T>(_: &T) -> bool
+    fn is_empty<T>(_: &T) -> bool
     where
         T: Primitive,
     {

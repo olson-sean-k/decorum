@@ -21,7 +21,7 @@ use num_traits::{
 #[cfg(feature = "serde")]
 use serde_derive::{Deserialize, Serialize};
 
-use crate::cmp::{CanonicalEq, CanonicalOrd, IntrinsicOrd, IntrinsicUndefined};
+use crate::cmp::{CanonicalEq, CanonicalOrd, EmptyInhabitant, EmptyOrd};
 use crate::constraint::{
     Constraint, ExpectConstrained, InfinitySet, IsExtendedReal, IsFloat, IsReal, Member, NanSet,
     SubsetOf, SupersetOf,
@@ -1348,36 +1348,36 @@ where
     }
 }
 
-impl<T, C> IntrinsicOrd for Constrained<T, C>
+impl<T, C> EmptyOrd for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint,
 {
-    type Undefined = C::Undefined<T>;
+    type Empty = C::Empty<T>;
 
     #[inline(always)]
-    fn from_undefined(undefined: Self::Undefined) -> Self {
-        C::from_undefined(undefined)
+    fn from_empty(empty: Self::Empty) -> Self {
+        C::from_empty(empty)
     }
 
     #[inline(always)]
-    fn is_undefined(&self) -> bool {
-        C::is_undefined(self.as_ref())
+    fn is_empty(&self) -> bool {
+        C::is_empty(self.as_ref())
     }
 
-    fn intrinsic_cmp(&self, other: &Self) -> Result<Ordering, Self::Undefined> {
-        match self.as_ref().intrinsic_cmp(other.as_ref()) {
+    fn cmp_empty(&self, other: &Self) -> Result<Ordering, Self::Empty> {
+        match self.as_ref().cmp_empty(other.as_ref()) {
             Ok(ordering) => Ok(ordering),
-            Err(_) => Err(C::undefined()),
+            Err(_) => Err(C::empty()),
         }
     }
 }
 
-impl<T> IntrinsicUndefined for Total<T>
+impl<T> EmptyInhabitant for Total<T>
 where
     T: Primitive,
 {
-    fn undefined() -> Self {
+    fn empty() -> Self {
         Total::NAN
     }
 }
