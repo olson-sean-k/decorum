@@ -195,7 +195,7 @@ impl<T, E> Expression<T, E> {
     }
 }
 
-impl<'a, T, E> Expression<&'a T, E> {
+impl<T, E> Expression<&'_ T, E> {
     pub fn copied(self) -> Expression<T, E>
     where
         T: Copy,
@@ -217,7 +217,7 @@ impl<'a, T, E> Expression<&'a T, E> {
     }
 }
 
-impl<'a, T, E> Expression<&'a mut T, E> {
+impl<T, E> Expression<&'_ mut T, E> {
     pub fn copied(self) -> Expression<T, E>
     where
         T: Copy,

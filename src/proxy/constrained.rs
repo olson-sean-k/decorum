@@ -162,15 +162,15 @@ where
     pub const fn debug(&self) -> impl '_ + Copy + Debug {
         struct Formatted<'a, T, C>(&'a Constrained<T, C>);
 
-        impl<'a, T, C> Clone for Formatted<'a, T, C> {
+        impl<T, C> Clone for Formatted<'_, T, C> {
             fn clone(&self) -> Self {
                 *self
             }
         }
 
-        impl<'a, T, C> Copy for Formatted<'a, T, C> {}
+        impl<T, C> Copy for Formatted<'_, T, C> {}
 
-        impl<'a, T, C> Debug for Formatted<'a, T, C>
+        impl<T, C> Debug for Formatted<'_, T, C>
         where
             T: Debug,
             C: StaticDebug,
