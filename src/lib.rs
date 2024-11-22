@@ -6,8 +6,6 @@
 //! [constraints][`constraint`] and [divergence] to configure behavior. Decorum also provides
 //! numerous traits describing real numerics and IEEE 754 encoding.
 //!
-//! Decorum requires Rust 1.65.0 or higher.
-//!
 //! # Proxy Types
 //!
 //! [`Constrained`] types wrap primitive floating-point types and constrain the set of values that

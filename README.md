@@ -5,8 +5,8 @@
 
 **Decorum** is a Rust library that provides total ordering, equivalence,
 hashing, constraints, error handling, and more for IEEE 754 floating-point
-representations. Decorum requires Rust 1.65.0 or higher and, except for specific
-features, does **not** require the `std` nor `alloc` libraries.
+representations. Decorum does **not** require the `std` nor `alloc` libraries,
+though they are necessary for some features.
 
 [![GitHub](https://img.shields.io/badge/GitHub-olson--sean--k/decorum-8da0cb?logo=github&style=for-the-badge)](https://github.com/olson-sean-k/decorum)
 [![docs.rs](https://img.shields.io/badge/docs.rs-decorum-66c2a5?logo=rust&style=for-the-badge)](https://docs.rs/decorum)
