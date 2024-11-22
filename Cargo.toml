@@ -2,6 +2,7 @@
 name = "decorum"
 version = "0.3.1"
 edition = "2021"
+rust-version = "1.70.0"
 license = "MIT"
 readme = "README.md"
 authors = ["Sean Olson <olson.sean.k@gmail.com>"]

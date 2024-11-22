@@ -532,12 +532,11 @@ where
     const NEG_INFINITY: Self = Defined(InfinityEncoding::NEG_INFINITY);
 
     fn is_infinite(self) -> bool {
-        self.defined()
-            .map_or(false, |defined| defined.is_infinite())
+        self.defined().is_some_and(InfinityEncoding::is_infinite)
     }
 
     fn is_finite(self) -> bool {
-        self.defined().map_or(false, |defined| defined.is_finite())
+        self.defined().is_some_and(InfinityEncoding::is_finite)
     }
 }
 
@@ -587,7 +586,7 @@ where
         self.as_ref()
             .defined()
             .zip(other.as_ref().defined())
-            .map_or(false, |(left, right)| left.eq(right))
+            .is_some_and(|(left, right)| left.eq(right))
     }
 }
 
@@ -647,11 +646,11 @@ where
     const LOG10_E: Self = Defined(UnaryRealFunction::LOG10_E);
 
     fn is_zero(self) -> bool {
-        self.defined().map_or(false, |defined| defined.is_zero())
+        self.defined().is_some_and(UnaryRealFunction::is_zero)
     }
 
     fn is_one(self) -> bool {
-        self.defined().map_or(false, |defined| defined.is_one())
+        self.defined().is_some_and(UnaryRealFunction::is_one)
     }
 
     fn sign(self) -> Sign {
