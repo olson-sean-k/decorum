@@ -164,8 +164,16 @@ impl Sign {
         matches!(self, Sign::Positive)
     }
 
+    pub fn is_zero_or_positive(&self) -> bool {
+        matches!(self, Sign::Zero | Sign::Positive)
+    }
+
     pub fn is_non_zero_negative(&self) -> bool {
         matches!(self, Sign::Negative)
+    }
+
+    pub fn is_zero_or_negative(&self) -> bool {
+        matches!(self, Sign::Zero | Sign::Negative)
     }
 
     pub fn is_zero(&self) -> bool {
