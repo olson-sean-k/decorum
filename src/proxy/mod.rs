@@ -38,7 +38,7 @@ use serde_derive::{Deserialize, Serialize};
 use crate::Primitive;
 
 pub use crate::proxy::constrained::{
-    Constrained, ConstrainedProxy, ErrorOf, ExpressionOf, OutputOf,
+    Constrained, ConstrainedProxy, ErrorFor, ExpressionFor, OutputFor,
 };
 pub use crate::proxy::nan::Nan;
 

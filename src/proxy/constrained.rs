@@ -39,11 +39,11 @@ use crate::{
     NanEncoding, Primitive, Real, ToCanonical, Total,
 };
 
-pub type OutputOf<P> = divergence::OutputOf<DivergenceOf<P>, P, ErrorOf<P>>;
-pub type ConstraintOf<P> = <P as ConstrainedProxy>::Constraint;
-pub type DivergenceOf<P> = <ConstraintOf<P> as Constraint>::Divergence;
-pub type ErrorOf<P> = <ConstraintOf<P> as Constraint>::Error;
-pub type ExpressionOf<P> = Expression<P, ErrorOf<P>>;
+pub type OutputFor<P> = divergence::OutputFor<DivergenceFor<P>, P, ErrorFor<P>>;
+pub type ConstraintFor<P> = <P as ConstrainedProxy>::Constraint;
+pub type DivergenceFor<P> = <ConstraintFor<P> as Constraint>::Divergence;
+pub type ErrorFor<P> = <ConstraintFor<P> as Constraint>::Error;
+pub type ExpressionFor<P> = Expression<P, ErrorFor<P>>;
 
 /// A constrained IEEE 754 floating-point proxy type.
 pub trait ConstrainedProxy: Proxy {
@@ -242,7 +242,7 @@ where
     ///
     /// [`OrPanic`]: crate::divergence::OrPanic
     /// [`Undefined`]: crate::expression::Expression::Undefined
-    pub fn new(inner: T) -> OutputOf<Self> {
+    pub fn new(inner: T) -> OutputFor<Self> {
         C::map(inner, |inner| Constrained {
             inner,
             phantom: PhantomData,
@@ -432,18 +432,18 @@ where
     /// The output of this function is always the [`Defined`] variant.
     ///
     /// [`Defined`]: crate::expression::Expression::Defined
-    pub fn into_expression(self) -> ExpressionOf<Self> {
+    pub fn into_expression(self) -> ExpressionFor<Self> {
         Expression::from(self)
     }
 
-    pub(crate) fn map<F>(self, f: F) -> OutputOf<Self>
+    pub(crate) fn map<F>(self, f: F) -> OutputFor<Self>
     where
         F: FnOnce(T) -> T,
     {
         Self::new(f(self.into_inner()))
     }
 
-    pub(crate) fn zip_map<C2, F>(self, other: Constrained<T, C2>, f: F) -> OutputOf<Self>
+    pub(crate) fn zip_map<C2, F>(self, other: Constrained<T, C2>, f: F) -> OutputFor<Self>
     where
         C2: Constraint,
         F: FnOnce(T, T) -> T,
@@ -507,7 +507,7 @@ where
     T: Primitive,
     C: Constraint,
 {
-    type Output = OutputOf<Self>;
+    type Output = OutputFor<Self>;
 
     fn add(self, other: Self) -> Self::Output {
         self.zip_map(other, Add::add)
@@ -519,7 +519,7 @@ where
     T: Primitive,
     C: Constraint,
 {
-    type Output = OutputOf<Self>;
+    type Output = OutputFor<Self>;
 
     fn add(self, other: T) -> Self::Output {
         self.map(|inner| inner + other)
@@ -530,7 +530,7 @@ impl<T, C, E> AddAssign for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
-    divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
+    divergence::ContinueFor<C::Divergence>: NonResidual<Self, E>,
 {
     fn add_assign(&mut self, other: Self) {
         *self = *self + other;
@@ -541,7 +541,7 @@ impl<T, C, E> AddAssign<T> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
-    divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
+    divergence::ContinueFor<C::Divergence>: NonResidual<Self, E>,
 {
     fn add_assign(&mut self, other: T) {
         *self = self.map(|inner| inner + other);
@@ -664,7 +664,7 @@ where
     T: Primitive,
     C: Constraint,
 {
-    type Codomain = OutputOf<Self>;
+    type Codomain = OutputFor<Self>;
 }
 
 impl<T, C> Copy for Constrained<T, C> where T: Copy {}
@@ -726,7 +726,7 @@ where
     T: Primitive,
     C: Constraint,
 {
-    type Output = OutputOf<Self>;
+    type Output = OutputFor<Self>;
 
     fn div(self, other: Self) -> Self::Output {
         self.zip_map(other, Div::div)
@@ -738,7 +738,7 @@ where
     T: Primitive,
     C: Constraint,
 {
-    type Output = OutputOf<Self>;
+    type Output = OutputFor<Self>;
 
     fn div(self, other: T) -> Self::Output {
         self.map(|inner| inner / other)
@@ -749,7 +749,7 @@ impl<T, C, E> DivAssign for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
-    divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
+    divergence::ContinueFor<C::Divergence>: NonResidual<Self, E>,
 {
     fn div_assign(&mut self, other: Self) {
         *self = *self / other
@@ -760,7 +760,7 @@ impl<T, C, E> DivAssign<T> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
-    divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
+    divergence::ContinueFor<C::Divergence>: NonResidual<Self, E>,
 {
     fn div_assign(&mut self, other: T) {
         *self = self.map(|inner| inner / other);
@@ -808,7 +808,7 @@ impl<T, C, E> Float for Constrained<T, C>
 where
     T: Float + Primitive,
     C: Constraint<Error = E> + Member<InfinitySet> + Member<NanSet>,
-    divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
+    divergence::ContinueFor<C::Divergence>: NonResidual<Self, E>,
 {
     fn infinity() -> Self {
         InfinityEncoding::INFINITY
@@ -1288,7 +1288,7 @@ impl<T, C, E> FromStr for Constrained<T, C>
 where
     T: FromStr + Primitive,
     C: Constraint<Error = E>,
-    divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
+    divergence::ContinueFor<C::Divergence>: NonResidual<Self, E>,
 {
     type Err = <T as FromStr>::Err;
 
@@ -1374,7 +1374,7 @@ where
     T: Primitive,
     C: Constraint,
 {
-    type Output = OutputOf<Self>;
+    type Output = OutputFor<Self>;
 
     fn mul(self, other: Self) -> Self::Output {
         self.zip_map(other, Mul::mul)
@@ -1386,7 +1386,7 @@ where
     T: Primitive,
     C: Constraint,
 {
-    type Output = OutputOf<Self>;
+    type Output = OutputFor<Self>;
 
     fn mul(self, other: T) -> Self::Output {
         self.map(|a| a * other)
@@ -1397,7 +1397,7 @@ impl<T, C, E> MulAssign for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
-    divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
+    divergence::ContinueFor<C::Divergence>: NonResidual<Self, E>,
 {
     fn mul_assign(&mut self, other: Self) {
         *self = *self * other;
@@ -1408,7 +1408,7 @@ impl<T, C, E> MulAssign<T> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
-    divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
+    divergence::ContinueFor<C::Divergence>: NonResidual<Self, E>,
 {
     fn mul_assign(&mut self, other: T) {
         *self = *self * other;
@@ -1445,7 +1445,7 @@ impl<T, C, E> Num for Constrained<T, C>
 where
     T: Num + Primitive,
     C: Constraint<Error = E>,
-    divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
+    divergence::ContinueFor<C::Divergence>: NonResidual<Self, E>,
 {
     // TODO: Differentiate between parse and contraint errors.
     type FromStrRadixErr = ();
@@ -1474,7 +1474,7 @@ impl<T, C, E> One for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
-    divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
+    divergence::ContinueFor<C::Divergence>: NonResidual<Self, E>,
 {
     fn one() -> Self {
         UnaryRealFunction::ONE
@@ -1539,7 +1539,7 @@ impl<T, C, E> Product for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
-    divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
+    divergence::ContinueFor<C::Divergence>: NonResidual<Self, E>,
 {
     fn product<I>(input: I) -> Self
     where
@@ -1585,7 +1585,7 @@ where
     T: Primitive,
     C: Constraint,
 {
-    type Output = OutputOf<Self>;
+    type Output = OutputFor<Self>;
 
     fn rem(self, other: Self) -> Self::Output {
         self.zip_map(other, Rem::rem)
@@ -1597,7 +1597,7 @@ where
     T: Primitive,
     C: Constraint,
 {
-    type Output = OutputOf<Self>;
+    type Output = OutputFor<Self>;
 
     fn rem(self, other: T) -> Self::Output {
         self.map(|inner| inner % other)
@@ -1608,7 +1608,7 @@ impl<T, C, E> RemAssign for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
-    divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
+    divergence::ContinueFor<C::Divergence>: NonResidual<Self, E>,
 {
     fn rem_assign(&mut self, other: Self) {
         *self = *self % other;
@@ -1619,7 +1619,7 @@ impl<T, C, E> RemAssign<T> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
-    divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
+    divergence::ContinueFor<C::Divergence>: NonResidual<Self, E>,
 {
     fn rem_assign(&mut self, other: T) {
         *self = self.map(|inner| inner % other);
@@ -1630,7 +1630,7 @@ impl<T, C, E> Signed for Constrained<T, C>
 where
     T: Primitive + Signed,
     C: Constraint<Error = E>,
-    divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
+    divergence::ContinueFor<C::Divergence>: NonResidual<Self, E>,
 {
     fn abs(&self) -> Self {
         self.map_unchecked(|inner| Signed::abs(&inner))
@@ -1658,7 +1658,7 @@ where
     T: Primitive,
     C: Constraint,
 {
-    type Output = OutputOf<Self>;
+    type Output = OutputFor<Self>;
 
     fn sub(self, other: Self) -> Self::Output {
         self.zip_map(other, Sub::sub)
@@ -1670,7 +1670,7 @@ where
     T: Primitive,
     C: Constraint,
 {
-    type Output = OutputOf<Self>;
+    type Output = OutputFor<Self>;
 
     fn sub(self, other: T) -> Self::Output {
         self.map(|inner| inner - other)
@@ -1681,7 +1681,7 @@ impl<T, C, E> SubAssign for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
-    divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
+    divergence::ContinueFor<C::Divergence>: NonResidual<Self, E>,
 {
     fn sub_assign(&mut self, other: Self) {
         *self = *self - other
@@ -1692,7 +1692,7 @@ impl<T, C, E> SubAssign<T> for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
-    divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
+    divergence::ContinueFor<C::Divergence>: NonResidual<Self, E>,
 {
     fn sub_assign(&mut self, other: T) {
         *self = self.map(|inner| inner - other)
@@ -1703,7 +1703,7 @@ impl<T, C, E> Sum for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
-    divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
+    divergence::ContinueFor<C::Divergence>: NonResidual<Self, E>,
 {
     fn sum<I>(input: I) -> Self
     where
@@ -2016,7 +2016,7 @@ impl<T, C, E> Zero for Constrained<T, C>
 where
     T: Primitive,
     C: Constraint<Error = E>,
-    divergence::ContinueOf<C::Divergence>: NonResidual<Self, E>,
+    divergence::ContinueFor<C::Divergence>: NonResidual<Self, E>,
 {
     fn zero() -> Self {
         UnaryRealFunction::ZERO
@@ -2043,7 +2043,7 @@ macro_rules! impl_binary_operation_for_proxy {
                 where
                     C: Constraint,
                 {
-                    type Output = OutputOf<Constrained<$t, C>>;
+                    type Output = OutputFor<Constrained<$t, C>>;
 
                     fn $method(self, other: Constrained<$t, C>) -> Self::Output {
                         let $left = self;
@@ -2079,7 +2079,7 @@ macro_rules! impl_num_traits_real_for_proxy {
         impl<D> num_traits::real::Real for $p<$t, D>
         where
             D: Divergence,
-            divergence::ContinueOf<D>: NonResidual<Self, ErrorOf<Self>>,
+            divergence::ContinueFor<D>: NonResidual<Self, ErrorFor<Self>>,
         {
             fn max_value() -> Self {
                 BaseEncoding::MAX_FINITE
@@ -2291,7 +2291,7 @@ macro_rules! impl_try_from_for_proxy {
         where
             D: Divergence,
         {
-            type Error = ErrorOf<Self>;
+            type Error = ErrorFor<Self>;
 
             fn try_from(inner: $t) -> Result<Self, Self::Error> {
                 Self::try_new(inner)
@@ -2302,10 +2302,10 @@ macro_rules! impl_try_from_for_proxy {
         where
             D: Divergence,
         {
-            type Error = ErrorOf<$p<$t, D>>;
+            type Error = ErrorFor<$p<$t, D>>;
 
             fn try_from(inner: &'a $t) -> Result<Self, Self::Error> {
-                ConstraintOf::<$p<$t, D>>::check(*inner).map(|_| {
+                ConstraintFor::<$p<$t, D>>::check(*inner).map(|_| {
                     // SAFETY: `Constrained<T>` is `repr(transparent)` and has the same binary
                     //         representation as its input type `T`. This means that it is safe to
                     //         transmute `T` to `Constrained<T>`.
@@ -2318,10 +2318,10 @@ macro_rules! impl_try_from_for_proxy {
         where
             D: Divergence,
         {
-            type Error = ErrorOf<$p<$t, D>>;
+            type Error = ErrorFor<$p<$t, D>>;
 
             fn try_from(inner: &'a mut $t) -> Result<Self, Self::Error> {
-                ConstraintOf::<$p<$t, D>>::check(*inner).map(move |_| {
+                ConstraintFor::<$p<$t, D>>::check(*inner).map(move |_| {
                     // SAFETY: `Constrained<T>` is `repr(transparent)` and has the same binary
                     //         representation as its input type `T`. This means that it is safe to
                     //         transmute `T` to `Constrained<T>`.

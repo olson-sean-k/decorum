@@ -35,7 +35,7 @@ use core::marker::PhantomData;
 use thiserror::Error;
 
 use crate::cmp::EmptyInhabitant;
-use crate::divergence::{Divergence, OrPanic, OutputOf};
+use crate::divergence::{Divergence, OrPanic, OutputFor};
 use crate::proxy::{Constrained, ConstrainedProxy};
 use crate::sealed::{Sealed, StaticDebug};
 use crate::{NanEncoding, Primitive};
@@ -200,7 +200,7 @@ pub trait Constraint: FromEmpty + Member<RealSet> + StaticDebug {
     where
         T: Primitive;
 
-    fn map<T, U, F>(inner: T, f: F) -> OutputOf<Self::Divergence, U, Self::Error>
+    fn map<T, U, F>(inner: T, f: F) -> OutputFor<Self::Divergence, U, Self::Error>
     where
         T: Primitive,
         U: ConstrainedProxy<Constraint = Self, Primitive = T>,

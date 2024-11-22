@@ -80,10 +80,10 @@
 //! ```rust
 //! use decorum::constraint::IsReal;
 //! use decorum::divergence::OrError;
-//! use decorum::proxy::{Constrained, OutputOf};
+//! use decorum::proxy::{Constrained, OutputFor};
 //!
 //! type Real = Constrained<f64, IsReal<OrError>>;
-//! type Expr = OutputOf<Real>;
+//! type Expr = OutputFor<Real>;
 //!
 //! fn f(x: Real, y: Real) -> Expr {
 //!     let z = x + y;
@@ -102,11 +102,11 @@
 //! ```rust,ignore
 //! use decorum::constraint::IsReal;
 //! use decorum::divergence::OrError;
-//! use decorum::proxy::{OutputOf, Constrained};
+//! use decorum::proxy::{OutputFor, Constrained};
 //! use decorum::real::UnaryRealFunction;
 //!
 //! type Real = Constrained<f64, IsReal<OrError>>;
-//! type Expr = OutputOf<Real>;
+//! type Expr = OutputFor<Real>;
 //!
 //! # fn fallible() -> Expr {
 //! fn f(x: Real, y: Real) -> Expr {

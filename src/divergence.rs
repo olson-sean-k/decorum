@@ -57,7 +57,7 @@
 //! pub mod real {
 //!     use decorum::constraint::IsReal;
 //!     use decorum::divergence::{self, AsResult};
-//!     use decorum::proxy::{Constrained, OutputOf};
+//!     use decorum::proxy::{Constrained, OutputFor};
 //!
 //!     #[cfg(debug_assertions)]
 //!     type OrDiverge = divergence::OrPanic<AsResult>;
@@ -65,7 +65,7 @@
 //!     type OrDiverge = divergence::OrError<AsResult>;
 //!
 //!     pub type Real = Constrained<f64, IsReal<OrDiverge>>;
-//!     pub type Result = OutputOf<Real>;
+//!     pub type Result = OutputFor<Real>;
 //! }
 //!
 //! use decorum::real::UnaryRealFunction;
@@ -217,8 +217,8 @@ pub trait Divergence: Sealed + StaticDebug {
         E: Debug;
 }
 
-pub type ContinueOf<D> = <D as Divergence>::Continue;
-pub type OutputOf<D, P, E> = <ContinueOf<D> as Continue>::As<P, E>;
+pub type ContinueFor<D> = <D as Divergence>::Continue;
+pub type OutputFor<D, P, E> = <ContinueFor<D> as Continue>::As<P, E>;
 
 /// Divergence that breaks on errors by **panicking**.
 ///

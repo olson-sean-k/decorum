@@ -41,12 +41,12 @@ Configure the behavior of an IEEE 754 floating-point representation:
 pub mod real {
     use decorum::constraint::IsReal;
     use decorum::divergence::{AsResult, OrError};
-    use decorum::proxy::{Constrained, OutputOf};
+    use decorum::proxy::{Constrained, OutputFor};
 
-    // A 64-bit floating point type that must represent a real number and returns
+    // A 64-bit floating-point type that must represent a real number and returns
     // `Result`s from fallible operations.
     pub type Real = Constrained<f64, IsReal<OrError<AsResult>>>;
-    pub type Result = OutputOf<Real>;
+    pub type Result = OutputFor<Real>;
 }
 
 use real::Real;
@@ -151,12 +151,12 @@ such that it can be used directly in expressions and defer error checking.
 ```rust
 use decorum::constraint::IsReal;
 use decorum::divergence::{AsExpression, OrError};
-use decorum::proxy::{Constrained, OutputOf};
+use decorum::proxy::{Constrained, OutputFor};
 use decorum::real::UnaryRealFunction;
 use decorum::try_expression;
 
 pub type Real = Constrained<f64, IsReal<OrError<AsExpression>>>;
-pub type Expr = OutputOf<Real>;
+pub type Expr = OutputFor<Real>;
 
 pub fn f(x: Real, y: Real) -> Expr {
     let sum = x + y;

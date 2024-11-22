@@ -9,7 +9,7 @@ use core::ops::{Add, Div, Mul, Neg, Rem, Sub};
 use crate::cmp::{self, EmptyOrd};
 use crate::constraint::{Constraint, Member, NanSet};
 use crate::divergence::{AsExpression, Divergence, OrError};
-use crate::proxy::{Constrained, ErrorOf, ExpressionOf};
+use crate::proxy::{Constrained, ErrorFor, ExpressionFor};
 use crate::real::{BinaryRealFunction, Function, Sign, UnaryRealFunction};
 use crate::{with_binary_operations, with_primitives, InfinityEncoding, NanEncoding, Primitive};
 
@@ -58,12 +58,12 @@ pub use try_expression;
 /// ```rust
 /// use decorum::constraint::IsReal;
 /// use decorum::divergence::OrError;
-/// use decorum::proxy::{Constrained, OutputOf};
+/// use decorum::proxy::{Constrained, OutputFor};
 /// use decorum::real::UnaryRealFunction;
 /// use decorum::try_expression;
 ///
 /// pub type Real = Constrained<f64, IsReal<OrError>>;
-/// pub type Expr = OutputOf<Real>;
+/// pub type Expr = OutputFor<Real>;
 ///
 /// # fn fallible() -> Expr {
 /// fn f(x: Real, y: Real, z: Real) -> Expr {
@@ -81,11 +81,11 @@ pub use try_expression;
 /// ```rust
 /// use decorum::constraint::IsReal;
 /// use decorum::divergence::{AsResult, OrError};
-/// use decorum::proxy::{Constrained, OutputOf};
+/// use decorum::proxy::{Constrained, OutputFor};
 /// use decorum::real::UnaryRealFunction;
 ///
 /// pub type Real = Constrained<f64, IsReal<OrError<AsResult>>>;
-/// pub type RealResult = OutputOf<Real>;
+/// pub type RealResult = OutputFor<Real>;
 ///
 /// # fn fallible() -> RealResult {
 /// fn f(x: Real, y: Real, z: Real) -> RealResult {
@@ -108,11 +108,11 @@ pub use try_expression;
 /// ```rust,ignore
 /// use decorum::constraint::IsReal;
 /// use decorum::divergence::{AsExpression, OrError};
-/// use decorum::proxy::{OutputOf, Constrained};
+/// use decorum::proxy::{Constrained, OutputFor};
 /// use decorum::real::UnaryRealFunction;
 ///
 /// pub type Real = Constrained<f64, IsReal<OrError<AsExpression>>>;
-/// pub type Expr = OutputOf<Real>;
+/// pub type Expr = OutputFor<Real>;
 ///
 /// # fn fallible() -> Expr {
 /// fn f(x: Real, y: Real, z: Real) -> Expr {
@@ -273,9 +273,9 @@ impl<E> Expression<Infallible, E> {
     }
 }
 
-impl<T, C> BinaryRealFunction for ExpressionOf<Constrained<T, C>>
+impl<T, C> BinaryRealFunction for ExpressionFor<Constrained<T, C>>
 where
-    ErrorOf<Constrained<T, C>>: Clone + cmp::EmptyInhabitant,
+    ErrorFor<Constrained<T, C>>: Clone + cmp::EmptyInhabitant,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -311,9 +311,9 @@ where
     }
 }
 
-impl<T, C> BinaryRealFunction<T> for ExpressionOf<Constrained<T, C>>
+impl<T, C> BinaryRealFunction<T> for ExpressionFor<Constrained<T, C>>
 where
-    ErrorOf<Constrained<T, C>>: Clone + cmp::EmptyInhabitant,
+    ErrorFor<Constrained<T, C>>: Clone + cmp::EmptyInhabitant,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -367,9 +367,9 @@ where
     }
 }
 
-impl<T, C> BinaryRealFunction<Constrained<T, C>> for ExpressionOf<Constrained<T, C>>
+impl<T, C> BinaryRealFunction<Constrained<T, C>> for ExpressionFor<Constrained<T, C>>
 where
-    ErrorOf<Constrained<T, C>>: Clone + cmp::EmptyInhabitant,
+    ErrorFor<Constrained<T, C>>: Clone + cmp::EmptyInhabitant,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -405,45 +405,45 @@ where
     }
 }
 
-impl<T, C> BinaryRealFunction<ExpressionOf<Constrained<T, C>>> for Constrained<T, C>
+impl<T, C> BinaryRealFunction<ExpressionFor<Constrained<T, C>>> for Constrained<T, C>
 where
-    ErrorOf<Constrained<T, C>>: Clone + cmp::EmptyInhabitant,
+    ErrorFor<Constrained<T, C>>: Clone + cmp::EmptyInhabitant,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
 {
     #[cfg(feature = "std")]
-    fn div_euclid(self, n: ExpressionOf<Constrained<T, C>>) -> Self::Codomain {
+    fn div_euclid(self, n: ExpressionFor<Constrained<T, C>>) -> Self::Codomain {
         BinaryRealFunction::div_euclid(self, try_expression!(n))
     }
 
     #[cfg(feature = "std")]
-    fn rem_euclid(self, n: ExpressionOf<Constrained<T, C>>) -> Self::Codomain {
+    fn rem_euclid(self, n: ExpressionFor<Constrained<T, C>>) -> Self::Codomain {
         BinaryRealFunction::rem_euclid(self, try_expression!(n))
     }
 
     #[cfg(feature = "std")]
-    fn pow(self, n: ExpressionOf<Constrained<T, C>>) -> Self::Codomain {
+    fn pow(self, n: ExpressionFor<Constrained<T, C>>) -> Self::Codomain {
         BinaryRealFunction::pow(self, try_expression!(n))
     }
 
     #[cfg(feature = "std")]
-    fn log(self, base: ExpressionOf<Constrained<T, C>>) -> Self::Codomain {
+    fn log(self, base: ExpressionFor<Constrained<T, C>>) -> Self::Codomain {
         BinaryRealFunction::log(self, try_expression!(base))
     }
 
     #[cfg(feature = "std")]
-    fn hypot(self, other: ExpressionOf<Constrained<T, C>>) -> Self::Codomain {
+    fn hypot(self, other: ExpressionFor<Constrained<T, C>>) -> Self::Codomain {
         BinaryRealFunction::hypot(self, try_expression!(other))
     }
 
     #[cfg(feature = "std")]
-    fn atan2(self, other: ExpressionOf<Constrained<T, C>>) -> Self::Codomain {
+    fn atan2(self, other: ExpressionFor<Constrained<T, C>>) -> Self::Codomain {
         BinaryRealFunction::atan2(self, try_expression!(other))
     }
 }
 
-impl<T, C> From<T> for Expression<Constrained<T, C>, ErrorOf<Constrained<T, C>>>
+impl<T, C> From<T> for Expression<Constrained<T, C>, ErrorFor<Constrained<T, C>>>
 where
     T: Primitive,
     C: Constraint,
@@ -453,7 +453,7 @@ where
     }
 }
 
-impl<'a, T, C> From<&'a T> for ExpressionOf<Constrained<T, C>>
+impl<'a, T, C> From<&'a T> for ExpressionFor<Constrained<T, C>>
 where
     Constrained<T, C>: TryFrom<&'a T, Error = C::Error>,
     T: Primitive,
@@ -464,7 +464,7 @@ where
     }
 }
 
-impl<'a, T, C> From<&'a mut T> for ExpressionOf<Constrained<T, C>>
+impl<'a, T, C> From<&'a mut T> for ExpressionFor<Constrained<T, C>>
 where
     Constrained<T, C>: TryFrom<&'a mut T, Error = C::Error>,
     T: Primitive,
@@ -475,7 +475,7 @@ where
     }
 }
 
-impl<T, C> From<Constrained<T, C>> for Expression<Constrained<T, C>, ErrorOf<Constrained<T, C>>>
+impl<T, C> From<Constrained<T, C>> for Expression<Constrained<T, C>, ErrorFor<Constrained<T, C>>>
 where
     T: Primitive,
     C: Constraint,
@@ -510,9 +510,9 @@ impl<T, E> FromResidual for Expression<T, E> {
     }
 }
 
-impl<T, C> Function for ExpressionOf<Constrained<T, C>>
+impl<T, C> Function for ExpressionFor<Constrained<T, C>>
 where
-    ErrorOf<Constrained<T, C>>: cmp::EmptyInhabitant,
+    ErrorFor<Constrained<T, C>>: cmp::EmptyInhabitant,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -520,9 +520,9 @@ where
     type Codomain = Self;
 }
 
-impl<T, C> InfinityEncoding for ExpressionOf<Constrained<T, C>>
+impl<T, C> InfinityEncoding for ExpressionFor<Constrained<T, C>>
 where
-    ErrorOf<Constrained<T, C>>: Copy,
+    ErrorFor<Constrained<T, C>>: Copy,
     Constrained<T, C>: InfinityEncoding,
     T: Primitive,
     C: Constraint,
@@ -540,7 +540,7 @@ where
     }
 }
 
-impl<T, C> EmptyOrd for ExpressionOf<Constrained<T, C>>
+impl<T, C> EmptyOrd for ExpressionFor<Constrained<T, C>>
 where
     T: Primitive,
     C: Constraint<Error = Infallible> + Member<NanSet>,
@@ -565,7 +565,7 @@ where
     }
 }
 
-impl<T, C> Neg for ExpressionOf<Constrained<T, C>>
+impl<T, C> Neg for ExpressionFor<Constrained<T, C>>
 where
     T: Primitive,
     C: Constraint,
@@ -619,9 +619,9 @@ impl<T, E> ops::Try for Expression<T, E> {
     }
 }
 
-impl<T, C> UnaryRealFunction for ExpressionOf<Constrained<T, C>>
+impl<T, C> UnaryRealFunction for ExpressionFor<Constrained<T, C>>
 where
-    ErrorOf<Constrained<T, C>>: Clone + cmp::EmptyInhabitant,
+    ErrorFor<Constrained<T, C>>: Clone + cmp::EmptyInhabitant,
     T: Primitive,
     C: Constraint,
     C::Divergence: Divergence<Continue = AsExpression>,
@@ -848,14 +848,14 @@ macro_rules! impl_binary_operation_for_expression {
                 with_primitives!(impl_primitive_binary_operation_for_expression);
             };
             (primitive => $t:ty) => {
-                impl<C> $trait<ExpressionOf<Constrained<$t, C>>> for $t
+                impl<C> $trait<ExpressionFor<Constrained<$t, C>>> for $t
                 where
                     C: Constraint,
                     C::Divergence: Divergence<Continue = AsExpression>,
                 {
-                    type Output = ExpressionOf<Constrained<$t, C>>;
+                    type Output = ExpressionFor<Constrained<$t, C>>;
 
-                    fn $method(self, other: ExpressionOf<Constrained<$t, C>>) -> Self::Output {
+                    fn $method(self, other: ExpressionFor<Constrained<$t, C>>) -> Self::Output {
                         let $left = try_expression!(Constrained::<_, C>::new(self));
                         let $right = try_expression!(other);
                         $f
@@ -865,22 +865,22 @@ macro_rules! impl_binary_operation_for_expression {
         }
         impl_primitive_binary_operation_for_expression!();
 
-        impl<T, C> $trait<ExpressionOf<Self>> for Constrained<T, C>
+        impl<T, C> $trait<ExpressionFor<Self>> for Constrained<T, C>
         where
             T: Primitive,
             C: Constraint,
             C::Divergence: Divergence<Continue = AsExpression>,
         {
-            type Output = ExpressionOf<Self>;
+            type Output = ExpressionFor<Self>;
 
-            fn $method(self, other: ExpressionOf<Self>) -> Self::Output {
+            fn $method(self, other: ExpressionFor<Self>) -> Self::Output {
                 let $left = self;
                 let $right = try_expression!(other);
                 $f
             }
         }
 
-        impl<T, C> $trait<Constrained<T, C>> for ExpressionOf<Constrained<T, C>>
+        impl<T, C> $trait<Constrained<T, C>> for ExpressionFor<Constrained<T, C>>
         where
             T: Primitive,
             C: Constraint,
@@ -895,7 +895,7 @@ macro_rules! impl_binary_operation_for_expression {
             }
         }
 
-        impl<T, C> $trait<ExpressionOf<Constrained<T, C>>> for ExpressionOf<Constrained<T, C>>
+        impl<T, C> $trait<ExpressionFor<Constrained<T, C>>> for ExpressionFor<Constrained<T, C>>
         where
             T: Primitive,
             C: Constraint,
@@ -910,7 +910,7 @@ macro_rules! impl_binary_operation_for_expression {
             }
         }
 
-        impl<T, C> $trait<T> for ExpressionOf<Constrained<T, C>>
+        impl<T, C> $trait<T> for ExpressionFor<Constrained<T, C>>
         where
             T: Primitive,
             C: Constraint,
