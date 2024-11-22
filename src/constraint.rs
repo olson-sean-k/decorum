@@ -31,7 +31,6 @@
 use core::convert::Infallible;
 use core::fmt::{self, Debug, Display, Formatter};
 use core::marker::PhantomData;
-#[cfg(feature = "std")]
 use thiserror::Error;
 
 use crate::cmp::EmptyInhabitant;
@@ -69,31 +68,12 @@ pub(crate) mod sealed {
 }
 use sealed::FromEmpty;
 
-pub(crate) trait Description {
-    const DESCRIPTION: &'static str;
-}
-
-#[cfg_attr(feature = "std", derive(Error))]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Error)]
 pub enum ConstraintError {
-    #[cfg_attr(feature = "std", error(transparent))]
+    #[error(transparent)]
     NotExtendedReal(NotExtendedRealError),
-    #[cfg_attr(feature = "std", error(transparent))]
+    #[error(transparent)]
     NotReal(NotRealError),
-}
-
-#[cfg(not(feature = "std"))]
-impl Display for ConstraintError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                ConstraintError::NotExtendedReal(_) => NotExtendedRealError::DESCRIPTION,
-                ConstraintError::NotReal(_) => NotRealError::DESCRIPTION,
-            },
-        )
-    }
 }
 
 impl From<NotExtendedRealError> for ConstraintError {
@@ -108,21 +88,9 @@ impl From<NotRealError> for ConstraintError {
     }
 }
 
-#[cfg_attr(feature = "std", derive(Error))]
-#[cfg_attr(feature = "std", error("{}", NotExtendedRealError::DESCRIPTION))]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Error)]
+#[error("{}", "floating-point value must be an extended real")]
 pub struct NotExtendedRealError;
-
-impl Description for NotExtendedRealError {
-    const DESCRIPTION: &'static str = "floating-point value must be an extended real";
-}
-
-#[cfg(not(feature = "std"))]
-impl Display for NotExtendedRealError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", NotExtendedRealError::DESCRIPTION)
-    }
-}
 
 impl EmptyInhabitant for NotExtendedRealError {
     fn empty() -> Self {
@@ -130,21 +98,9 @@ impl EmptyInhabitant for NotExtendedRealError {
     }
 }
 
-#[cfg_attr(feature = "std", derive(Error))]
-#[cfg_attr(feature = "std", error("{}", NotRealError::DESCRIPTION))]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Error)]
+#[error("{}", "floating-point value must be a real")]
 pub struct NotRealError;
-
-impl Description for NotRealError {
-    const DESCRIPTION: &'static str = "floating-point value must be a real";
-}
-
-#[cfg(not(feature = "std"))]
-impl Display for NotRealError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", NotRealError::DESCRIPTION)
-    }
-}
 
 impl EmptyInhabitant for NotRealError {
     fn empty() -> Self {

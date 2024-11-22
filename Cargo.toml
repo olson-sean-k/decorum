@@ -13,12 +13,12 @@ keywords = [
     "float",
     "hash",
     "nan",
-    "ordering"
+    "ordering",
 ]
 categories = [
     "mathematics",
     "no-std",
-    "rust-patterns"
+    "rust-patterns",
 ]
 
 [package.metadata.docs.rs]
@@ -26,24 +26,24 @@ all-features = true
 # Enable KaTeX support.
 rustdoc-args = [
     "--html-in-header",
-    "doc/katex-header.html"
+    "doc/katex-header.html",
 ]
 
 [features]
 default = [
     "approx",
     "serde",
-    "std"
+    "std",
 ]
 serde = [
     "dep:serde",
-    "dep:serde_derive"
+    "dep:serde_derive",
 ]
 std = [
-    "dep:thiserror",
     "approx/std",
     "num-traits/std",
-    "serde/std"
+    "serde/std",
+    "thiserror/std",
 ]
 unstable = []
 
@@ -68,11 +68,9 @@ version = "1.0"
 default-features = false
 optional = true
 
-# TODO: Use `thiserror` in `no_std` environments when support lands.
-#       See https://github.com/dtolnay/thiserror/pull/64
 [dependencies.thiserror]
-version = "^1.0.0"
-optional = true
+version = "^2.0.0"
+default-features = false
 
 [build-dependencies]
 rustversion = "^1.0.3"
