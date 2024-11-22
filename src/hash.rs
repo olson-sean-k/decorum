@@ -15,7 +15,6 @@
 //! [`CanonicalOrd`] and [`CanonicalEq`] traits.
 //!
 //! [`CanonicalEq`]: crate::cmp::CanonicalEq
-//! [`CanonicalHash`]: crate::hash::CanonicalHash
 //! [`CanonicalOrd`]: crate::cmp::CanonicalOrd
 
 use core::hash::{Hash, Hasher};

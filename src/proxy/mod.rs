@@ -27,7 +27,6 @@
 //! [`divergence`]: crate::divergence
 //! [`ExtendedReal`]: crate::ExtendedReal
 //! [`Real`]: crate::Real
-//! [`Result::Err`]: core::result::Result::Err
 //! [`Total`]: crate::Total
 
 mod constrained;

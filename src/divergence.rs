@@ -78,17 +78,9 @@
 //! }
 //! ```
 //!
-//! [`AsExpression`]: crate::divergence::AsExpression
-//! [`AsOption`]: crate::divergence::AsOption
-//! [`AsResult`]: crate::divergence::AsResult
-//! [`AsSelf`]: crate::divergence::AsSelf
 //! [`Constrained`]: crate::proxy::Constrained
 //! [`constraint`]: crate::constraint
 //! [`Constraint::Error`]: crate::constraint::Constraint::Error
-//! [`Divergence`]: crate::divergence::Divergence
-//! [`OrError`]: crate::divergence::OrError
-//! [`OrPanic`]: crate::divergence::OrPanic
-//! [`Result`]: core::result::Result
 
 use core::convert::Infallible;
 use core::fmt::{self, Debug, Formatter};
@@ -111,8 +103,6 @@ pub trait Break: Continue {
 }
 
 /// An [output kind][`Continue`] that outputs the identity.
-///
-/// [`Continue`]: crate::divergence::Continue
 pub trait NonResidual<P, E>: Continue<As<P, E> = P> {}
 
 impl<P, E, K> NonResidual<P, E> for K where K: Continue<As<P, E> = P> {}
@@ -218,9 +208,7 @@ impl StaticDebug for AsSelf {
 /// [`Constrained`]. See the [module documentation][`divergence`].
 ///
 /// [`Constrained`]: crate::proxy::Constrained
-/// [`Continue`]: crate::divergence::Continue
 /// [`divergence`]: crate::divergence
-/// [`Result`]: core::result::Result
 pub trait Divergence: Sealed + StaticDebug {
     type Continue: Continue;
 
@@ -240,9 +228,7 @@ pub type OutputOf<D, P, E> = <ContinueOf<D> as Continue>::As<P, E>;
 ///
 /// By default, `OrPanic` uses the [`AsSelf`] output kind.
 ///
-/// [`AsSelf`]: crate::divergence::AsSelf
 /// [`Constrained`]: crate::proxy::Constrained
-/// [`Result`]: core::result::Result
 #[derive(Debug)]
 pub struct OrPanic<K = AsSelf>(PhantomData<fn() -> K>, Infallible);
 
@@ -279,9 +265,6 @@ where
 ///
 /// By default, `OrError` uses the [`AsExpression`] kind and therefore has an [`Expression`] output
 /// type.
-///
-/// [`AsExpression`]: crate::divergence::AsExpression
-/// [`Expression`]: crate::expression::Expression
 pub struct OrError<K = AsExpression>(PhantomData<fn() -> K>, Infallible);
 
 impl<K> Divergence for OrError<K>

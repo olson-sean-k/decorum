@@ -120,21 +120,9 @@
 //! # }
 //! ```
 //!
-//! [`cmp`]: crate::cmp
-//! [`Constrained`]: crate::proxy::Constrained
-//! [`constraint`]: crate::constraint
 //! [`Constraint`]: crate::constraint::Constraint
-//! [`divergence`]: crate::divergence
 //! [`Expression`]: crate::expression::Expression
-//! [`ExtendedReal`]: crate::ExtendedReal
-//! [`hash`]: crate::hash
-//! [`Hash`]: core::hash::Hash
-//! [`proxy`]: crate::proxy
-//! [`real`]: crate::real
-//! [`Real`]: crate::Real
-//! [`Total`]: crate::Total
 //! [`Try`]: core::ops::Try
-//! [`try_expression`]: crate::try_expression
 
 #![doc(
     html_favicon_url = "https://raw.githubusercontent.com/olson-sean-k/decorum/master/doc/decorum-favicon.ico"
@@ -192,11 +180,6 @@ pub mod prelude {
 /// This [`Constrained`] type applies no constraints and no divergence. It can trivially replace
 /// primitive floating point types and implements the standard [`Eq`] and [`Ord`] traits. See the
 /// [`cmp`] module for more details about these relations.
-///
-/// [`cmp`]: crate::cmp
-/// [`Constrained`]: crate::proxy::Constrained
-/// [`Eq`]: core::cmp::Eq
-/// [`Ord`]: core::cmp::Ord
 pub type Total<T> = Constrained<T, IsFloat>;
 
 /// IEEE 754 floating-point representation that must be an extended real.
@@ -392,7 +375,6 @@ pub trait NanEncoding: Copy {
     ///
     /// For proxy types, which are totally ordered, this type satisfies the bound `Eq + Ord`.
     ///
-    /// [`Nan`]: crate::proxy::Nan
     /// [`NAN`]: crate::NanEncoding::NAN
     type Nan;
 

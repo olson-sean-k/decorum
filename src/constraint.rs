@@ -23,13 +23,8 @@
 //! which determines the behavior of [`Constrained`]s when such a value is encountered.
 //!
 //! [`cmp`]: crate::cmp
-//! [`Constrained`]: crate::proxy::Constrained
 //! [`divergence`]: crate::divergence
 //! [`ExtendedReal`]: crate::ExtendedReal
-//! [`IsExtendedReal`]: crate::constraint::IsExtendedReal
-//! [`IsFloat`]: crate::constraint::IsFloat
-//! [`IsReal`]: crate::constraint::IsReal
-//! [`OrPanic`]: crate::divergence::OrPanic
 //! [`Real`]: crate::Real
 //! [`Total`]: crate::Total
 
@@ -56,10 +51,6 @@ pub(crate) mod sealed {
     ///
     /// **The notion of an empty inhabitant is independent of constraints.** Regardless of
     /// constraint, `NaN`s are considered empty inhabitants.
-    ///
-    /// [`Constrained`]: crate::proxy::Constrained
-    /// [`Constraint`]: crate::constraint::Constraint
-    /// [`EmptyOrd`]: crate::cmp::EmptyOrd
     pub trait FromEmpty: Sized {
         type Empty<T>;
 
@@ -197,9 +188,6 @@ where
 ///
 /// Note that constraints require [`Member<RealSet>`][`Member`], meaning that the set of real
 /// numbers must always be supported and is implied wherever a `Constraint` bound is used.
-///
-/// [`Constrained`]: crate::proxy::Constrained
-/// [`Member`]: crate::constraint::Member
 pub trait Constraint: FromEmpty + Member<RealSet> + StaticDebug {
     type Divergence: Divergence;
     // TODO: Bound this on `core::Error` once it is stabilized.

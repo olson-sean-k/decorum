@@ -22,11 +22,6 @@ pub use Expression::Undefined;
 /// [`Result`]s. If the given [`Expression`] is the `Defined` variant, then the expression (of the
 /// macro) is the accompanying value. Otherwise, the error in the `Undefined` variant is converted
 /// via [`From`] and returned in the constructed [`Expression`].
-///
-/// [`Expression`]: crate::expression::Expression
-/// [`From`]: core::convert::From
-/// [`Result`]: core::result::Result
-/// [`try`]: core::try
 #[macro_export]
 macro_rules! try_expression {
     ($x:expr $(,)?) => {{
@@ -135,8 +130,6 @@ pub use try_expression;
 /// # }
 /// ```
 ///
-/// [`Constrained`]: crate::proxy::Constrained
-/// [`Result`]: core::result::Result
 /// [`Try`]: core::ops::Try
 #[derive(Clone, Copy, Debug)]
 pub enum Expression<T, E = ()> {

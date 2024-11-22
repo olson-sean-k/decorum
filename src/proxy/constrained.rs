@@ -63,10 +63,6 @@ pub trait ConstrainedProxy: Proxy {
 /// [`Total`] type, which extends floating-point types with a non-standard total ordering.
 ///
 /// [`cmp`]: crate::cmp
-/// [`Eq`]: core::cmp::Eq
-/// [`Hash`]: core::hash::Hash
-/// [`Ord`]: core::cmp::Ord
-/// [`Total`]: crate::Total
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(
     feature = "serde",
@@ -149,8 +145,6 @@ where
     /// [`Formatter`] rather than returning a [`Debug`] implementation.
     ///
     /// [`debug`]: crate::proxy::Constrained::debug
-    /// [`Debug`]: core::fmt::Debug
-    /// [`Formatter`]: core::fmt::Formatter
     pub fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         write!(formatter, "Constrained<")?;
         C::fmt(formatter)?;
@@ -165,9 +159,6 @@ where
     /// behavior of the proxy.
     ///
     /// [`constraint`]: crate::constraint
-    /// [`Debug`]: core::fmt::Debug
-    /// [`Display`]: core::fmt::Display
-    /// [`divergence`]: crate::divergence
     pub const fn debug(&self) -> impl '_ + Copy + Debug {
         struct Formatted<'a, T, C>(&'a Constrained<T, C>);
 
@@ -249,10 +240,7 @@ where
     /// let y = Real::new(0.0 / 0.0); // Panics.
     /// ```
     ///
-    /// [`divergence`]: crate::divergence
-    /// [`Expression`]: crate::expression::Expression
     /// [`OrPanic`]: crate::divergence::OrPanic
-    /// [`Total`]: crate::Total
     /// [`Undefined`]: crate::expression::Expression::Undefined
     pub fn new(inner: T) -> OutputOf<Self> {
         C::map(inner, |inner| Constrained {
@@ -305,11 +293,7 @@ where
     /// let x = Real::try_new(0.0 / 0.0).unwrap(); // Panics when unwrapping.
     /// ```
     ///
-    /// [`divergence`]: crate::divergence
     /// [`Infallible`]: core::convert::Infallible
-    /// [`IsFloat`]: crate::constraint::IsFloat
-    /// [`Result`]: core::result::Result
-    /// [`Total`]: crate::Total
     pub fn try_new(inner: T) -> Result<Self, C::Error> {
         C::check(inner).map(|_| Constrained {
             inner,
@@ -359,9 +343,6 @@ where
     /// // `IsReal` does not allow `NaN`s, but `0.0 / 0.0` produces a `NaN`.
     /// let x = Real::assert(0.0 / 0.0); // Panics.
     /// ```
-    ///
-    /// [`divergence`]: crate::divergence
-    /// [`Total`]: crate::Total
     pub fn assert(inner: T) -> Self {
         Self::try_new(inner).expect_constrained()
     }
@@ -378,7 +359,6 @@ where
     /// the constraints of the proxy.
     ///
     /// [`from_slice`]: crate::Total::from_slice
-    /// [`IsFloat`]: crate::constraint::IsFloat
     pub fn try_from_slice<'a>(slice: &'a [T]) -> Result<&'a [Self], C::Error> {
         slice.iter().try_for_each(|inner| C::check(*inner))?;
         // SAFETY: `Constrained<T>` is `repr(transparent)` and has the same binary representation
@@ -400,7 +380,6 @@ where
     /// slice do not satisfy the constraints of the proxy.
     ///
     /// [`from_mut_slice`]: crate::Total::from_mut_slice
-    /// [`IsFloat`]: crate::constraint::IsFloat
     pub fn try_from_mut_slice<'a>(slice: &'a mut [T]) -> Result<&'a mut [Self], C::Error> {
         slice.iter().try_for_each(|inner| C::check(*inner))?;
         // SAFETY: `Constrained<T>` is `repr(transparent)` and has the same binary representation
@@ -453,7 +432,6 @@ where
     /// The output of this function is always the [`Defined`] variant.
     ///
     /// [`Defined`]: crate::expression::Expression::Defined
-    /// [`Expression`]: crate::expression::Expression
     pub fn into_expression(self) -> ExpressionOf<Self> {
         Expression::from(self)
     }
